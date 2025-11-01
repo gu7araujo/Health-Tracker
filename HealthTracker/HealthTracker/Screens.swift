@@ -9,108 +9,117 @@ import SwiftUI
 
 struct MainView: View {
 
+    @State private var store = Store()
     @State var selectedMood: String = ""
     @State var selectedDate = Date()
-    @State var isMealModalPresented = false
+    @State var isAddEditModalPresented = false
+    @State var waterQuantity = 1.0
+
+    init() {
+        guard let data = UserDefaults.standard.data(forKey: "store") else { return }
+        let decoder = JSONDecoder()
+        if let store = try? decoder.decode(Store.self, from: data) {
+            self._store = State(initialValue: store)
+        }
+    }
+
+    func displayMealModal() {
+        isAddEditModalPresented.toggle()
+    }
 
     var body: some View {
         NavigationStack {
             List {
                 DatePicker(selection: $selectedDate, displayedComponents: [.date]) {
                     Text("Selecione a data")
-                        .font(.title)
+                        .font(.title3)
+                        .bold()
                 }
                 .datePickerStyle(.compact)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                .listRowInsets(EdgeInsets(top: 30, leading: 20, bottom: 30, trailing: 20))
 
-                CardView(internalPadding: EdgeInsets(top: 20, leading: 20, bottom: 20, trailing: 20)) {
-                    VStack(alignment: .leading) {
-                        Text("🍴 Refeições")
-                            .padding(.bottom, 15)
-                            .font(.headline)
+                HeaderListView(title: "Refeições", icon: "plus", action: displayMealModal)
 
-                        CardView {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text("Arroz, feijão, carne e salada")
-                                        .padding(.bottom, 5)
-                                    Text("Quantidade: média")
-                                        .font(.subheadline)
-                                    Text("Satisfeito(a): 80%")
-                                        .font(.subheadline)
-                                }
-                                Spacer()
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack {
+                        CardListView(isFirst: true, isUnique: false, action: displayMealModal) {
+                            VStack(alignment: .leading) {
+                                Text("Arroz, feijão, carne e salada")
+                                    .padding(.bottom, 5)
+                                Text("Quantidade: média")
+                                    .font(.subheadline)
+                                Text("Satisfeito(a): 80%")
+                                    .font(.subheadline)
                             }
                         }
 
-                        CardView {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text("Arroz, feijão, carne e salada")
-                                        .padding(.bottom, 5)
-                                    Text("Quantidade: média")
-                                        .font(.subheadline)
-                                    Text("Satisfeito(a): 80%")
-                                        .font(.subheadline)
-                                }
-                                Spacer()
+                        CardListView(action: displayMealModal) {
+                            VStack(alignment: .leading) {
+                                Text("Arroz, feijão, carne e salada")
+                                    .padding(.bottom, 5)
+                                Text("Quantidade: média")
+                                    .font(.subheadline)
+                                Text("Satisfeito(a): 80%")
+                                    .font(.subheadline)
                             }
                         }
-
-                        HStack {
-                            Spacer()
-                            Button("+", action: { isMealModalPresented = true })
-                                .buttonStyle(.glass)
-                            Spacer()
-                        }
-                        .padding(.top, 15)
                     }
                 }
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 10, trailing: 0))
 
-                CardView(internalPadding: EdgeInsets(top: 20, leading: 20, bottom: 20, trailing: 20)) {
-                    VStack(alignment: .leading) {
-                        Text("🏋 Exercícios")
-                            .padding(.bottom, 15)
-                            .font(.headline)
+                Text("Água")
+                    .font(.title3)
+                    .bold()
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
 
-                        CardView {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text("Caminhada")
-                                        .padding(.bottom, 5)
-                                    Text("40m")
-                                        .font(.subheadline)
-                                }
-                                Spacer()
-                            }
+                CardView {
+                    HStack {
+                        Spacer()
+                        VStack {
+                            Text(String(format: "%.1f L", waterQuantity))
+                                .font(.title2)
+                            Stepper(value: $waterQuantity, in: 0...10, step: 0.1, label: { })
                         }
-
-                        CardView {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text("Academia")
-                                        .padding(.bottom, 5)
-                                    Text("40m")
-                                        .font(.subheadline)
-                                }
-                                Spacer()
-                            }
-                        }
-
-                        HStack {
-                            Spacer()
-                            Button("+", action: { })
-                                .buttonStyle(.glass)
-                            Spacer()
-                        }
-                        .padding(.top, 15)
+                        Spacer()
                     }
                 }
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 10, trailing: 20))
+
+                HeaderListView(title: "Exercícios", icon: "plus", action: displayMealModal)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack {
+                        CardListView(isFirst: true, isUnique: false, action: displayMealModal) {
+                            VStack(alignment: .leading) {
+                                Text("Caminhada")
+                                    .padding(.bottom, 5)
+                                Text("Tempo: 40m")
+                                    .font(.subheadline)
+                            }
+                        }
+
+                        CardListView(action: displayMealModal) {
+                            VStack(alignment: .leading) {
+                                Text("Caminhada")
+                                    .padding(.bottom, 5)
+                                Text("Tempo: 40m")
+                                    .font(.subheadline)
+                            }
+                        }
+                    }
+                }
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 10, trailing: 0))
+
+                Text("Humor")
+                    .font(.title3)
+                    .bold()
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
 
                 CardView(internalPadding: EdgeInsets(top: 20, leading: 20, bottom: 20, trailing: 20)) {
                     VStack(alignment: .leading) {
@@ -165,19 +174,19 @@ struct MainView: View {
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
             }
-            .navigationTitle("Olá! 👋")
+            .navigationTitle("Monitore sua saúde")
             .listStyle(.plain)
-            .listRowSpacing(20)
+            .scrollIndicators(.hidden)
         }
-        .sheet(isPresented: $isMealModalPresented) {
-            MealView()
+        .sheet(isPresented: $isAddEditModalPresented) {
+            AddEditModal()
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
         }
     }
 }
 
-struct MealView: View {
+struct AddEditModal: View {
 
     @State private var text = ""
     @State var selectedSize: String = ""
