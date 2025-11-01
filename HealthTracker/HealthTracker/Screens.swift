@@ -9,22 +9,18 @@ import SwiftUI
 
 struct MainView: View {
 
-    @State private var store = Store()
-    @State var selectedMood: String = ""
+    @State var store = Store()
+    @State var selectedDateData: Store.DayData?
     @State var selectedDate = Date()
-    @State var isAddEditModalPresented = false
-    @State var waterQuantity = 1.0
+    @State var isAddModalPresented = false
+    @State var modalSection: Section?
+    @State var editModalData: Store.DayData.Item?
 
-    init() {
-        guard let data = UserDefaults.standard.data(forKey: "store") else { return }
-        let decoder = JSONDecoder()
-        if let store = try? decoder.decode(Store.self, from: data) {
-            self._store = State(initialValue: store)
-        }
-    }
-
-    func displayMealModal() {
-        isAddEditModalPresented.toggle()
+    var waterBinding: Binding<Double> {
+        Binding<Double>(
+            get: { selectedDateData?.water ?? 0 },
+            set: { selectedDateData?.water = $0 }
+        )
     }
 
     var body: some View {
@@ -39,35 +35,41 @@ struct MainView: View {
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 30, leading: 20, bottom: 30, trailing: 20))
 
-                HeaderListView(title: "Refeições", icon: "plus", action: displayMealModal)
+                HeaderListView(title: "Refeições", icon: "plus", action: {
+                    modalSection = .meal
+                    isAddModalPresented = true
+                })
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack {
-                        CardListView(isFirst: true, isUnique: false, action: displayMealModal) {
-                            VStack(alignment: .leading) {
-                                Text("Arroz, feijão, carne e salada")
-                                    .padding(.bottom, 5)
-                                Text("Quantidade: média")
-                                    .font(.subheadline)
-                                Text("Satisfeito(a): 80%")
-                                    .font(.subheadline)
-                            }
-                        }
-
-                        CardListView(action: displayMealModal) {
-                            VStack(alignment: .leading) {
-                                Text("Arroz, feijão, carne e salada")
-                                    .padding(.bottom, 5)
-                                Text("Quantidade: média")
-                                    .font(.subheadline)
-                                Text("Satisfeito(a): 80%")
-                                    .font(.subheadline)
+                if selectedDateData?.meals.isEmpty == false {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack {
+                            ForEach(Array(selectedDateData?.meals ?? []).enumerated(), id: \.offset) { index, element in
+                                CardListView(isFirst: index == 0, isUnique: selectedDateData?.meals.count == 1) {
+                                    VStack(alignment: .leading) {
+                                        Text(element.description)
+                                            .padding(.bottom, 5)
+                                        Text("Quantidade: ")
+                                            .font(.subheadline)
+                                        Text("Satisfeito(a): ")
+                                            .font(.subheadline)
+                                    }
+                                }
+                                .onTapGesture(count: 2) {
+                                    modalSection = .meal
+                                    editModalData = element
+                                }
                             }
                         }
                     }
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 10, trailing: 0))
+                } else {
+                    HStack {
+                        Spacer()
+                        Text("Lista vazia!")
+                        Spacer()
+                    }
                 }
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 10, trailing: 0))
 
                 Text("Água")
                     .font(.title3)
@@ -79,9 +81,14 @@ struct MainView: View {
                     HStack {
                         Spacer()
                         VStack {
-                            Text(String(format: "%.1f L", waterQuantity))
+                            Text(String(format: "%.1f L", selectedDateData?.water ?? 0))
                                 .font(.title2)
-                            Stepper(value: $waterQuantity, in: 0...10, step: 0.1, label: { })
+                            Stepper(value: waterBinding, in: 0...10, step: 0.1, label: { }) { changed in
+                                guard changed else { return }
+                                if changed, let dayIndex = store.days.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }) {
+                                    store.days[dayIndex].water = selectedDateData?.water
+                                }
+                            }
                         }
                         Spacer()
                     }
@@ -89,31 +96,39 @@ struct MainView: View {
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 10, trailing: 20))
 
-                HeaderListView(title: "Exercícios", icon: "plus", action: displayMealModal)
+                HeaderListView(title: "Exercícios", icon: "plus", action: {
+                    modalSection = .workout
+                    isAddModalPresented = true
+                })
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack {
-                        CardListView(isFirst: true, isUnique: false, action: displayMealModal) {
-                            VStack(alignment: .leading) {
-                                Text("Caminhada")
-                                    .padding(.bottom, 5)
-                                Text("Tempo: 40m")
-                                    .font(.subheadline)
-                            }
-                        }
-
-                        CardListView(action: displayMealModal) {
-                            VStack(alignment: .leading) {
-                                Text("Caminhada")
-                                    .padding(.bottom, 5)
-                                Text("Tempo: 40m")
-                                    .font(.subheadline)
+                if selectedDateData?.workouts.isEmpty == false {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack {
+                            ForEach(Array(selectedDateData?.workouts ?? []).enumerated(), id: \.offset) { index, element in
+                                CardListView(isFirst: index == 0, isUnique: selectedDateData?.workouts.count == 1) {
+                                    VStack(alignment: .leading) {
+                                        Text(element.description)
+                                            .padding(.bottom, 5)
+                                        Text("Tempo: ")
+                                            .font(.subheadline)
+                                    }
+                                }
+                                .onTapGesture(count: 2) {
+                                    modalSection = .workout
+                                    editModalData = element
+                                }
                             }
                         }
                     }
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 10, trailing: 0))
+                } else {
+                    HStack {
+                        Spacer()
+                        Text("Lista vazia!")
+                        Spacer()
+                    }
                 }
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 10, trailing: 0))
 
                 Text("Humor")
                     .font(.title3)
@@ -128,8 +143,9 @@ struct MainView: View {
                             .font(.headline)
 
                         HStack {
-                            CardView(applyGlassEffect: selectedMood == "Good" ? false : true, backgroundColor: .constant(selectedMood == "Good" ? .green : nil)) {
-                                selectedMood = "Good"
+                            CardView(applyGlassEffect: selectedDateData?.mood == "Good" ? false : true, backgroundColor: .constant(selectedDateData?.mood == "Good" ? .green : nil)) {
+                                guard let dayIndex = store.days.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }) else { return }
+                                store.days[dayIndex].mood = "Good"
                             } content: {
                                 HStack {
                                     Spacer()
@@ -142,8 +158,9 @@ struct MainView: View {
                             }
 
 
-                            CardView(applyGlassEffect: selectedMood == "Neutral" ? false : true, backgroundColor: .constant(selectedMood == "Neutral" ? .orange : nil)) {
-                                selectedMood = "Neutral"
+                            CardView(applyGlassEffect: selectedDateData?.mood == "Neutral" ? false : true, backgroundColor: .constant(selectedDateData?.mood == "Neutral" ? .orange : nil)) {
+                                guard let dayIndex = store.days.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }) else { return }
+                                store.days[dayIndex].mood = "Neutral"
                             } content: {
                                 HStack {
                                     Spacer()
@@ -156,8 +173,9 @@ struct MainView: View {
                             }
 
 
-                            CardView(applyGlassEffect: selectedMood == "Sad" ? false : true, backgroundColor: .constant(selectedMood == "Sad" ? .red : nil)) {
-                                selectedMood = "Sad"
+                            CardView(applyGlassEffect: selectedDateData?.mood == "Sad" ? false : true, backgroundColor: .constant(selectedDateData?.mood == "Sad" ? .red : nil)) {
+                                guard let dayIndex = store.days.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }) else { return }
+                                store.days[dayIndex].mood = "Sad"
                             } content: {
                                 HStack {
                                     Spacer()
@@ -178,23 +196,106 @@ struct MainView: View {
             .listStyle(.plain)
             .scrollIndicators(.hidden)
         }
-        .sheet(isPresented: $isAddEditModalPresented) {
-            AddEditModal()
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
+        .onFirstAppear {
+            if let data = UserDefaults.standard.data(forKey: "store") {
+                let decoder = JSONDecoder()
+                if let store = try? decoder.decode(Store.self, from: data) {
+                    self.store = store
+                }
+            }
+
+            if store.days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }) == nil {
+                let newDate = Store.DayData(date: Date(), meals: [], workouts: [], water: nil, mood: nil)
+                selectedDateData = newDate
+                store.days.append(newDate)
+                let encoder = JSONEncoder()
+                let data = try? encoder.encode(store)
+                UserDefaults.standard.set(data, forKey: "store")
+            } else {
+                selectedDateData = store.days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) })
+            }
+        }
+        .onChange(of: selectedDate, { _, newValue in
+            guard let dayData = store.days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }) else {
+                let newDate = Store.DayData(date: selectedDate, meals: [], workouts: [], water: nil, mood: nil)
+                selectedDateData = newDate
+                store.days.append(newDate)
+                return
+            }
+            selectedDateData = dayData
+        })
+        .onChange(of: store.days, { _, _ in
+            let encoder = JSONEncoder()
+            let data = try? encoder.encode(store)
+            UserDefaults.standard.set(data, forKey: "store")
+            selectedDateData = store.days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) })
+        })
+        .sheet(isPresented: $isAddModalPresented) {
+            AddEditModal(date: selectedDate, section: modalSection ?? .meal)
+                .environment(store)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $editModalData) { item in
+            AddEditModal(date: selectedDate, section: modalSection ?? .meal, itemID: item.id)
+                .environment(store)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
         }
     }
 }
 
 struct AddEditModal: View {
 
-    @State private var text = ""
-    @State var selectedSize: String = ""
+    @Environment(\.dismiss) var dismiss
+    @Environment(Store.self) var store
+    @State var text: String
+
+    var date: Date
+    var section: Section
+    var itemID: UUID?
+
+    init(date: Date, section: Section, itemID: UUID? = nil) {
+        self.date = date
+        self.section = section
+        self.itemID = itemID
+        self.text = ""
+    }
 
     var body: some View {
-        TextEditor(text: $text)
-            .frame(height: 150)
-            .padding()
+        VStack {
+            TextEditor(text: $text)
+                .frame(height: 150)
+                .padding()
+            Button("Salvar") {
+                guard let dayIndex = store.days.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: date) }) else { return }
+
+                if let itemID { // edit
+                    if section == .meal {
+                        guard let itemIndex = store.days[dayIndex].meals.firstIndex(where: { $0.id == itemID }) else { return }
+                        store.days[dayIndex].meals[itemIndex].description = text
+                    } else {
+                        guard let itemIndex = store.days[dayIndex].workouts.firstIndex(where: { $0.id == itemID }) else { return }
+                        store.days[dayIndex].workouts[itemIndex].description = text
+                    }
+                } else { // add
+                    if section == .meal {
+                        store.days[dayIndex].meals.append(.init(description: text))
+                    } else {
+                        store.days[dayIndex].workouts.append(.init(description: text))
+                    }
+                }
+
+                dismiss()
+            }
+        }
+        .onAppear {
+            if section == .meal {
+                text = store.days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: date) })?.meals.first(where: { $0.id == itemID })?.description ?? ""
+            } else {
+                text = store.days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: date) })?.workouts.first(where: { $0.id == itemID })?.description ?? ""
+            }
+        }
     }
 }
 

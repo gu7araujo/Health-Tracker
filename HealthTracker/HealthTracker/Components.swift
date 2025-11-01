@@ -66,12 +66,10 @@ struct CardListView<Content: View>: View {
 
     let isFirst: Bool
     let isUnique: Bool
-    let action: (() -> Void)?
 
-    init(isFirst: Bool = false, isUnique: Bool = false, action: (() -> Void)? = nil, @ViewBuilder content: () -> Content) {
+    init(isFirst: Bool = false, isUnique: Bool = false, @ViewBuilder content: () -> Content) {
         self.isFirst = isFirst
         self.isUnique = isUnique
-        self.action = action
         self.content = content()
     }
 
@@ -89,12 +87,6 @@ struct CardListView<Content: View>: View {
         .if(!isUnique, transform: { view in
             view
                 .frame(maxWidth: UIScreen.main.bounds.width-40)
-        })
-        .if(action != nil, transform: { view in
-            view
-                .onTapGesture(count: 2) {
-                    action?()
-                }
         })
         .padding(.leading, isFirst ? 20 : 0)
     }

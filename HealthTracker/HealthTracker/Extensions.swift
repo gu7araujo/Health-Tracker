@@ -15,4 +15,23 @@ extension View {
             self
         }
     }
+
+    public func onFirstAppear(perform action: @escaping () -> Void) -> some View {
+        modifier(FirstAppearModifier(action: action))
+    }
+}
+
+public struct FirstAppearModifier: ViewModifier {
+    @State private var hasAppeared = false
+    let action: () -> Void
+
+    public func body(content: Content) -> some View {
+        content
+            .onAppear {
+                if !hasAppeared {
+                    hasAppeared = true
+                    action()
+                }
+            }
+    }
 }
