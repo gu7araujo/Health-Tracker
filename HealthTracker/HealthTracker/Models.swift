@@ -14,10 +14,16 @@ class Store: Codable, Equatable {
         struct Item: Codable, Equatable, Identifiable {
             let id: UUID
             var description: String
+            var quantity: Int?
+            var satisfaction: Int?
+            var time: Int?
 
-            init(description: String) {
+            init(description: String, quantity: Int? = nil, satisfaction: Int? = nil, time: Int? = nil) {
                 self.id = UUID()
                 self.description = description
+                self.quantity = quantity
+                self.satisfaction = satisfaction
+                self.time = time
             }
         }
 

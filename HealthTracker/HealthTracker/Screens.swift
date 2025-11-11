@@ -23,6 +23,48 @@ struct MainView: View {
         )
     }
 
+    func getQuantityLabel(_ element: Store.DayData.Item) -> String {
+        if element.quantity == 0 {
+            return "Muito pequena"
+        } else if element.quantity == 1 {
+            return "Pequena"
+        } else if element.quantity == 2 {
+            return "Média"
+        } else if element.quantity == 3 {
+            return "Grande"
+        } else {
+            return ""
+        }
+    }
+
+    func getSatisfactionLabel(_ element: Store.DayData.Item) -> String {
+        if element.satisfaction == 0 {
+            return "30%"
+        } else if element.satisfaction == 1 {
+            return "50%"
+        } else if element.satisfaction == 2 {
+            return "80%"
+        } else if element.satisfaction == 3 {
+            return "100%"
+        } else {
+            return ""
+        }
+    }
+
+    func getDurationLabel(_ element: Store.DayData.Item) -> String {
+        if element.time == 0 {
+            return "15m"
+        } else if element.time == 1 {
+            return "30m"
+        } else if element.time == 2 {
+            return "1h"
+        } else if element.time == 3 {
+            return "1h30m"
+        } else {
+            return ""
+        }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -48,9 +90,9 @@ struct MainView: View {
                                     VStack(alignment: .leading) {
                                         Text(element.description)
                                             .padding(.bottom, 5)
-                                        Text("Quantidade: ")
+                                        Text("Quantidade: \(getQuantityLabel(element))")
                                             .font(.subheadline)
-                                        Text("Satisfeito(a): ")
+                                        Text("Satisfeito(a): \(getSatisfactionLabel(element))")
                                             .font(.subheadline)
                                     }
                                 }
@@ -109,7 +151,7 @@ struct MainView: View {
                                     VStack(alignment: .leading) {
                                         Text(element.description)
                                             .padding(.bottom, 5)
-                                        Text("Tempo: ")
+                                        Text("Tempo: \(getDurationLabel(element))")
                                             .font(.subheadline)
                                     }
                                 }
@@ -250,6 +292,9 @@ struct AddEditModal: View {
     @Environment(\.dismiss) var dismiss
     @Environment(Store.self) var store
     @State var text: String
+    @State var selectedQuantity: Int = 1
+    @State var selectedSatisfied: Int = 1
+    @State var selectedTime: Int = 1
 
     var date: Date
     var section: Section
@@ -260,13 +305,37 @@ struct AddEditModal: View {
         self.section = section
         self.itemID = itemID
         self.text = ""
+        print("Gustavo - \(section)")
     }
 
     var body: some View {
-        VStack {
+        List {
             TextEditor(text: $text)
-                .frame(height: 150)
-                .padding()
+                .frame(height: 40)
+
+            if section == .meal {
+                Picker("Quantidade", selection: $selectedQuantity) {
+                    Text("Muito pequena").tag(0)
+                    Text("Pequena").tag(1)
+                    Text("Média").tag(2)
+                    Text("Grande").tag(3)
+                }
+
+                Picker("Satisfeito(a)", selection: $selectedSatisfied) {
+                    Text("30%").tag(0)
+                    Text("50%").tag(1)
+                    Text("80%").tag(2)
+                    Text("100%").tag(3)
+                }
+            } else {
+                Picker("Tempo", selection: $selectedTime) {
+                    Text("15m").tag(0)
+                    Text("30m").tag(1)
+                    Text("1h").tag(2)
+                    Text("1h30m").tag(3)
+                }
+            }
+
             Button("Salvar") {
                 guard let dayIndex = store.days.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: date) }) else { return }
 
@@ -274,15 +343,18 @@ struct AddEditModal: View {
                     if section == .meal {
                         guard let itemIndex = store.days[dayIndex].meals.firstIndex(where: { $0.id == itemID }) else { return }
                         store.days[dayIndex].meals[itemIndex].description = text
+                        store.days[dayIndex].meals[itemIndex].quantity = selectedQuantity
+                        store.days[dayIndex].meals[itemIndex].satisfaction = selectedSatisfied
                     } else {
                         guard let itemIndex = store.days[dayIndex].workouts.firstIndex(where: { $0.id == itemID }) else { return }
                         store.days[dayIndex].workouts[itemIndex].description = text
+                        store.days[dayIndex].workouts[itemIndex].time = selectedTime
                     }
                 } else { // add
                     if section == .meal {
-                        store.days[dayIndex].meals.append(.init(description: text))
+                        store.days[dayIndex].meals.append(.init(description: text, quantity: selectedQuantity, satisfaction: selectedSatisfied))
                     } else {
-                        store.days[dayIndex].workouts.append(.init(description: text))
+                        store.days[dayIndex].workouts.append(.init(description: text, time: selectedTime))
                     }
                 }
 
@@ -292,8 +364,11 @@ struct AddEditModal: View {
         .onAppear {
             if section == .meal {
                 text = store.days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: date) })?.meals.first(where: { $0.id == itemID })?.description ?? ""
+                selectedQuantity = store.days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: date) })?.meals.first(where: { $0.id == itemID })?.quantity ?? 1
+                selectedSatisfied = store.days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: date) })?.meals.first(where: { $0.id == itemID })?.satisfaction ?? 1
             } else {
                 text = store.days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: date) })?.workouts.first(where: { $0.id == itemID })?.description ?? ""
+                selectedTime = store.days.first(where: { Calendar.current.isDate($0.date, inSameDayAs: date) })?.workouts.first(where: { $0.id == itemID })?.time ?? 1
             }
         }
     }
