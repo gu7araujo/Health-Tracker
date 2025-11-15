@@ -373,7 +373,3 @@ struct AddEditModal: View {
         }
     }
 }
-
-//#Preview {
-//    MainView()
-//}
