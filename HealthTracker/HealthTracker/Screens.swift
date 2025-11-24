@@ -73,7 +73,7 @@ struct MainView: View {
                         .font(.title3)
                         .bold()
                 }
-                .datePickerStyle(.compact)
+                .datePickerStyle(.graphical)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 30, leading: 20, bottom: 30, trailing: 20))
 
