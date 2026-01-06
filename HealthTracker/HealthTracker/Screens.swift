@@ -104,13 +104,15 @@ struct MainView: View {
                         }
                     }
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 10, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 15, trailing: 0))
                 } else {
                     HStack {
                         Spacer()
                         Text("Lista vazia!")
                         Spacer()
                     }
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 20, leading: 0, bottom: 20, trailing: 0))
                 }
 
                 Text("Água")
@@ -136,7 +138,7 @@ struct MainView: View {
                     }
                 }
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 10, trailing: 20))
+                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 15, trailing: 20))
 
                 HeaderListView(title: "Exercícios", icon: "plus", action: {
                     modalSection = .workout
@@ -163,13 +165,15 @@ struct MainView: View {
                         }
                     }
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 10, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 15, trailing: 0))
                 } else {
                     HStack {
                         Spacer()
                         Text("Lista vazia!")
                         Spacer()
                     }
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 20, leading: 0, bottom: 20, trailing: 0))
                 }
 
                 Text("Humor")
