@@ -110,6 +110,13 @@ final class LoginViewModel {
 ```
 </layer>
 
+#### Data Flow
+
+1. View instantiates ViewModel with injected use cases.
+2. ViewModel calls use case `execute()` methods.
+3. Use cases invoke repository protocols.
+4. Repositories use data sources (e.g., UserDefaults) for persistence.
+
 ### Layer Dependencies Summary
 
 | Layer | Can Depend On | Cannot Depend On |
@@ -201,6 +208,10 @@ protocol Repository<T> { }
 ❌ Retained cycles in closures
 ❌ Force unwrapping optionals
 </avoid>
+
+## Build & Run
+
+- iOS 26.0 target, SwiftUI app.
 
 ## Workflow
 
