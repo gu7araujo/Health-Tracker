@@ -66,14 +66,9 @@ struct MainView: View {
     // MARK: - Date Picker Section
 
     private var datePickerSection: some View {
-        DatePicker(selection: $viewModel.selectedDate, displayedComponents: [.date]) {
-            Text("Selecione a data")
-                .font(.title3)
-                .bold()
-        }
-        .datePickerStyle(.graphical)
-        .listRowSeparator(.hidden)
-        .listRowInsets(EdgeInsets(top: 30, leading: 20, bottom: 30, trailing: 20))
+        CalendarStrip(selectedDate: $viewModel.selectedDate)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 30, leading: 0, bottom: 30, trailing: 0))
     }
 
     // MARK: - Meals Section

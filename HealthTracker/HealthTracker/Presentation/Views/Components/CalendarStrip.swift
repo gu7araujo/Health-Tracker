@@ -10,6 +10,7 @@ import SwiftUI
 /// A horizontally scrollable calendar strip showing days of the week.
 struct CalendarStrip: View {
 
+    @Binding var selectedDate: Date
     @State private var dates: [Date] = []
     @State private var isLoadingPast = false
     @State private var oldestLoadedDate: Date?
@@ -25,31 +26,40 @@ struct CalendarStrip: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 30) {
-                    ForEach(dates, id: \.self) { date in
-                        CalendarStripDay(
-                            weekdayLetter: weekdayLetter(from: date),
-                            dayNumber: dayNumber(from: date)
-                        )
-                        .id(date)
-                        .onAppear {
-                            checkAndLoadPast(for: date)
+        GeometryReader { outerGeometry in
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack {
+                        ForEach(dates, id: \.self) { date in
+                            let isSelected = brazilianCalendar.isDate(date, inSameDayAs: selectedDate)
+                            CalendarStripDay(
+                                weekdayLetter: weekdayLetter(from: date),
+                                dayNumber: dayNumber(from: date),
+                                isSelected: isSelected
+                            ) {
+                                selectedDate = date
+                            }
+                            .frame(width: outerGeometry.size.width / 8)
+                            .id(date)
+                            .onAppear {
+                                checkAndLoadPast(for: date)
+                            }
                         }
                     }
+                    .scrollTargetLayout()
                 }
-                .scrollTargetLayout()
-                .padding()
-            }
-            .scrollTargetBehavior(.paging)
-            .onAppear {
-                if dates.isEmpty {
-                    loadInitialDates()
-                    scrollToCurrentWeek(using: proxy)
+                .scrollTargetBehavior(.paging)
+                .onAppear {
+                    if dates.isEmpty {
+                        loadInitialDates()
+                        scrollToCurrentWeek(using: proxy)
+                    }
+                }
+                .onChange(of: selectedDate) { _, newDate in
+                    scrollToSelectedDate(newDate, using: proxy)
                 }
             }
-        }
+        }.frame(height: 65)
     }
 
     // MARK: - Date Formatting
@@ -104,6 +114,40 @@ struct CalendarStrip: View {
         }
     }
 
+    private func scrollToSelectedDate(_ date: Date, using proxy: ScrollViewProxy) {
+        // Ensure the date exists in the dates array, if not, load more dates
+        let dateExists = dates.contains { brazilianCalendar.isDate($0, inSameDayAs: date) }
+        
+        if !dateExists {
+            // Load dates around the selected date
+            loadDatesAround(date)
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            proxy.scrollTo(date, anchor: .center)
+        }
+    }
+
+    private func loadDatesAround(_ date: Date) {
+        let calendar = brazilianCalendar
+        var newDates: [Date] = []
+        
+        // Load 7 days before and 7 days after the selected date
+        for dayOffset in -7...7 {
+            if let newDate = calendar.date(byAdding: .day, value: dayOffset, to: date) {
+                newDates.append(newDate)
+            }
+        }
+        
+        // Merge with existing dates, avoiding duplicates
+        let existingDateSet = Set(dates.map { calendar.startOfDay(for: $0) })
+        let newDateSet = Set(newDates.map { calendar.startOfDay(for: $0) })
+        let uniqueNewDates = newDates.filter { !existingDateSet.contains(calendar.startOfDay(for: $0)) }
+        
+        dates = (dates + uniqueNewDates).sorted()
+        oldestLoadedDate = dates.first
+    }
+
     private func checkAndLoadPast(for date: Date) {
         guard !isLoadingPast, let oldest = oldestLoadedDate else {
             return
@@ -149,6 +193,8 @@ struct CalendarStripDay: View {
 
     let weekdayLetter: String
     let dayNumber: Int
+    let isSelected: Bool
+    let onTap: () -> Void
 
     var body: some View {
         VStack {
@@ -157,15 +203,24 @@ struct CalendarStripDay: View {
                 .padding(7)
                 .background(
                     Circle()
-                        .stroke(Color.green, lineWidth: 3)
+                        .fill(isSelected ? Color.green : Color.clear)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.green, lineWidth: isSelected ? 2 : 3)
+                        )
                 )
+                .foregroundColor(isSelected ? .white : .primary)
 
             Text("\(dayNumber)")
                 .font(.title3)
+                .foregroundColor(isSelected ? .green : .primary)
+        }
+        .onTapGesture {
+            onTap()
         }
     }
 }
 
 #Preview {
-    CalendarStrip()
+    CalendarStrip(selectedDate: .constant(Date()))
 }
