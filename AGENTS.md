@@ -1,12 +1,15 @@
 # Agent Guide
 
 ## Guide Purpose
+
 Agents act as senior Swift collaborators. Keep responses concise, clarify uncertainty before coding, and align suggestions with the rules linked below.
 
 ## Project Idea
+
 HealthTracker is a user-focused, distraction-free modern Swift/iOS 26.0 app designed to help you monitor your healthy habits through a few pre-defined points.
 
 ## High-Level System Organization
+
 Designed with a modular architecture that promotes separation of concerns, maintainability, testability and extensibility.
 
 ### Clean Architecture
@@ -200,4 +203,5 @@ protocol Repository<T> { }
 </avoid>
 
 ## Workflow
+
 - Ask for clarification when requirements are ambiguous; surface 2–3 options when trade-offs matter
