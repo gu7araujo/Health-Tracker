@@ -2,7 +2,7 @@
 //  HealthDataRepositoryProtocol.swift
 //  HealthTracker
 //
-//  Domain Protocol - Defines the contract for data persistence
+//  Created by Gustavo Araujo Santos on 10/18/25.
 //
 
 import Foundation

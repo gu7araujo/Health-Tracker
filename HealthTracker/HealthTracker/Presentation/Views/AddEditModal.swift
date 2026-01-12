@@ -2,7 +2,7 @@
 //  AddEditModal.swift
 //  HealthTracker
 //
-//  Presentation Layer - Modal for adding/editing meals and workouts
+//  Created by Gustavo Araujo Santos on 10/18/25.
 //
 
 import SwiftUI

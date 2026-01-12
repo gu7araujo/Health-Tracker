@@ -2,7 +2,7 @@
 //  HealthDataRepository.swift
 //  HealthTracker
 //
-//  Data Layer - Repository implementation
+//  Created by Gustavo Araujo Santos on 10/18/25.
 //
 
 import Foundation

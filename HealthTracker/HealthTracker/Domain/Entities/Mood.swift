@@ -2,7 +2,7 @@
 //  Mood.swift
 //  HealthTracker
 //
-//  Domain Entity - Pure Swift, no framework dependencies except SwiftUI for Color
+//  Created by Gustavo Araujo Santos on 10/18/25.
 //
 
 import SwiftUI

@@ -2,7 +2,7 @@
 //  UserDefaultsDataSource.swift
 //  HealthTracker
 //
-//  Data Layer - Local persistence using UserDefaults
+//  Created by Gustavo Araujo Santos on 10/18/25.
 //
 
 import Foundation

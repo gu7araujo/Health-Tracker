@@ -2,7 +2,7 @@
 //  CardListView.swift
 //  HealthTracker
 //
-//  Presentation Layer - Horizontal scrolling card component
+//  Created by Gustavo Araujo Santos on 10/18/25.
 //
 
 import SwiftUI

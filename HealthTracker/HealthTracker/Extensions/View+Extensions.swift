@@ -2,7 +2,7 @@
 //  View+Extensions.swift
 //  HealthTracker
 //
-//  Utility extensions for SwiftUI Views
+//  Created by Gustavo Araujo Santos on 10/18/25.
 //
 
 import SwiftUI

@@ -2,7 +2,7 @@
 //  LoadDayDataUseCase.swift
 //  HealthTracker
 //
-//  Domain Use Case - Business logic for loading health data
+//  Created by Gustavo Araujo Santos on 10/18/25.
 //
 
 import Foundation

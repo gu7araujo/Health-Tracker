@@ -2,7 +2,7 @@
 //  MainView.swift
 //  HealthTracker
 //
-//  Presentation Layer - Main health tracking view
+//  Created by Gustavo Araujo Santos on 10/18/25.
 //
 
 import SwiftUI

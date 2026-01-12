@@ -2,7 +2,7 @@
 //  MainViewModel.swift
 //  HealthTracker
 //
-//  Presentation Layer - ViewModel for MainView
+//  Created by Gustavo Araujo Santos on 10/18/25.
 //
 
 import Foundation

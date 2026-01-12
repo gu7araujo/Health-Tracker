@@ -2,7 +2,7 @@
 //  HeaderListView.swift
 //  HealthTracker
 //
-//  Presentation Layer - Section header component
+//  Created by Gustavo Araujo Santos on 10/18/25.
 //
 
 import SwiftUI

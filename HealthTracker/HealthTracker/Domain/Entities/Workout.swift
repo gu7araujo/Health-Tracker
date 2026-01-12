@@ -2,7 +2,7 @@
 //  Workout.swift
 //  HealthTracker
 //
-//  Domain Entity - Pure Swift
+//  Created by Gustavo Araujo Santos on 10/18/25.
 //
 
 import Foundation
