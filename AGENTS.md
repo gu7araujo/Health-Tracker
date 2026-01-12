@@ -33,7 +33,7 @@ Apply Clean Architecture via folders. The golden rule is the **Dependency Rule**
     └── 📂 ViewModels/Presenters
 ```
 
-### Data Communication Between Layers
+#### Data Communication Between Layers
 
 Communication follows the **Dependency Inversion** principle. Here is the step-by-step flow:
 
@@ -117,7 +117,7 @@ final class LoginViewModel {
 3. Use cases invoke repository protocols.
 4. Repositories use data sources (e.g., UserDefaults) for persistence.
 
-### Layer Dependencies Summary
+#### Layer Dependencies Summary
 
 | Layer | Can Depend On | Cannot Depend On |
 |-------|--------------|------------------|
@@ -127,6 +127,21 @@ final class LoginViewModel {
 
 ## Code Style Conventions
 - Swift files use 4-space indentation, ≤180-character width, and always-trailing commas
+
+### File Headers and Documentation
+
+All source files must include the standard license header:
+- Author: Gustavo Araujo Santos
+- Date: Creation date in the mm/dd/yy format
+
+```swift
+//
+//  FileName.swift
+//  HealthTracker
+//
+//  Created by Gustavo Araujo Santos on [Date].
+//
+```
 
 ## CORE RULES [CRITICAL - ALWAYS APPLY]
 
