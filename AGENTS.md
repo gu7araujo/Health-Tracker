@@ -221,12 +221,22 @@ All source files must include the standard license header:
 - Domain code becomes unbreakable: even if boundary checks are commented out, domain invariants remain enforced by types
 </rule_4>
 
-<rule_5 priority="MEDIUM">
+<rule_5 priority="HIGH">
+**WITNESS PATTERN FOR ACCESS CONTROL**: Turn conventions into compile-time requirements
+- A **Witness** is a value that proves a precondition is met (e.g., feature enabled, user authenticated, data saved)
+- Replace boolean flags with optional witness types (e.g., `isEnabled: Bool` → `enabled: FeatureEnabled?`)
+- Use `fileprivate init()` to prevent forging witnesses outside their origin
+- Require witnesses as non-optional arguments to enforce access control at compile time
+- Code fails to compile if access control isn't enforced, catching mistakes early
+- Use "black hole" arguments (`init(_: Witness)`) when witness is only proof, not data
+</rule_5>
+
+<rule_6 priority="MEDIUM">
 **TESTABLE BY DESIGN**: Inject all dependencies
 - Design for testing from start
 - Test behavior, not implementation
 - Decouple from frameworks
-</rule_5>
+</rule_6>
 
 ## Common Implementation Patterns
 
@@ -350,6 +360,97 @@ func execute(email: String, password: String) {
 ```
 </pattern>
 
+<pattern name="witness_access_control">
+```swift
+// ❌ AVOID: Boolean flags for access control
+struct FeatureFlags {
+    let isPremiumEnabled: Bool  // ⚠️ Can be ignored, no compile-time enforcement
+}
+
+if featureFlags.isPremiumEnabled {
+    showPremiumFeature()  // ⚠️ Another entry point might forget this check
+}
+
+// ✅ PREFER: Witness pattern for type-safe access control
+
+// 1. Define witness with fileprivate init (can't be forged)
+struct PremiumEnabled {
+    fileprivate init() {}  // Only creatable in this file
+}
+
+// 2. Replace Bool with optional witness
+struct FeatureFlags: Decodable {
+    let premiumEnabled: PremiumEnabled?
+    
+    enum CodingKeys: String, CodingKey {
+        case isPremiumEnabled = "premium-enabled"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let isPremiumEnabled = try container.decode(Bool.self, forKey: .isPremiumEnabled)
+        // Embed proof into witness during decoding
+        self.premiumEnabled = isPremiumEnabled ? PremiumEnabled() : nil
+    }
+}
+
+// 3. Require witness as proof (black hole argument)
+struct PremiumFeatureScreen: View {
+    init(_: PremiumEnabled) {}  // Requires proof, not data
+}
+
+// 4. Propagate witness through navigation
+enum Path {
+    case premium(PremiumEnabled)  // Witness travels with path
+}
+
+// Usage: Compile-time enforcement
+if let premiumEnabled = featureFlags.premiumEnabled {
+    path.append(.premium(premiumEnabled))  // ✅ Can only navigate with proof
+}
+
+// Deep link without witness = compile error
+.onOpenURL { url in
+    if url.path() == "/premium" {
+        path.append(.premium(???))  // ❌ ERROR: Missing proof!
+    }
+}
+```
+</pattern>
+
+<pattern name="witness_operation_order">
+```swift
+// ✅ Use witnesses to enforce operation order
+
+// Witness proves video was saved
+struct SavedVideo {
+    let videoData: Data
+    fileprivate init(_ videoData: Data) {
+        self.videoData = videoData
+    }
+}
+
+class VideoStorage {
+    func save(_ videoData: Data) async throws -> SavedVideo {
+        // ... saving logic ...
+        return SavedVideo(videoData)  // Proof embedded on success
+    }
+}
+
+class VideoUploader {
+    // Requires proof that video was saved first
+    func upload(_ savedVideo: SavedVideo) async { ... }
+}
+
+// Usage: Correct order enforced by types
+let savedVideo = try await storage.save(videoData)
+await uploader.upload(savedVideo)  // ✅ Must save first
+
+// Wrong order = compile error
+await uploader.upload(videoData)  // ❌ ERROR: Expected SavedVideo, not Data
+```
+</pattern>
+
 ## QUALITY GATES
 
 <checklist>
@@ -362,6 +463,8 @@ func execute(email: String, password: String) {
 ☐ VALIDATED data flows through system as typed values, not raw strings
 ☐ DOMAIN BOUNDARIES: Domain uses domain types, boundaries parse strings ↔ domain types
 ☐ ROBUST DOMAIN: Domain code unbreakable even if boundary checks are removed
+☐ ACCESS CONTROL: Preconditions use witnesses, not boolean checks
+☐ OPERATION ORDER: Sequential operations enforced by witness types when critical
 </checklist>
 
 ## ANTI-PATTERNS TO AVOID
@@ -378,6 +481,10 @@ func execute(email: String, password: String) {
 ❌ Passing strings through domain layer (domain should use domain types)
 ❌ Domain types in UI/Network layers (boundaries should use primitives)
 ❌ Weakly-typed primitives in domain logic (domain should be strongly-typed)
+❌ Boolean flags for access control (use witness types instead)
+❌ Multiple entry points without compile-time access enforcement
+❌ Forgeable proofs (witness init should be fileprivate)
+❌ Relying on convention/discipline for access control (turn into compile-time requirement)
 </avoid>
 
 ## Build & Run
