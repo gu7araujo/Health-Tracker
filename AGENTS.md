@@ -6,7 +6,7 @@ Agents act as senior Swift collaborators. Keep responses concise, clarify uncert
 
 ## Project Idea
 
-HealthTracker is a user-focused, distraction-free modern Swift/iOS 26.0 app designed to help you monitor your healthy habits through a few pre-defined points.
+HealthTracker is a user-focused, distraction-free modern Swift/iOS 26.0 app designed to help monitor healthy habits through a few pre-defined points.
 
 ## High-Level System Organization
 
@@ -39,9 +39,33 @@ Communication follows the **Dependency Inversion** principle. Here is the step-b
 
 <layer name="domain" description="Defines WHAT needs to be done, not HOW">
 ```swift
+// Domain/Entities/Email.swift
+public struct Email {
+    let rawValue: String
+    
+    public init?(_ rawValue: String) {
+        guard rawValue.matches("#email regex#") else {
+            return nil
+        }
+        self.rawValue = rawValue
+    }
+}
+
+// Domain/Entities/Password.swift
+public struct Password {
+    let rawValue: String
+    
+    public init?(_ rawValue: String) {
+        guard rawValue.count > 7 else {
+            return nil
+        }
+        self.rawValue = rawValue
+    }
+}
+
 // Domain/Protocols/AuthRepositoryProtocol.swift
 public protocol AuthRepositoryProtocol {
-    func login(username: String, password: String) async throws -> User
+    func login(email: Email, password: Password) async throws -> User
 }
 
 // Domain/UseCases/LoginUseCase.swift
@@ -52,8 +76,8 @@ public final class LoginUseCase {
         self.repository = repository
     }
     
-    public func execute(username: String, password: String) async throws -> User {
-        try await repository.login(username: username, password: password)
+    public func execute(email: Email, password: Password) async throws -> User {
+        try await repository.login(email: email, password: password)
     }
 }
 ```
@@ -70,11 +94,18 @@ final class AuthRepository: AuthRepositoryProtocol {
         self.networkService = networkService
     }
 
-    func login(username: String, password: String) async throws -> User {
-        // 1. Call API
-        let dto = try await networkService.post("/auth/login", body: LoginRequest(username: username, password: password))
-        // 2. Convert DTO → Domain Entity (via Mapper)
-        // 3. Return Entity
+    // ✅ Receives domain types, converts to strings/JSON at boundary
+    func login(email: Email, password: Password) async throws -> User {
+        // 1. Convert domain types → strings/JSON for network
+        let request = LoginRequest(
+            email: email.rawValue,  // Domain type → string at boundary
+            password: password.rawValue
+        )
+        
+        // 2. Call API (network works with strings/JSON)
+        let dto = try await networkService.post("/auth/login", body: request)
+        
+        // 3. Convert DTO → Domain Entity (via Mapper)
         return dto.toDomain()
     }
 }
@@ -95,12 +126,21 @@ final class LoginViewModel {
         self.loginUseCase = loginUseCase
     }
 
-    func onLoginButtonTapped(username: String, password: String) async {
+    // ✅ UI works with strings, parses to domain types at boundary
+    func onLoginButtonTapped(emailString: String, passwordString: String) async {
+        // Parse strings → domain types at boundary
+        guard let email = Email(emailString),
+              let password = Password(passwordString) else {
+            // Handle validation error
+            return
+        }
+        
         isLoading = true
         defer { isLoading = false }
 
         do {
-            let user = try await loginUseCase.execute(username: username, password: password)
+            // Domain receives validated types
+            let user = try await loginUseCase.execute(email: email, password: password)
             // Handle success
         } catch {
             self.error = error
@@ -126,6 +166,7 @@ final class LoginViewModel {
 | Presentation | Domain, Data (via DI) | — |
 
 ## Code Style Conventions
+
 - Swift files use 4-space indentation, ≤180-character width, and always-trailing commas
 
 ### File Headers and Documentation
@@ -161,12 +202,31 @@ All source files must include the standard license header:
 - NEVER force unwrap in production
 </rule_2>
 
-<rule_3 priority="MEDIUM">
+<rule_3 priority="HIGH">
+**PARSE, DON'T VALIDATE**: Use types to carry proof of validation
+- Create validation-carrying types (e.g., `Email`, `Password`) instead of validating raw strings
+- Types serve as vessels for validated data, carrying validation invariants within them
+- Prefer parsing (transformation with retention) over validation (check with discard)
+- Validation checks can be displaced; parsed types cannot be created without validation
+- Eliminates systemic vulnerabilities from scattered validation logic
+</rule_3>
+
+<rule_4 priority="HIGH">
+**DOMAIN BOUNDARIES & TYPE PLACEMENT**: Keep strongly-typed domain types in the domain, weakly-typed primitives at boundaries
+- Domain logic lives with domain types (e.g., `Email`, `Password` in login domain)
+- UI domain works with strings (for display purposes)
+- Network/Data layer works with strings/JSON (for serialization)
+- Parse at boundaries: convert strings → domain types when entering domain, domain types → strings when leaving
+- Pushing weakly-typed types outside the domain achieves clean, robust domain code
+- Domain code becomes unbreakable: even if boundary checks are commented out, domain invariants remain enforced by types
+</rule_4>
+
+<rule_5 priority="MEDIUM">
 **TESTABLE BY DESIGN**: Inject all dependencies
 - Design for testing from start
 - Test behavior, not implementation
 - Decouple from frameworks
-</rule_3>
+</rule_5>
 
 ## Common Implementation Patterns
 
@@ -204,6 +264,92 @@ protocol Repository<T> { }
 ```
 </pattern>
 
+<pattern name="type_safe_validation">
+```swift
+// ❌ AVOID: Validation that discards information
+func isValidEmail(_ string: String) -> Bool {
+    return string.matches("#email regex#")
+}
+if isValidEmail(email) {
+    // ⚠️ No proof retained - validation can be bypassed
+}
+
+// ✅ PREFER: Parsing that retains validation proof
+struct Email {
+    let rawValue: String
+    
+    init?(_ rawValue: String) {
+        guard rawValue.matches("#email regex#") else {
+            return nil
+        }
+        self.rawValue = rawValue
+    }
+}
+
+// Usage: Type carries proof of validation
+func login(email: Email, password: Password) {
+    // ✅ Has proof that email and password are validated
+    // No need to validate again
+}
+
+// Parse at boundaries, propagate validated types
+guard let validEmail = Email(emailString),
+      let validPassword = Password(passwordString) else {
+    return
+}
+login(email: validEmail, password: validPassword)
+```
+</pattern>
+
+<pattern name="domain_boundaries">
+```swift
+// ✅ CORRECT: Parse at boundaries, use domain types in domain
+
+// UI Layer: Works with strings
+struct LoginView: View {
+    @State var emailString: String = ""  // UI uses strings
+    @State var passwordString: String = ""
+    
+    func onLoginTapped() {
+        // Parse strings → domain types at boundary
+        guard let email = Email(emailString),
+              let password = Password(passwordString) else {
+            return
+        }
+        viewModel.login(email: email, password: password)
+    }
+}
+
+// Domain Layer: Works with domain types
+final class LoginUseCase {
+    func execute(email: Email, password: Password) async throws -> User {
+        // ✅ Domain code is robust - types enforce invariants
+        // Even if boundary checks are removed, domain types prevent invalid data
+        return try await repository.login(email: email, password: password)
+    }
+}
+
+// Data Layer: Converts domain types → strings/JSON at boundary
+final class AuthRepository: AuthRepositoryProtocol {
+    func login(email: Email, password: Password) async throws -> User {
+        // Convert domain types → strings for network
+        let request = LoginRequest(
+            email: email.rawValue,      // Domain → string at boundary
+            password: password.rawValue
+        )
+        let dto = try await networkService.post("/login", body: request)
+        return dto.toDomain()
+    }
+}
+
+// ❌ AVOID: Passing strings through domain
+func execute(email: String, password: String) {
+    // ⚠️ Domain doesn't know if data is validated
+    // Must check everywhere, can be bypassed
+}
+```
+</pattern>
+
 ## QUALITY GATES
 
 <checklist>
@@ -212,6 +358,10 @@ protocol Repository<T> { }
 ☐ DEPENDENCIES injected via init
 ☐ PUBLIC APIs documented
 ☐ EDGE CASES handled (nil, empty, invalid)
+☐ VALIDATION uses parsing (validation-carrying types) not boolean checks
+☐ VALIDATED data flows through system as typed values, not raw strings
+☐ DOMAIN BOUNDARIES: Domain uses domain types, boundaries parse strings ↔ domain types
+☐ ROBUST DOMAIN: Domain code unbreakable even if boundary checks are removed
 </checklist>
 
 ## ANTI-PATTERNS TO AVOID
@@ -222,6 +372,12 @@ protocol Repository<T> { }
 ❌ Synchronous network calls
 ❌ Retained cycles in closures
 ❌ Force unwrapping optionals
+❌ Scattered validation checks (validation that discards proof)
+❌ Passing raw strings where validated types are needed
+❌ Re-validating data that should already be validated (indicates missing type safety)
+❌ Passing strings through domain layer (domain should use domain types)
+❌ Domain types in UI/Network layers (boundaries should use primitives)
+❌ Weakly-typed primitives in domain logic (domain should be strongly-typed)
 </avoid>
 
 ## Build & Run
