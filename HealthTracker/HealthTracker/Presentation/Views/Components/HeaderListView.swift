@@ -9,7 +9,6 @@ import SwiftUI
 
 /// A section header with title and action button.
 struct HeaderListView: View {
-
     let title: String
     let icon: String
     let action: () -> Void

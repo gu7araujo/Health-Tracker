@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct MainView: View {
-
     @State private var viewModel = MainViewModel()
     @State private var isAddModalPresented = false
     @State private var modalSection: HealthSection = .meal
@@ -129,9 +128,9 @@ struct MainView: View {
                                 get: { viewModel.waterIntake },
                                 set: { viewModel.updateWater($0) }
                             ),
-                            in: 0...10,
+                            in: 0 ... 10,
                             step: 0.1,
-                            label: { }
+                            label: {}
                         )
                     }
                     Spacer()

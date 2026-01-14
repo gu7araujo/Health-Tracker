@@ -11,7 +11,6 @@ import Foundation
 /// The Domain layer depends on this abstraction, NOT on concrete implementations.
 /// This follows the Dependency Inversion Principle.
 protocol HealthDataRepositoryProtocol {
-
     /// Loads all stored day data entries.
     /// - Returns: Array of `DayData` sorted by date, or empty array if none exist.
     func loadAllDays() -> [DayData]

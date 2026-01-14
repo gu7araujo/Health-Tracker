@@ -10,7 +10,6 @@ import Foundation
 /// Represents a workout/exercise entry with duration.
 /// Replaces the generic `Item` struct with workout-specific properties.
 struct Workout: Identifiable, Codable, Equatable {
-
     /// Duration of the workout session
     enum Duration: Int, Codable, CaseIterable {
         case fifteenMin = 0

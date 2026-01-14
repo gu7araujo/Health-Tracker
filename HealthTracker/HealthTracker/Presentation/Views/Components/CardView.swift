@@ -9,7 +9,6 @@ import SwiftUI
 
 /// A reusable card component with optional glass effect and tap action.
 struct CardView<Content: View>: View {
-
     @ViewBuilder var content: Content
     @Binding var backgroundColor: Color?
 
@@ -27,7 +26,7 @@ struct CardView<Content: View>: View {
         self.internalPadding = internalPadding ?? EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
         self.action = action
         self.applyGlassEffect = applyGlassEffect
-        self._backgroundColor = backgroundColor
+        _backgroundColor = backgroundColor
         self.content = content()
     }
 

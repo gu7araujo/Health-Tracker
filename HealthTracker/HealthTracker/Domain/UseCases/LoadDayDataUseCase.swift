@@ -10,7 +10,6 @@ import Foundation
 /// Use case for loading health tracking data.
 /// Encapsulates the business logic for retrieving stored day data.
 final class LoadDayDataUseCase {
-
     private let repository: HealthDataRepositoryProtocol
 
     init(repository: HealthDataRepositoryProtocol) {

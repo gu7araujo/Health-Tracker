@@ -17,7 +17,6 @@ protocol LocalDataSourceProtocol {
 /// UserDefaults-based implementation of local data storage.
 /// Extracts persistence logic from the presentation layer.
 final class UserDefaultsDataSource: LocalDataSourceProtocol {
-
     private let userDefaults: UserDefaults
     private let storageKey: String
 
@@ -42,7 +41,7 @@ final class UserDefaultsDataSource: LocalDataSourceProtocol {
         } catch {
             // Log error in debug builds, return empty array for graceful degradation
             #if DEBUG
-            print("UserDefaultsDataSource: Failed to decode stored data - \(error)")
+                print("UserDefaultsDataSource: Failed to decode stored data - \(error)")
             #endif
             return []
         }
@@ -58,7 +57,7 @@ final class UserDefaultsDataSource: LocalDataSourceProtocol {
             userDefaults.set(data, forKey: storageKey)
         } catch {
             #if DEBUG
-            print("UserDefaultsDataSource: Failed to encode data - \(error)")
+                print("UserDefaultsDataSource: Failed to encode data - \(error)")
             #endif
         }
     }

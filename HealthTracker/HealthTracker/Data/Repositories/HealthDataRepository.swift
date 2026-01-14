@@ -10,7 +10,6 @@ import Foundation
 /// Concrete implementation of `HealthDataRepositoryProtocol`.
 /// Coordinates data operations through the local data source.
 final class HealthDataRepository: HealthDataRepositoryProtocol {
-
     private let dataSource: LocalDataSourceProtocol
 
     init(dataSource: LocalDataSourceProtocol = UserDefaultsDataSource()) {

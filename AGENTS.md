@@ -491,6 +491,10 @@ await uploader.upload(videoData)  // ❌ ERROR: Expected SavedVideo, not Data
 
 - iOS 26.0 target, SwiftUI app.
 
+## Commands
+- `swiftformat .`: Apply formatting (run after finishing edit)
+- `swiftlint .`: Lint Swift sources (run after finishing edit)
+
 ## Workflow
 
 - Ask for clarification when requirements are ambiguous; surface 2–3 options when trade-offs matter

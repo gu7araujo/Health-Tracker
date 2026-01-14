@@ -11,7 +11,6 @@ import Foundation
 /// Extracts business logic from the view and coordinates with use cases.
 @Observable
 final class MainViewModel {
-
     // MARK: - Dependencies
 
     private let loadUseCase: LoadDayDataUseCase
@@ -20,7 +19,7 @@ final class MainViewModel {
     // MARK: - State
 
     private(set) var days: [DayData] = []
-    var selectedDate: Date = Date() {
+    var selectedDate: Date = .init() {
         didSet {
             ensureDayDataExists(for: selectedDate)
         }

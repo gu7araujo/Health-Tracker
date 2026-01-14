@@ -9,7 +9,6 @@ import SwiftUI
 
 /// A card designed for horizontal scrolling lists with dynamic sizing.
 struct CardListView<Content: View>: View {
-
     @ViewBuilder var content: Content
 
     let isFirst: Bool

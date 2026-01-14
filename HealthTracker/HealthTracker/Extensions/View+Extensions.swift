@@ -10,7 +10,6 @@ import SwiftUI
 // MARK: - Conditional View Modifier
 
 extension View {
-
     /// Conditionally applies a transformation to the view.
     /// - Parameters:
     ///   - condition: The condition to evaluate.
@@ -29,7 +28,6 @@ extension View {
 // MARK: - First Appear Modifier
 
 extension View {
-
     /// Performs an action only on the first appearance of the view.
     /// Useful for one-time initialization that shouldn't repeat on view reappearance.
     /// - Parameter action: The action to perform on first appearance.
@@ -41,7 +39,6 @@ extension View {
 
 /// A view modifier that tracks first appearance and executes an action only once.
 struct FirstAppearModifier: ViewModifier {
-
     @State private var hasAppeared = false
     let action: () -> Void
 

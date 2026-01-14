@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct AddEditModal: View {
-
     @Environment(\.dismiss) private var dismiss
 
     private let viewModel: MainViewModel

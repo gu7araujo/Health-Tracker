@@ -10,7 +10,6 @@ import Foundation
 /// Represents a meal entry with quantity and satisfaction level.
 /// Replaces the generic `Item` struct with meal-specific properties.
 struct Meal: Identifiable, Codable, Equatable {
-
     /// Portion size of the meal
     enum Quantity: Int, Codable, CaseIterable {
         case verySmall = 0

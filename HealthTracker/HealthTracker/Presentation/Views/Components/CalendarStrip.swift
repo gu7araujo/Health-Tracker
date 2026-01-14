@@ -9,7 +9,6 @@ import SwiftUI
 
 /// A horizontally scrollable calendar strip showing days of the week.
 struct CalendarStrip: View {
-
     @Binding var selectedDate: Date
     @State private var dates: [Date] = []
     @State private var isLoadingPast = false
@@ -89,14 +88,14 @@ struct CalendarStrip: View {
         var tempDates: [Date] = []
 
         // Load PAST week (7 days before current week)
-        for dayOffset in -7..<0 {
+        for dayOffset in -7 ..< 0 {
             if let date = calendar.date(byAdding: .day, value: dayOffset, to: startOfWeek) {
                 tempDates.append(date)
             }
         }
 
         // Load CURRENT week (7 days starting from current week)
-        for dayOffset in 0..<7 {
+        for dayOffset in 0 ..< 7 {
             if let date = calendar.date(byAdding: .day, value: dayOffset, to: startOfWeek) {
                 tempDates.append(date)
             }
@@ -117,12 +116,12 @@ struct CalendarStrip: View {
     private func scrollToSelectedDate(_ date: Date, using proxy: ScrollViewProxy) {
         // Ensure the date exists in the dates array, if not, load more dates
         let dateExists = dates.contains { brazilianCalendar.isDate($0, inSameDayAs: date) }
-        
+
         if !dateExists {
             // Load dates around the selected date
             loadDatesAround(date)
         }
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             proxy.scrollTo(date, anchor: .center)
         }
@@ -131,19 +130,19 @@ struct CalendarStrip: View {
     private func loadDatesAround(_ date: Date) {
         let calendar = brazilianCalendar
         var newDates: [Date] = []
-        
+
         // Load 7 days before and 7 days after the selected date
-        for dayOffset in -7...7 {
+        for dayOffset in -7 ... 7 {
             if let newDate = calendar.date(byAdding: .day, value: dayOffset, to: date) {
                 newDates.append(newDate)
             }
         }
-        
+
         // Merge with existing dates, avoiding duplicates
         let existingDateSet = Set(dates.map { calendar.startOfDay(for: $0) })
         let newDateSet = Set(newDates.map { calendar.startOfDay(for: $0) })
         let uniqueNewDates = newDates.filter { !existingDateSet.contains(calendar.startOfDay(for: $0)) }
-        
+
         dates = (dates + uniqueNewDates).sorted()
         oldestLoadedDate = dates.first
     }
@@ -170,7 +169,7 @@ struct CalendarStrip: View {
         var newDates: [Date] = []
 
         // Load 1 week (7 days) before the current first date
-        for dayOffset in (1...7).reversed() {
+        for dayOffset in (1 ... 7).reversed() {
             if let date = calendar.date(byAdding: .day, value: -dayOffset, to: firstDate) {
                 newDates.append(date)
             }
@@ -190,7 +189,6 @@ struct CalendarStrip: View {
 
 /// Individual day view in the calendar strip.
 struct CalendarStripDay: View {
-
     let weekdayLetter: String
     let dayNumber: Int
     let isSelected: Bool

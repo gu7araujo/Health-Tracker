@@ -10,7 +10,6 @@ import Foundation
 /// Use case for saving health tracking data.
 /// Encapsulates the business logic for persisting day data.
 final class SaveDayDataUseCase {
-
     private let repository: HealthDataRepositoryProtocol
 
     init(repository: HealthDataRepositoryProtocol) {
