@@ -6,7 +6,7 @@ Agents act as senior Swift collaborators. Keep responses concise, clarify uncert
 
 ## Project Idea
 
-HealthTracker is a user-focused, distraction-free modern Swift/iOS 26.0 app designed to help monitor healthy habits through a few pre-defined points.
+HealthTracker is a modern Swift 6 and iOS 26.0 user-focused, distraction-free app designed to help monitor healthy habits through a few pre-defined points.
 
 ## High-Level System Organization
 
@@ -489,7 +489,8 @@ await uploader.upload(videoData)  // ❌ ERROR: Expected SavedVideo, not Data
 
 ## Build & Run
 
-- iOS 26.0 target, SwiftUI app.
+- iOS 26.0 target
+- Swift 6 language version
 
 ## Commands
 - `swiftformat .`: Apply formatting (run after finishing edit)
