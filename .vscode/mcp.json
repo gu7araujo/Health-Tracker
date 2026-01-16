@@ -12,7 +12,8 @@
         "ide",
         "--project",
         "${workspaceFolder}",
-        "--open-web-dashboard False"
+        "--open-web-dashboard",
+        "false"
       ]
     }
   },
