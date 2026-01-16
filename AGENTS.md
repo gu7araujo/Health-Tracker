@@ -493,9 +493,34 @@ await uploader.upload(videoData)  // ❌ ERROR: Expected SavedVideo, not Data
 - Swift 6 language version
 
 ## Commands
+
 - `swiftformat .`: Apply formatting (run after finishing edit)
 - `swiftlint .`: Lint Swift sources (run after finishing edit)
+
+## MCP Tools Integration - Use tools if you can
+
+The AI agents leverage MCP (Model Context Protocol) servers to enhance development capabilities and access up-to-date documentation:
+
+**Context7 MCP Server**:
+- **Purpose**: Use to fetch latest library documentation and API references
+- **Capabilities**: 
+  - Resolve library IDs for Swift packages and frameworks
+  - Retrieve comprehensive documentation for Apple frameworks (SwiftUI, UIKit, Core ML, etc.)
+  - Access up-to-date API references and code examples
+- **Integration**: Automatically used for code generation, setup, and configuration steps
+- **Benefits**: Ensures agents work with current APIs and best practices
+
+**Serena MCP Server**:
+- **Purpose**: Use for high-precision internal navigation and symbolic understanding of the local codebase.
+- **Capabilities**:
+  - Symbolic Search: Find exact function definitions, class structures, and variable usages using LSP (Language Server Protocol)
+  - Dependency Mapping: Trace call hierarchies to understand how components interact across different files
+  - Context-Aware Extraction: Extract specific code blocks (e.g., a single method body) without reading entire files, saving token window space
+- **Benefits**: Provides 100% accuracy in code navigation and significantly reduces "hallucinations" regarding local project structure.
 
 ## Workflow
 
 - Ask for clarification when requirements are ambiguous; surface 2–3 options when trade-offs matter
+- External Knowledge: Consult the `context7` tool for most up-to-date software package documentation
+- Internal Knowledge: Consult the `serena` tool before editing code to verify existing function signatures, find references, or map project dependencies
+- Efficiency: Prefer serena's symbol-based reading over full-file reading for large files to maintain a lean context window
