@@ -10,6 +10,8 @@ import SwiftUI
 /// A horizontally scrollable calendar strip showing days of the week.
 struct CalendarStrip: View {
     @Binding var selectedDate: Date
+    let days: [DayData]
+
     @State private var dates: [Date] = []
     @State private var isLoadingPast = false
     @State private var oldestLoadedDate: Date?
@@ -31,10 +33,14 @@ struct CalendarStrip: View {
                     LazyHStack {
                         ForEach(dates, id: \.self) { date in
                             let isSelected = brazilianCalendar.isDate(date, inSameDayAs: selectedDate)
+                            let isFuture = isFutureDate(date)
+                            let status = dayStatus(for: date)
                             CalendarStripDay(
                                 weekdayLetter: weekdayLetter(from: date),
                                 dayNumber: dayNumber(from: date),
-                                isSelected: isSelected
+                                isSelected: isSelected,
+                                isFuture: isFuture,
+                                status: status
                             ) {
                                 selectedDate = date
                             }
@@ -62,6 +68,20 @@ struct CalendarStrip: View {
     }
 
     // MARK: - Date Formatting
+
+    private func isFutureDate(_ date: Date) -> Bool {
+        let calendar = brazilianCalendar
+        let normalizedDate = calendar.startOfDay(for: date)
+        let normalizedToday = calendar.startOfDay(for: Date())
+        return normalizedDate > normalizedToday
+    }
+
+    private func dayStatus(for date: Date) -> DayStatus {
+        guard let dayData = days.first(where: { brazilianCalendar.isDate($0.date, inSameDayAs: date) }) else {
+            return .noData
+        }
+        return dayData.status
+    }
 
     private func weekdayLetter(from date: Date) -> String {
         let formatter = DateFormatter()
@@ -192,6 +212,8 @@ struct CalendarStripDay: View {
     let weekdayLetter: String
     let dayNumber: Int
     let isSelected: Bool
+    let isFuture: Bool
+    let status: DayStatus
     let onTap: () -> Void
 
     var body: some View {
@@ -199,26 +221,63 @@ struct CalendarStripDay: View {
             Text(weekdayLetter)
                 .font(.title3)
                 .padding(7)
-                .background(
-                    Circle()
-                        .fill(isSelected ? Color.green : Color.clear)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.green, lineWidth: isSelected ? 2 : 3)
-                        )
-                )
-                .foregroundColor(isSelected ? .white : .primary)
+                .background(circleBackground)
+                .foregroundColor(isFuture ? .gray : .primary)
 
             Text("\(dayNumber)")
                 .font(.title3)
-                .foregroundColor(isSelected ? .green : .primary)
+                .fontWeight(isSelected ? .bold : .regular)
+                .foregroundColor(isFuture ? .gray : .primary)
         }
         .onTapGesture {
-            onTap()
+            if !isFuture {
+                onTap()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var circleBackground: some View {
+        if !isFuture, let circleColor = status.color {
+            if status == .incomplete {
+                // Right-half semicircle for incomplete days
+                RightSemicircle()
+                    .stroke(circleColor, lineWidth: 2)
+            } else {
+                // Full circle for complete days
+                Circle()
+                    .fill(Color.clear)
+                    .overlay(
+                        Circle()
+                            .stroke(circleColor, lineWidth: 2)
+                    )
+            }
         }
     }
 }
 
+// MARK: - Right Semicircle Shape
+
+/// A shape that draws only the right half of a circle (from top to bottom).
+struct RightSemicircle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let radius = min(rect.width, rect.height) / 2
+
+        // Draw arc from top (270°) to bottom (90°) on the right side
+        path.addArc(
+            center: center,
+            radius: radius,
+            startAngle: .degrees(-90),
+            endAngle: .degrees(90),
+            clockwise: false
+        )
+
+        return path
+    }
+}
+
 #Preview {
-    CalendarStrip(selectedDate: .constant(Date()))
+    CalendarStrip(selectedDate: .constant(Date()), days: [])
 }

@@ -65,7 +65,7 @@ struct MainView: View {
     // MARK: - Date Picker Section
 
     private var datePickerSection: some View {
-        CalendarStrip(selectedDate: $viewModel.selectedDate)
+        CalendarStrip(selectedDate: $viewModel.selectedDate, days: viewModel.days)
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 30, leading: 0, bottom: 30, trailing: 0))
     }

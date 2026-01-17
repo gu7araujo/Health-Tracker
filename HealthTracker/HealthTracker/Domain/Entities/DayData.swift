@@ -61,6 +61,65 @@ struct DayData: Codable, Equatable, Identifiable {
     mutating func removeWorkout(id: UUID) {
         workouts.removeAll { $0.id == id }
     }
+
+    // MARK: - Status Computation
+
+    /// Computes the health status for this day based on meals, water, workouts, and mood.
+    var status: DayStatus {
+        let categoriesCount = filledCategoriesCount
+
+        // No data recorded
+        guard categoriesCount > 0 else { return .noData }
+
+        // Incomplete: only 1-2 categories have data
+        guard categoriesCount >= 3 else { return .incomplete }
+
+        // 3-4 categories have data: evaluate status
+        if meetsOptimalCriteria { return .optimal }
+
+        if meetsModerateCriteria { return .moderate }
+
+        return .poor
+    }
+
+    /// Counts how many of the 4 categories (meals, water, workouts, mood) have data.
+    private var filledCategoriesCount: Int {
+        var count = 0
+        if !meals.isEmpty { count += 1 }
+        if water != nil { count += 1 }
+        if !workouts.isEmpty { count += 1 }
+        if mood != nil { count += 1 }
+        return count
+    }
+
+    /// Checks if all optimal (green) criteria are met.
+    /// Requirements: all meals small/verySmall + 50% satiety, water >= 1.8L, has workout, good mood
+    private var meetsOptimalCriteria: Bool {
+        let hasOptimalMeals = !meals.isEmpty && meals.allSatisfy { meal in
+            (meal.quantity == .small || meal.quantity == .verySmall) && meal.satisfaction == .fifty
+        }
+        let hasOptimalWater = (water ?? 0) >= 1.8
+        let hasWorkout = !workouts.isEmpty
+        let hasGoodMood = mood == .good
+
+        return hasOptimalMeals && hasOptimalWater && hasWorkout && hasGoodMood
+    }
+
+    /// Checks if any moderate (yellow) criteria are met.
+    /// Requirements: 1-2 meals with medium + 80% satiety, OR water 1.0-1.7L, OR neutral mood
+    private var meetsModerateCriteria: Bool {
+        let moderateMealCount = meals.filter { meal in
+            meal.quantity == .medium && meal.satisfaction == .eighty
+        }.count
+        let hasModerateMeals = moderateMealCount >= 1 && moderateMealCount <= 2
+
+        let waterAmount = water ?? 0
+        let hasModerateWater = waterAmount >= 1.0 && waterAmount < 1.8
+
+        let hasNeutralMood = mood == .neutral
+
+        return hasModerateMeals || hasModerateWater || hasNeutralMood
+    }
 }
 
 /// Represents the type of health tracking section (meal or workout)
