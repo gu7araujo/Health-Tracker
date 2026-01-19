@@ -69,7 +69,8 @@ final class MainViewModel {
     /// - Parameter value: The new water intake value in liters.
     func updateWater(_ value: Double) {
         guard let index = currentDayIndex else { return }
-        days[index].water = value
+        // If value is 0, treat it as removing the water information
+        days[index].water = value > 0 ? value : nil
         persistChanges()
     }
 
