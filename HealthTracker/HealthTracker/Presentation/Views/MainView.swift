@@ -74,7 +74,7 @@ struct MainView: View {
 
     private var mealsSection: some View {
         Group {
-            HeaderListView(title: "Refeições", icon: "plus") {
+            HeaderListView(title: mealsSectionTitle, icon: "plus") {
                 modalSection = .meal
                 isAddModalPresented = true
             }
@@ -145,7 +145,7 @@ struct MainView: View {
 
     private var workoutsSection: some View {
         Group {
-            HeaderListView(title: "Exercícios", icon: "plus") {
+            HeaderListView(title: workoutsSectionTitle, icon: "plus") {
                 modalSection = .workout
                 isAddModalPresented = true
             }
@@ -205,6 +205,16 @@ struct MainView: View {
     }
 
     // MARK: - Helper Views
+
+    private var mealsSectionTitle: String {
+        let count = viewModel.currentDayData?.meals.count ?? 0
+        return count > 1 ? "Refeições (\(count))" : "Refeições"
+    }
+
+    private var workoutsSectionTitle: String {
+        let count = viewModel.currentDayData?.workouts.count ?? 0
+        return count > 1 ? "Exercícios (\(count))" : "Exercícios"
+    }
 
     private var emptyListRow: some View {
         HStack {
