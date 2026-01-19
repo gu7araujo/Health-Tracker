@@ -13,6 +13,10 @@ struct MainView: View {
     @State private var modalSection: HealthSection = .meal
     @State private var editingMealId: UUID?
     @State private var editingWorkoutId: UUID?
+    @State private var selectedMealIdForAction: UUID?
+    @State private var showMealActionAlert = false
+    @State private var selectedWorkoutIdForAction: UUID?
+    @State private var showWorkoutActionAlert = false
 
     var body: some View {
         NavigationStack {
@@ -94,7 +98,8 @@ struct MainView: View {
                                 }
                             }
                             .onTapGesture(count: 2) {
-                                editingMealId = meal.id
+                                selectedMealIdForAction = meal.id
+                                showMealActionAlert = true
                             }
                         }
                     }
@@ -104,6 +109,25 @@ struct MainView: View {
             } else {
                 emptyListRow
             }
+        }
+        .alert("Ação para Refeição", isPresented: $showMealActionAlert) {
+            Button("Editar") {
+                if let mealId = selectedMealIdForAction {
+                    editingMealId = mealId
+                }
+                selectedMealIdForAction = nil
+            }
+            Button("Excluir", role: .destructive) {
+                if let mealId = selectedMealIdForAction {
+                    viewModel.deleteMeal(withId: mealId)
+                }
+                selectedMealIdForAction = nil
+            }
+            Button("Cancelar", role: .cancel) {
+                selectedMealIdForAction = nil
+            }
+        } message: {
+            Text("O que você gostaria de fazer com esta refeição?")
         }
     }
 
@@ -163,7 +187,8 @@ struct MainView: View {
                                 }
                             }
                             .onTapGesture(count: 2) {
-                                editingWorkoutId = workout.id
+                                selectedWorkoutIdForAction = workout.id
+                                showWorkoutActionAlert = true
                             }
                         }
                     }
@@ -173,6 +198,25 @@ struct MainView: View {
             } else {
                 emptyListRow
             }
+        }
+        .alert("Ação para Treino", isPresented: $showWorkoutActionAlert) {
+            Button("Editar") {
+                if let workoutId = selectedWorkoutIdForAction {
+                    editingWorkoutId = workoutId
+                }
+                selectedWorkoutIdForAction = nil
+            }
+            Button("Excluir", role: .destructive) {
+                if let workoutId = selectedWorkoutIdForAction {
+                    viewModel.deleteWorkout(withId: workoutId)
+                }
+                selectedWorkoutIdForAction = nil
+            }
+            Button("Cancelar", role: .cancel) {
+                selectedWorkoutIdForAction = nil
+            }
+        } message: {
+            Text("O que você gostaria de fazer com este treino?")
         }
     }
 

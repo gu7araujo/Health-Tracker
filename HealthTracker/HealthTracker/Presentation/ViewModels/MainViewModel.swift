@@ -114,6 +114,14 @@ final class MainViewModel {
         currentDayData?.meals.first { $0.id == id }
     }
 
+    /// Deletes a meal by ID from the current day.
+    /// - Parameter id: The meal's unique identifier.
+    func deleteMeal(withId id: UUID) {
+        guard let index = currentDayIndex else { return }
+        days[index].removeMeal(id: id)
+        persistChanges()
+    }
+
     // MARK: - Workout Management
 
     /// Adds a new workout to the current day.
@@ -137,6 +145,14 @@ final class MainViewModel {
     /// - Returns: The workout if found, nil otherwise.
     func workout(withId id: UUID) -> Workout? {
         currentDayData?.workouts.first { $0.id == id }
+    }
+
+    /// Deletes a workout by ID from the current day.
+    /// - Parameter id: The workout's unique identifier.
+    func deleteWorkout(withId id: UUID) {
+        guard let index = currentDayIndex else { return }
+        days[index].removeWorkout(id: id)
+        persistChanges()
     }
 
     // MARK: - Private Methods
