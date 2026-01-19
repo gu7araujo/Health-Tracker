@@ -360,6 +360,29 @@ func execute(email: String, password: String) {
 ```
 </pattern>
 
+<pattern name="phantom_types">
+**Problem**: IDs of different entity types can be accidentally mixed
+**Solution**: Use phantom types to create compile-time distinction
+
+```swift
+struct ID<Entity> {
+    let rawValue: String
+}
+
+struct User { }
+struct Order { }
+
+func fetchUser(id: ID<User>) -> User { }
+func fetchOrder(id: ID<Order>) -> Order { }
+
+let userID = ID<User>(rawValue: "123")
+let orderID = ID<Order>(rawValue: "456")
+
+fetchUser(id: userID)   // ✅ compiles
+fetchUser(id: orderID)  // ❌ compile error - type mismatch
+```
+</pattern>
+
 <pattern name="witness_access_control">
 ```swift
 // ❌ AVOID: Boolean flags for access control
@@ -448,6 +471,70 @@ await uploader.upload(savedVideo)  // ✅ Must save first
 
 // Wrong order = compile error
 await uploader.upload(videoData)  // ❌ ERROR: Expected SavedVideo, not Data
+```
+</pattern>
+
+<pattern name="rule_of_three_abstraction">
+```swift
+// 1. DO NOT abstract on the first or second usage.
+// 2. DUPLICATE code until the pattern is proven three times.
+// 3. REFRACTOR only when the commonality is structural, not accidental.
+
+// Initial usage: Keep it local
+struct UserAvatar: View { ... }
+
+// Second usage: Copy-paste if domains differ
+struct EmployeeAvatar: View { ... }
+
+// Third usage: Extract reusable component
+struct CircleImage(url: URL): View { ... }
+</pattern>
+
+<pattern name="context_free_naming">
+```swift
+// 1. AVOID use-case-specific names that leak implementation context.
+// 2. USE generic, function-based names that describe WHAT it does, not WHERE it's used.
+// 3. This enables reuse across different features without renaming.
+
+// ❌ BAD: Name tied to specific feature
+struct MoneyBuddyCard: View { ... }
+struct OrderHistoryBanner: View { ... }
+struct PromotionHeaderView: View { ... }
+
+// ✅ GOOD: Generic, function-based names
+struct DecoratedCardView: View { ... }
+struct InfoBannerView: View { ... }
+struct HeroHeaderView: View { ... }
+```
+</pattern>
+
+<pattern name="prevent_usecase_leakage">
+```swift
+// 1. Component APIs should NOT expose domain-specific terminology.
+// 2. Use PRIMITIVE types or generic models as inputs when possible.
+// 3. Let the CALL SITE handle domain-to-component mapping.
+
+// ❌ BAD: API leaks use-case knowledge
+struct UserProfileHeader: View {
+    let user: User           // Requires User model
+    let loyaltyTier: Tier    // Specific to loyalty feature
+}
+
+// ✅ GOOD: Generic API, caller maps domain data
+struct AvatarHeader: View {
+    let imageURL: URL?
+    let title: String
+    let subtitle: String?
+    let badgeText: String?
+}
+
+// Call site handles mapping:
+AvatarHeader(
+    imageURL: user.avatarURL,
+    title: user.displayName,
+    subtitle: user.email,
+    badgeText: loyaltyTier.label
+)
 ```
 </pattern>
 
@@ -553,6 +640,7 @@ Usage notes:
 ## Workflow
 
 - Ask for clarification when requirements are ambiguous; surface 2–3 options when trade-offs matter
+- When unsure or need to make a significant decision ASK the user for guidance
 - For external knowledge consult the `context7` tool for most up-to-date software package documentation
 - For internal knowledge consult the `serena` tool before editing code to verify existing function signatures, find references, or map project dependencies
 - Prefer serena's symbol-based reading over full-file reading for large files to maintain a lean context window and efficiency
