@@ -14,7 +14,7 @@ struct CalendarStrip: View {
 
     @State private var dates: [Date] = []
     @State private var isLoadingPast = false
-    @State private var oldestLoadedDate: Date?
+    @State private var needsMorePastDates = false
 
     /// Brazilian calendar configuration with safe timezone initialization.
     private var brazilianCalendar: Calendar {
@@ -59,9 +59,6 @@ struct CalendarStrip: View {
                         loadInitialDates()
                         scrollToCurrentWeek(using: proxy)
                     }
-                }
-                .onChange(of: selectedDate) { _, newDate in
-                    scrollToSelectedDate(newDate, using: proxy)
                 }
             }
         }.frame(height: 65)
@@ -122,7 +119,6 @@ struct CalendarStrip: View {
         }
 
         dates = tempDates
-        oldestLoadedDate = dates.first
     }
 
     private func scrollToCurrentWeek(using proxy: ScrollViewProxy) {
@@ -133,50 +129,19 @@ struct CalendarStrip: View {
         }
     }
 
-    private func scrollToSelectedDate(_ date: Date, using proxy: ScrollViewProxy) {
-        // Ensure the date exists in the dates array, if not, load more dates
-        let dateExists = dates.contains { brazilianCalendar.isDate($0, inSameDayAs: date) }
-
-        if !dateExists {
-            // Load dates around the selected date
-            loadDatesAround(date)
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            proxy.scrollTo(date, anchor: .center)
-        }
-    }
-
-    private func loadDatesAround(_ date: Date) {
-        let calendar = brazilianCalendar
-        var newDates: [Date] = []
-
-        // Load 7 days before and 7 days after the selected date
-        for dayOffset in -7 ... 7 {
-            if let newDate = calendar.date(byAdding: .day, value: dayOffset, to: date) {
-                newDates.append(newDate)
-            }
-        }
-
-        // Merge with existing dates, avoiding duplicates
-        let existingDateSet = Set(dates.map { calendar.startOfDay(for: $0) })
-        let newDateSet = Set(newDates.map { calendar.startOfDay(for: $0) })
-        let uniqueNewDates = newDates.filter { !existingDateSet.contains(calendar.startOfDay(for: $0)) }
-
-        dates = (dates + uniqueNewDates).sorted()
-        oldestLoadedDate = dates.first
-    }
-
     private func checkAndLoadPast(for date: Date) {
-        guard !isLoadingPast, let oldest = oldestLoadedDate else {
+        // Find the index of the appearing date in the array
+        guard let index = dates.firstIndex(where: { brazilianCalendar.isDate($0, inSameDayAs: date) }) else {
             return
         }
 
-        let calendar = brazilianCalendar
-        let daysSinceOldest = calendar.dateComponents([.day], from: date, to: oldest).day ?? 0
+        // Load more when user sees one of the first 3 dates in the list
+        guard index < 3 else { return }
 
-        // Load more when user gets within 3 days of the oldest loaded date
-        if abs(daysSinceOldest) <= 3 {
+        if isLoadingPast {
+            // Mark that we need more dates after current load finishes
+            needsMorePastDates = true
+        } else {
             loadPastWeeks()
         }
     }
@@ -184,6 +149,7 @@ struct CalendarStrip: View {
     private func loadPastWeeks() {
         guard let firstDate = dates.first else { return }
         isLoadingPast = true
+        needsMorePastDates = false
 
         let calendar = brazilianCalendar
         var newDates: [Date] = []
@@ -196,11 +162,13 @@ struct CalendarStrip: View {
         }
 
         dates = newDates + dates
-        oldestLoadedDate = dates.first
 
-        // Small delay before allowing next load
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        // Small delay before allowing next load, then check if more needed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             isLoadingPast = false
+            if needsMorePastDates {
+                loadPastWeeks()
+            }
         }
     }
 }
