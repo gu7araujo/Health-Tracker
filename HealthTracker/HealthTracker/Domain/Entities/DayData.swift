@@ -123,7 +123,9 @@ struct DayData: Codable, Equatable, Identifiable {
 }
 
 /// Represents the type of health tracking section (meal or workout)
-enum HealthSection: Equatable {
+enum HealthSection: Equatable, Hashable, Identifiable {
     case meal
     case workout
+
+    var id: Self { self }
 }

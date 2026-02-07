@@ -38,7 +38,7 @@ struct CardView<Content: View>: View {
                     view.glassEffect(in: .rect(cornerRadius: 16))
                 }
                 .background(backgroundColor)
-                .cornerRadius(applyGlassEffect ? 0 : 16)
+                .clipShape(.rect(cornerRadius: applyGlassEffect ? 0 : 16))
         })
         .buttonStyle(.plain)
     }
