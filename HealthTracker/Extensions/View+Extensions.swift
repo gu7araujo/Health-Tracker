@@ -16,7 +16,7 @@ extension View {
     ///   - transform: The transformation to apply if condition is true.
     /// - Returns: Either the transformed view or the original view.
     @ViewBuilder
-    func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+    func `if`(_ condition: Bool, transform: (Self) -> some View) -> some View {
         if condition {
             transform(self)
         } else {

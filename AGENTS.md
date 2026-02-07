@@ -20,36 +20,36 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 ### Building and Running
 ```bash
 # Build the project
-xcodebuild -project HealthTracker/HealthTracker.xcodeproj -scheme HealthTracker -configuration Debug build
+xcodebuild -project HealthTracker.xcodeproj -scheme HealthTracker -configuration Debug build
 ```
 
 ### Code Quality
 ```bash
-# Format Swift code (run after editing)
-swiftformat .
+# Lint Swift code and apply fixes for autocorrectable rules (run after editing)
+swiftlint --fix && swiftlint
 
-# Lint Swift code (run after editing)
-swiftlint .
+# Format Swift code (run after editing)
+swiftformat . --swift-version 6
 ```
 
 ## Architecture
 
 The codebase follows Clean Architecture principles with three main layers:
 
-### Domain Layer (`HealthTracker/HealthTracker/Domain/`)
+### Domain Layer (`HealthTracker/Domain/`)
 - **Entities**: Core business models (`DayData`, `Meal`, `Workout`, `Mood`, `DayStatus`)
   - `DayData`: Aggregate root containing all health data for a single day
   - Implements business logic for health status computation (optimal/moderate/poor)
 - **Protocols**: Abstract interfaces (`HealthDataRepositoryProtocol`, `LocalDataSourceProtocol`)
 - **Use Cases**: Business operations (`LoadDayDataUseCase`, `SaveDayDataUseCase`)
 
-### Data Layer (`HealthTracker/HealthTracker/Data/`)
+### Data Layer (`HealthTracker/Data/`)
 - **Repositories**: Concrete implementations of domain protocols
   - `HealthDataRepository`: Orchestrates data operations
 - **DataSources**: Platform-specific storage implementations
   - `UserDefaultsDataSource`: JSON-based persistence using UserDefaults
 
-### Presentation Layer (`HealthTracker/HealthTracker/Presentation/`)
+### Presentation Layer (`HealthTracker/Presentation/`)
 - **Views**: SwiftUI views with section-based composition
   - `MainView`: Root view with meals, water, workouts, mood sections
   - `AddEditModal`: Shared modal for adding/editing meals and workouts

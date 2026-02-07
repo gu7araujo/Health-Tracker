@@ -29,15 +29,15 @@ enum DayStatus: Equatable {
     var color: Color? {
         switch self {
         case .optimal:
-            return .green
+            .green
         case .moderate:
-            return .yellow
+            .yellow
         case .poor:
-            return .red
+            .red
         case .incomplete:
-            return .primary
+            .primary
         case .noData:
-            return nil
+            nil
         }
     }
 }

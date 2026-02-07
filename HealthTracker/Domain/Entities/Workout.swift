@@ -19,10 +19,10 @@ struct Workout: Identifiable, Codable, Equatable {
 
         var localizedName: String {
             switch self {
-            case .fifteenMin: return "15m"
-            case .thirtyMin: return "30m"
-            case .oneHour: return "1h"
-            case .oneHourThirty: return "1h30m"
+            case .fifteenMin: "15m"
+            case .thirtyMin: "30m"
+            case .oneHour: "1h"
+            case .oneHourThirty: "1h30m"
             }
         }
     }

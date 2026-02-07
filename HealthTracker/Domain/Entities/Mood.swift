@@ -16,25 +16,25 @@ enum Mood: String, Codable, CaseIterable, Equatable {
 
     var emoji: String {
         switch self {
-        case .good: return "😁"
-        case .neutral: return "😐"
-        case .sad: return "😔"
+        case .good: "😁"
+        case .neutral: "😐"
+        case .sad: "😔"
         }
     }
 
     var localizedName: String {
         switch self {
-        case .good: return "Bom"
-        case .neutral: return "Neutro"
-        case .sad: return "Ruim"
+        case .good: "Bom"
+        case .neutral: "Neutro"
+        case .sad: "Ruim"
         }
     }
 
     var color: Color {
         switch self {
-        case .good: return .green
-        case .neutral: return .orange
-        case .sad: return .red
+        case .good: .green
+        case .neutral: .orange
+        case .sad: .red
         }
     }
 }

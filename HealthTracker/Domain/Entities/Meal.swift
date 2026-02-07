@@ -19,10 +19,10 @@ struct Meal: Identifiable, Codable, Equatable {
 
         var localizedName: String {
             switch self {
-            case .verySmall: return "Muito pequena"
-            case .small: return "Pequena"
-            case .medium: return "Média"
-            case .large: return "Grande"
+            case .verySmall: "Muito pequena"
+            case .small: "Pequena"
+            case .medium: "Média"
+            case .large: "Grande"
             }
         }
     }
@@ -36,10 +36,10 @@ struct Meal: Identifiable, Codable, Equatable {
 
         var localizedName: String {
             switch self {
-            case .thirty: return "30%"
-            case .fifty: return "50%"
-            case .eighty: return "80%"
-            case .hundred: return "100%"
+            case .thirty: "30%"
+            case .fifty: "50%"
+            case .eighty: "80%"
+            case .hundred: "100%"
             }
         }
     }
