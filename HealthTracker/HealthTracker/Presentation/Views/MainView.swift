@@ -121,15 +121,32 @@ private struct MealsSectionView: View {
 
             if !meals.isEmpty {
                 ForEach(meals) { meal in
-                    CardView {
+                    CardView(
+                        internalPadding: .init(
+                            top: 15,
+                            leading: 15,
+                            bottom: 15,
+                            trailing: 15
+                        ),
+                        applyGlassEffect: false,
+                        backgroundColor: .constant(
+                            Color(
+                                .secondarySystemBackground
+                            )
+                        )
+                    ) {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(meal.description)
+                                    .font(.title3)
+                                    .bold()
                                     .padding(.bottom, 5)
                                 Text("Quantidade: \(meal.quantity.localizedName)")
                                     .font(.subheadline)
+                                    .foregroundStyle(.gray)
                                 Text("Satisfeito(a): \(meal.satisfaction.localizedName)")
                                     .font(.subheadline)
+                                    .foregroundStyle(.gray)
                             }
                             Spacer()
                         }
@@ -215,13 +232,29 @@ private struct WorkoutsSectionView: View {
 
             if !workouts.isEmpty {
                 ForEach(workouts) { workout in
-                    CardView {
+                    CardView(
+                        internalPadding: .init(
+                            top: 15,
+                            leading: 15,
+                            bottom: 15,
+                            trailing: 15
+                        ),
+                        applyGlassEffect: false,
+                        backgroundColor: .constant(
+                            Color(
+                                .secondarySystemBackground
+                            )
+                        )
+                    ) {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(workout.description)
+                                    .font(.title3)
+                                    .bold()
                                     .padding(.bottom, 5)
                                 Text("Tempo: \(workout.duration.localizedName)")
                                     .font(.subheadline)
+                                    .foregroundStyle(.gray)
                             }
                             Spacer()
                         }
@@ -263,11 +296,25 @@ private struct MoodSectionView: View {
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
 
-            CardView(internalPadding: EdgeInsets(top: 20, leading: 20, bottom: 20, trailing: 20)) {
+            CardView(
+                internalPadding: .init(
+                    top: 15,
+                    leading: 15,
+                    bottom: 15,
+                    trailing: 15
+                ),
+                applyGlassEffect: false,
+                backgroundColor: .constant(
+                    Color(
+                        .secondarySystemBackground
+                    )
+                )
+            ) {
                 VStack(alignment: .leading) {
                     Text("Como está o seu humor hoje?")
+                        .font(.title3)
+                        .bold()
                         .padding(.bottom, 15)
-                        .font(.headline)
 
                     HStack {
                         ForEach(Mood.allCases, id: \.self) { mood in
