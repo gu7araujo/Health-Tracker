@@ -222,6 +222,30 @@ The app is currently in Portuguese (Brazil). All UI strings, entity property nam
 - `DayData` computes health status based on business rules (see `status`, `meetsOptimalCriteria`, `meetsModerateCriteria`)
 - Nested enums have localized names (e.g., `Meal.Quantity.localizedName`)
 
+## Updating This Guide (AGENTS.md)
+
+When you make changes that affect how the project is structured, documented, or used, **update AGENTS.md** so it stays accurate for future agents and developers.
+
+### When to Update AGENTS.md
+
+Update this file when you:
+
+- **Add or remove layers, modules, or major types** — Update **Project Overview** and **Architecture** (Domain/Data/Presentation) so the listed entities, protocols, use cases, repositories, views, view models, and components reflect the codebase.
+- **Change technology or tooling** — Update **Technology Stack** and **Development Commands** (e.g., new Swift version, new persistence, new lint/format commands).
+- **Introduce or change patterns** — Update **Key Patterns** (state management, DI, data flow, view extensions) and **Implementation patterns** / rules if you add or change conventions.
+- **Add or change quality or style rules** — Update **QUALITY GATES**, **ANTI-PATTERNS TO AVOID**, or add/remove rules in the implementation patterns section.
+- **Add or remove agent skills** — Update **Agent Skills - Available Skills** (the skills table) so the listed skills match what’s available in the project.
+- **Change localization or language** — Update **Language and Localization**.
+- **Change how features are added or where things live** — Update **Working with the Codebase** (Adding New Features, Modifying Views, Storage Changes, Entity Modifications) so the steps and file/layer references are correct.
+
+### How to Update
+
+- Edit the **existing section** that matches the change (see list above). Do not duplicate sections.
+- Keep the same structure and formatting (headers, lists, code blocks, checklist/avoid blocks).
+- Be concise: add or adjust only what’s needed to reflect the current project; remove or reword anything that’s no longer true.
+
+If a change doesn’t clearly fit any section, add a short note in the most relevant place or in **Important Notes**, and consider whether a new subsection is justified.
+
 ## Agent Skills - Available Skills
 
 When working on specific tasks, use these specialized skills:
