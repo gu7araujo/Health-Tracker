@@ -17,8 +17,8 @@ final class LoadDayDataUseCase {
     }
 
     /// Loads all stored day data entries.
-    /// - Returns: Array of `DayData` entries.
-    func execute() -> [DayData] {
+    /// - Returns: Array of `RecordedDayData` entries (only days with actual data).
+    func execute() -> [RecordedDayData] {
         repository.loadAllDays()
     }
 
@@ -27,6 +27,6 @@ final class LoadDayDataUseCase {
     /// - Parameter date: The date to load data for.
     /// - Returns: The existing or newly created `DayData`.
     func execute(for date: Date) -> DayData {
-        repository.dayData(for: date) ?? DayData(date: date)
+        repository.dayData(for: date)?.dayData ?? DayData(date: date)
     }
 }

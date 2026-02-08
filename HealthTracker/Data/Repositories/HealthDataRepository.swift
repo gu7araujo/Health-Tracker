@@ -12,27 +12,29 @@ import Foundation
 final class HealthDataRepository: HealthDataRepositoryProtocol {
     private let dataSource: LocalDataSourceProtocol
 
-    init(dataSource: LocalDataSourceProtocol = UserDefaultsDataSource()) {
+    init(dataSource: LocalDataSourceProtocol = ICloudDriveDataSource()) {
         self.dataSource = dataSource
     }
 
-    func loadAllDays() -> [DayData] {
+    func loadAllDays() -> [RecordedDayData] {
         dataSource.load()
     }
 
-    func save(days: [DayData]) {
+    func save(days: [RecordedDayData]) {
         dataSource.save(days)
     }
 
-    func dayData(for date: Date) -> DayData? {
+    func dayData(for date: Date) -> RecordedDayData? {
         let days = dataSource.load()
-        return days.first { Calendar.current.isDate($0.date, inSameDayAs: date) }
+        return days.first { Calendar.current.isDate($0.dayData.date, inSameDayAs: date) }
     }
 
-    func saveDayData(_ dayData: DayData) {
+    func saveDayData(_ dayData: RecordedDayData) {
         var days = dataSource.load()
 
-        if let index = days.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: dayData.date) }) {
+        if let index = days.firstIndex(where: {
+            Calendar.current.isDate($0.dayData.date, inSameDayAs: dayData.dayData.date)
+        }) {
             days[index] = dayData
         } else {
             days.append(dayData)

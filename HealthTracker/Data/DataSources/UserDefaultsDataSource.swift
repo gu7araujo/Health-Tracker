@@ -9,9 +9,10 @@ import Foundation
 
 /// Protocol for local data storage operations.
 /// Allows for easy testing and future replacement of storage mechanism.
+/// Works with `RecordedDayData` to ensure only non-empty days are persisted.
 protocol LocalDataSourceProtocol {
-    func load() -> [DayData]
-    func save(_ days: [DayData])
+    func load() -> [RecordedDayData]
+    func save(_ days: [RecordedDayData])
 }
 
 /// UserDefaults-based implementation of local data storage.
@@ -29,15 +30,16 @@ final class UserDefaultsDataSource: LocalDataSourceProtocol {
     }
 
     /// Loads all stored day data from UserDefaults.
-    /// - Returns: Array of `DayData`, or empty array if none exist or decoding fails.
-    func load() -> [DayData] {
+    /// - Returns: Array of `RecordedDayData`, or empty array if none exist or decoding fails.
+    ///   Empty entries are filtered out during the parse from `DayData` to `RecordedDayData`.
+    func load() -> [RecordedDayData] {
         guard let data = userDefaults.data(forKey: storageKey) else {
             return []
         }
 
         do {
             let container = try JSONDecoder().decode(DayDataContainer.self, from: data)
-            return container.days
+            return container.days.compactMap(RecordedDayData.init)
         } catch {
             // Log error in debug builds, return empty array for graceful degradation
             #if DEBUG
@@ -48,9 +50,9 @@ final class UserDefaultsDataSource: LocalDataSourceProtocol {
     }
 
     /// Saves day data to UserDefaults.
-    /// - Parameter days: Array of `DayData` to persist.
-    func save(_ days: [DayData]) {
-        let container = DayDataContainer(days: days)
+    /// - Parameter days: Array of `RecordedDayData` to persist.
+    func save(_ days: [RecordedDayData]) {
+        let container = DayDataContainer(days: days.map(\.dayData))
 
         do {
             let data = try JSONEncoder().encode(container)
@@ -61,12 +63,4 @@ final class UserDefaultsDataSource: LocalDataSourceProtocol {
             #endif
         }
     }
-}
-
-// MARK: - Storage Container
-
-/// Container for encoding/decoding day data array.
-/// Maintains backwards compatibility with the original `Store` structure.
-private struct DayDataContainer: Codable {
-    let days: [DayData]
 }

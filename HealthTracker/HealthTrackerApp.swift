@@ -9,6 +9,10 @@ import SwiftUI
 
 @main
 struct HealthTrackerApp: App {
+    init() {
+        DataMigration.migrateIfNeeded()
+    }
+
     var body: some Scene {
         WindowGroup {
             MainView()

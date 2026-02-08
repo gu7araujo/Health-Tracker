@@ -136,7 +136,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Add Homebrew paths for both Intel (/usr/local) and Apple Silicon (/opt/homebrew)\nif test -d \"/opt/homebrew/bin\"; then\n  PATH=\"/opt/homebrew/bin:${PATH}\"\nelif test -d \"/usr/local/bin\"; then\n  PATH=\"/usr/local/bin:${PATH}\"\nfi\nexport PATH\n\nif which swiftlint >/dev/null; then\n    swiftlint --fix && swiftlint\nelse\n  echo \"warning: SwiftLint not installed\"\nfi\n\nif which swiftformat >/dev/null; then\n  swiftformat . --swift-version 6\nelse\n  echo \"warning: SwiftFormat not installed\"\nfi\n";
+			shellScript = "# Add Homebrew paths for both Intel (/usr/local) and Apple Silicon (/opt/homebrew)\nif test -d \"/opt/homebrew/bin\"; then\n  PATH=\"/opt/homebrew/bin:${PATH}\"\nelif test -d \"/usr/local/bin\"; then\n  PATH=\"/usr/local/bin:${PATH}\"\nfi\nexport PATH\n\nif which swiftformat >/dev/null; then\n  swiftformat . --swift-version 6\nelse\n  echo \"warning: SwiftFormat not installed\"\nfi\n\nif which swiftlint >/dev/null; then\n    swiftlint --fix && swiftlint\nelse\n  echo \"warning: SwiftLint not installed\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -279,6 +279,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = HealthTracker;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HealthTracker/HealthTracker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				ENABLE_PREVIEWS = YES;
@@ -317,6 +318,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = HealthTracker;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HealthTracker/HealthTracker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				ENABLE_PREVIEWS = YES;

@@ -17,14 +17,14 @@ final class SaveDayDataUseCase {
     }
 
     /// Saves all day data entries, replacing existing data.
-    /// - Parameter days: Array of `DayData` to persist.
-    func execute(days: [DayData]) {
+    /// - Parameter days: Array of `RecordedDayData` to persist (only non-empty days).
+    func execute(days: [RecordedDayData]) {
         repository.save(days: days)
     }
 
     /// Saves or updates a single day's data.
-    /// - Parameter dayData: The `DayData` to save or update.
-    func execute(dayData: DayData) {
+    /// - Parameter dayData: The `RecordedDayData` to save or update.
+    func execute(dayData: RecordedDayData) {
         repository.saveDayData(dayData)
     }
 }

@@ -58,8 +58,9 @@ final class MainViewModel {
     // MARK: - Public Methods
 
     /// Loads initial data from storage.
+    /// Converts `RecordedDayData` from the persistence layer back to `DayData` for in-memory use.
     func loadData() {
-        days = loadUseCase.execute()
+        days = loadUseCase.execute().map(\.dayData)
         ensureDayDataExists(for: selectedDate)
     }
 
@@ -158,19 +159,20 @@ final class MainViewModel {
 
     // MARK: - Private Methods
 
-    /// Ensures day data exists for the given date, creating it if necessary.
+    /// Ensures day data exists in memory for the given date, creating it if necessary.
+    /// Does NOT persist the empty entry — only non-empty days are written to storage.
     private func ensureDayDataExists(for date: Date) {
         let dateExists = days.contains { Calendar.current.isDate($0.date, inSameDayAs: date) }
 
         if !dateExists {
-            let newDayData = DayData(date: date)
-            days.append(newDayData)
-            persistChanges()
+            days.append(DayData(date: date))
         }
     }
 
     /// Persists the current state to storage.
+    /// Parses `DayData` to `RecordedDayData`, filtering out empty entries by construction.
     private func persistChanges() {
-        saveUseCase.execute(days: days)
+        let recordedDays = days.compactMap(RecordedDayData.init)
+        saveUseCase.execute(days: recordedDays)
     }
 }

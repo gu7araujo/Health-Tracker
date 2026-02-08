@@ -12,7 +12,7 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 - **UI Framework**: SwiftUI with iOS 26+ Liquid Glass effects
 - **Target**: iOS 26.0+
 - **Architecture**: Clean Architecture (Domain/Data/Presentation)
-- **Persistence**: UserDefaults (JSON encoding)
+- **Persistence**: iCloud Drive (JSON file) with local Documents fallback; migrated from UserDefaults
 - **State Management**: @Observable macro
 
 ## Development Commands
@@ -37,17 +37,23 @@ swiftformat . --swift-version 6
 The codebase follows Clean Architecture principles with three main layers:
 
 ### Domain Layer (`HealthTracker/Domain/`)
-- **Entities**: Core business models (`DayData`, `Meal`, `Workout`, `Mood`, `DayStatus`)
-  - `DayData`: Aggregate root containing all health data for a single day
+- **Entities**: Core business models (`DayData`, `RecordedDayData`, `Meal`, `Workout`, `Mood`, `DayStatus`)
+  - `DayData`: Aggregate root containing all health data for a single day (may be empty for UI purposes)
+  - `RecordedDayData`: Parse-don't-validate wrapper that guarantees at least one health category has data. Failable init is the only construction path. Used throughout the persistence chain (data sources, repository, use cases). The ViewModel parses `DayData` to `RecordedDayData` before saving and converts back on load.
   - Implements business logic for health status computation (optimal/moderate/poor)
 - **Protocols**: Abstract interfaces (`HealthDataRepositoryProtocol`, `LocalDataSourceProtocol`)
 - **Use Cases**: Business operations (`LoadDayDataUseCase`, `SaveDayDataUseCase`)
 
 ### Data Layer (`HealthTracker/Data/`)
 - **Repositories**: Concrete implementations of domain protocols
-  - `HealthDataRepository`: Orchestrates data operations
+  - `HealthDataRepository`: Orchestrates data operations (defaults to `ICloudDriveDataSource`)
 - **DataSources**: Platform-specific storage implementations
-  - `UserDefaultsDataSource`: JSON-based persistence using UserDefaults
+  - `ICloudDriveDataSource`: JSON file persistence via iCloud Drive (default). File visible at **Files app > iCloud Drive > HealthTracker > HealthTrackerData.json**. Falls back to local Documents directory when iCloud is unavailable. Uses `NSFileCoordinator` for safe reads/writes.
+  - `UserDefaultsDataSource`: Legacy JSON-based persistence using UserDefaults (kept for migration and testing)
+- **Models**: Shared data transfer objects
+  - `DayDataContainer`: Codable wrapper for `[DayData]` array, used by both data sources
+- **Migration**: One-time data migration logic
+  - `DataMigration`: Migrates existing UserDefaults data to iCloud Drive on first launch (runs once, controlled by `iCloudMigrationCompleted` flag)
 
 ### Presentation Layer (`HealthTracker/Presentation/`)
 - **Views**: SwiftUI views with section-based composition
@@ -213,9 +219,12 @@ The app is currently in Portuguese (Brazil). All UI strings, entity property nam
 
 ### Storage Changes
 - All persistence goes through `LocalDataSourceProtocol`
-- Storage key is "store" in UserDefaults
-- Data is wrapped in `DayDataContainer` for encoding/decoding
+- Default data source is `ICloudDriveDataSource` (iCloud Drive JSON file at `<ubiquityContainer>/Documents/HealthTrackerData.json`)
+- Falls back to local `Documents/HealthTrackerData.json` when iCloud is unavailable
+- Data is wrapped in `DayDataContainer` for encoding/decoding (shared model in `Data/Models/`)
+- Uses `NSFileCoordinator` for safe concurrent file access
 - Graceful error handling: returns empty arrays on decode failures
+- Migration from UserDefaults runs once at app startup via `DataMigration.migrateIfNeeded()`
 
 ### Entity Modifications
 - Entities are `Codable`, so changes may require migration logic
