@@ -190,23 +190,26 @@ private struct WaterSectionView: View {
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
 
             CardView {
-                HStack {
-                    Spacer()
-                    VStack {
-                        (Text(water, format: .number.precision(.fractionLength(1)))
-                            + Text(" L"))
-                            .font(.title2)
-                        Stepper(
-                            value: Binding(
-                                get: { waterIntake },
-                                set: { onUpdateWater($0) }
-                            ),
-                            in: 0 ... 10,
-                            step: 0.1,
-                            label: {}
-                        )
+                VStack {
+                    (Text(water, format: .number.precision(.fractionLength(1)))
+                        + Text(" L"))
+                        .font(.title2)
+                    Slider(
+                        value: Binding(
+                            get: { waterIntake },
+                            set: { onUpdateWater($0) }
+                        ),
+                        in: 0 ... 5,
+                        step: 0.1
+                    ) {
+                        EmptyView()
+                    } minimumValueLabel: {
+                        Text("0 L")
+                            .font(.caption)
+                    } maximumValueLabel: {
+                        Text("5 L")
+                            .font(.caption)
                     }
-                    Spacer()
                 }
             }
             .listRowSeparator(.hidden)
