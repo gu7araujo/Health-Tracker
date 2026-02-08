@@ -12,17 +12,23 @@ import Foundation
 struct Workout: Identifiable, Codable, Equatable {
     /// Duration of the workout session
     enum Duration: Int, Codable, CaseIterable {
+        case tenMin = 4
         case fifteenMin = 0
         case thirtyMin = 1
+        case fortyMin = 5
         case oneHour = 2
         case oneHourThirty = 3
+        case twoHours = 6
 
         var localizedName: String {
             switch self {
+            case .tenMin: "10m"
             case .fifteenMin: "15m"
             case .thirtyMin: "30m"
+            case .fortyMin: "40m"
             case .oneHour: "1h"
             case .oneHourThirty: "1h30m"
+            case .twoHours: "2h"
             }
         }
     }

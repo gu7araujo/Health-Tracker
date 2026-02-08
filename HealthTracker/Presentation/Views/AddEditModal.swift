@@ -36,24 +36,76 @@ struct AddEditModal: View {
         self.workoutId = workoutId
     }
 
-    var body: some View {
-        List {
-            TextEditor(text: $text)
-                .frame(height: 40)
-
-            if section == .meal {
-                mealFields
-            } else {
-                workoutFields
-            }
-
-            Button("Salvar") {
-                saveEntry()
-                dismiss()
-            }
+    private var navigationTitle: String {
+        switch (section, isEditing) {
+        case (.meal, false): "Nova Refeição"
+        case (.meal, true): "Editar Refeição"
+        case (.workout, false): "Novo Treino"
+        case (.workout, true): "Editar Treino"
         }
-        .onAppear {
-            loadExistingData()
+    }
+
+    private var sectionIcon: String {
+        section == .meal ? "fork.knife" : "figure.run"
+    }
+
+    private var sectionIconColor: Color {
+        section == .meal ? .orange : .green
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    VStack {
+                        Image(systemName: sectionIcon)
+                            .font(.system(size: 40))
+                            .foregroundStyle(sectionIconColor)
+                            .frame(width: 80, height: 80)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
+                }
+
+                Section {
+                    TextField(
+                        section == .meal ? "Descrição da refeição" : "Descrição do treino",
+                        text: $text
+                    )
+                    .multilineTextAlignment(.center)
+                }
+
+                Section {
+                    if section == .meal {
+                        mealFields
+                    } else {
+                        workoutFields
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle(navigationTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Fechar", systemImage: "xmark") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Salvar", systemImage: "checkmark") {
+                        saveEntry()
+                        dismiss()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(.systemBlue))
+                }
+            }
+            .onAppear {
+                loadExistingData()
+            }
         }
     }
 
