@@ -190,7 +190,20 @@ private struct WaterSectionView: View {
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
 
-            CardView {
+            CardView(
+                internalPadding: .init(
+                    top: 15,
+                    leading: 15,
+                    bottom: 15,
+                    trailing: 15
+                ),
+                applyGlassEffect: false,
+                backgroundColor: .constant(
+                    Color(
+                        .secondarySystemBackground
+                    )
+                )
+            ) {
                 VStack {
                     (Text(water, format: .number.precision(.fractionLength(1)))
                         + Text(" L"))

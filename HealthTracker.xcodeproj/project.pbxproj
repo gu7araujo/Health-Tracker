@@ -10,9 +10,22 @@
 		B756C6122EA3F8900057DE0C /* HealthTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B7F1A0012F4C000000000001 /* Exceptions for "HealthTracker" folder in "HealthTracker" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = B756C6112EA3F8900057DE0C /* HealthTracker */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		B756C6142EA3F8900057DE0C /* HealthTracker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B7F1A0012F4C000000000001 /* Exceptions for "HealthTracker" folder in "HealthTracker" target */,
+			);
 			path = HealthTracker;
 			sourceTree = "<group>";
 		};
@@ -285,6 +298,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HealthTracker/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Monitor de Hábitos Saudáveis";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -324,6 +338,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HealthTracker/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Monitor de Hábitos Saudáveis";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
