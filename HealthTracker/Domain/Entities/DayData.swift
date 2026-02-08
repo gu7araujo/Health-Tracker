@@ -93,16 +93,25 @@ struct DayData: Codable, Equatable, Identifiable {
     }
 
     /// Checks if all optimal (green) criteria are met.
-    /// Requirements: all meals small/verySmall + 50% satiety, water >= 1.8L, has workout, good mood
+    /// Requirements: meals small/verySmall + 50% satiety (up to 1 medium + 80% allowed), water >= 1.8L, good mood
     private var meetsOptimalCriteria: Bool {
-        let hasOptimalMeals = !meals.isEmpty && meals.allSatisfy { meal in
+        guard !meals.isEmpty else { return false }
+
+        // Count meals by category
+        let mediumMealsCount = meals.filter { meal in
+            meal.quantity == .medium && meal.satisfaction == .eighty
+        }.count
+        let optimalMealsCount = meals.filter { meal in
             (meal.quantity == .small || meal.quantity == .verySmall) && meal.satisfaction == .fifty
-        }
+        }.count
+
+        // Allow at most 1 medium meal; all other meals must be optimal
+        let hasOptimalMeals = mediumMealsCount <= 1 && (mediumMealsCount + optimalMealsCount) == meals.count
+
         let hasOptimalWater = (water ?? 0) >= 1.8
-        let hasWorkout = !workouts.isEmpty
         let hasGoodMood = mood == .good
 
-        return hasOptimalMeals && hasOptimalWater && hasWorkout && hasGoodMood
+        return hasOptimalMeals && hasOptimalWater && hasGoodMood
     }
 
     /// Checks if any moderate (yellow) criteria are met.

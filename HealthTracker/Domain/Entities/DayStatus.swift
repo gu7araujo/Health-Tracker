@@ -10,7 +10,7 @@ import SwiftUI
 /// Represents the health status of a day based on tracked metrics.
 /// Used to determine the circle color in the calendar strip.
 enum DayStatus: Equatable {
-    /// All optimal conditions met: small meals + 50% satiety, water >= 1.8L, has workout, good mood
+    /// All optimal conditions met: small meals + 50% satiety (up to 1 medium + 80% allowed), water >= 1.8L, good mood
     case optimal
 
     /// Moderate conditions: medium meals + 80% satiety, OR water 1.0-1.7L, OR neutral mood
