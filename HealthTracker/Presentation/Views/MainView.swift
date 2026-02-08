@@ -165,6 +165,7 @@ private struct MealsSectionView: View {
                         .tint(.blue)
                     }
                     .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 10, trailing: 20))
                 }
             } else {
@@ -276,6 +277,7 @@ private struct WorkoutsSectionView: View {
                         .tint(.blue)
                     }
                     .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 10, trailing: 20))
                 }
             } else {
