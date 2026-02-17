@@ -261,6 +261,8 @@ When working on specific tasks, use these specialized skills:
 
 <skills_system priority="1">
 
+## Available Skills
+
 <!-- SKILLS_TABLE_START -->
 <usage>
 When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.
@@ -277,6 +279,12 @@ Usage notes:
 </usage>
 
 <available_skills>
+
+<skill>
+<name>swift-api-design-guidelines</name>
+<description>Applies Apple's Swift API Design Guidelines when writing or reviewing Swift code. Use when writing Swift APIs, naming types and methods, designing Swift libraries, or when the user asks for Swift style, naming, or API design.</description>
+<location>project</location>
+</skill>
 
 <skill>
 <name>swift-concurrency</name>
