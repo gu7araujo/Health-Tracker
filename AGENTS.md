@@ -32,6 +32,21 @@ swiftlint --fix && swiftlint
 swiftformat . --swift-version 6
 ```
 
+### Testing
+```bash
+# Run all tests
+xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>'
+
+# Run specific test file
+xcodebuild test -scheme HealthTracker -only-testing:HealthTrackerTests/DayDataTests
+
+# Run with coverage report
+xcodebuild test -scheme HealthTracker -enableCodeCoverage YES -derivedDataPath ./DerivedData
+
+# View coverage report (after running with coverage)
+# Open: ./DerivedData/Logs/Test/*.xcresult in Xcode
+```
+
 ## Architecture
 
 The codebase follows Clean Architecture principles with three main layers:
@@ -163,6 +178,59 @@ struct CircleImage(url: URL): View { ... }
 - Use "black hole" arguments (`init(_: Witness)`) when witness is only proof, not data
 </rule_7>
 
+## Testing Architecture
+
+The project uses **Swift Testing framework** (not XCTest) with comprehensive test coverage across all layers.
+
+### Test Structure
+```
+HealthTrackerTests/
+├── Domain/
+│   ├── Entities/           # Entity tests (DayData, RecordedDayData, Meal, Workout, Mood, DayStatus)
+│   └── UseCases/          # Use case tests with mocked repositories
+├── Data/
+│   ├── Repositories/      # Repository tests with mocked data sources
+│   ├── DataSources/       # Data source tests (UserDefaultsDataSource)
+│   └── Models/            # Model tests (DayDataContainer)
+├── Presentation/
+│   └── ViewModels/        # ViewModel tests with mocked use cases
+├── Mocks/                 # Mock implementations of protocols
+└── TestHelpers/           # Test data builders and utilities
+```
+
+### Testing Patterns
+
+**Framework:** Swift Testing with `@Test` macro and `#expect()` assertions
+
+**Mocking Strategy:**
+- Protocol-based mocks for `HealthDataRepositoryProtocol` and `LocalDataSourceProtocol`
+- In-memory UserDefaults for data source tests
+- Test data builders for creating fixtures with sensible defaults
+
+**Key Principles:**
+- Use fixed dates (`TestDataBuilder.fixedDate`) for deterministic tests
+- Test one behavior per test function
+- Use descriptive test names: `statusIsOptimal_whenMeetsOptimalCriteria`
+- Follow Arrange-Act-Assert pattern
+- Keep tests fast (< 1 second each) with proper mocking
+- All test functions are marked `@MainActor` due to `@Observable` macro isolation
+
+**Actor Isolation in Test Helpers:**
+- ⚠️ **Don't** mark entire test helper enums/structs with `@MainActor`
+- ✅ **Do** mark only specific factory methods that create `@Observable` types with `@MainActor`
+- ✅ **Keep** date constants and other non-isolated properties accessible from any context
+- Example: In `TestDataBuilder`, only `makeDayData()`, `makeOptimalDay()`, etc. are `@MainActor`, not the enum itself
+
+### Coverage Areas
+- **Domain Layer:** 95%+ (core business logic)
+- **Data Layer:** 80%+ (persistence and data transformation)
+- **Presentation Layer:** 70%+ (ViewModels and state management)
+- **Overall:** 80%+
+- **Total Tests:** 166 tests across all layers
+
+### Running Tests
+See **Development Commands > Testing** section for test execution commands.
+
 ## QUALITY GATES
 
 <checklist>
@@ -177,6 +245,8 @@ struct CircleImage(url: URL): View { ... }
 ☐ ROBUST DOMAIN: Domain code unbreakable even if boundary checks are removed
 ☐ ACCESS CONTROL: Preconditions use witnesses, not boolean checks
 ☐ OPERATION ORDER: Sequential operations enforced by witness types when critical
+☐ NEW FEATURES have corresponding tests (maintain 80%+ coverage)
+☐ RUN TESTS regularly to ensure code quality and prevent regressions
 </checklist>
 
 ## ANTI-PATTERNS TO AVOID
@@ -197,6 +267,7 @@ struct CircleImage(url: URL): View { ... }
 ❌ Multiple entry points without compile-time access enforcement
 ❌ Forgeable proofs (witness init should be fileprivate)
 ❌ Relying on convention/discipline for access control (turn into compile-time requirement)
+❌ Marking entire enums/structs with @MainActor when only specific methods need isolation (makes all static properties MainActor-isolated, preventing non-isolated access)
 </avoid>
 
 ## Language and Localization
@@ -231,9 +302,18 @@ The app is currently in Portuguese (Brazil). All UI strings, entity property nam
 - `DayData` computes health status based on business rules (see `status`, `meetsOptimalCriteria`, `meetsModerateCriteria`)
 - Nested enums have localized names (e.g., `Meal.Quantity.localizedName`)
 
+### Writing Tests
+- All tests use Swift Testing framework (`import Testing`, `@Test` macro)
+- Use `@testable import HealthTracker` to access internal types
+- Mark all test functions with `@Test @MainActor` due to `@Observable` macro isolation
+- Leverage existing mocks in `HealthTrackerTests/Mocks/`
+- Use `TestDataBuilder` for creating test fixtures
+- Follow existing test organization by layer (Domain/Data/Presentation)
+- Ensure new features have corresponding tests (maintain 80%+ coverage)
+
 ## Updating This Guide (AGENTS.md)
 
-When you make changes that affect how the project is structured, documented, or used, **update AGENTS.md** so it stays accurate for future agents and developers.
+**As an AI agent, you are RESPONSIBLE for keeping this documentation accurate and improving it based on experience.** When you make changes that affect how the project is structured, documented, or used, **update AGENTS.md** so it stays accurate for future agents and developers.
 
 ### When to Update AGENTS.md
 
@@ -246,14 +326,30 @@ Update this file when you:
 - **Add or remove agent skills** — Update **Agent Skills - Available Skills** (the skills table) so the listed skills match what’s available in the project.
 - **Change localization or language** — Update **Language and Localization**.
 - **Change how features are added or where things live** — Update **Working with the Codebase** (Adding New Features, Modifying Views, Storage Changes, Entity Modifications) so the steps and file/layer references are correct.
+- **Follow instructions that are now obsolete** — Remove or update guidance that no longer applies (e.g., migration steps that have been completed, deprecated patterns, outdated tool versions).
+- **Discover repetitive mistakes or common pitfalls** — Add warnings, anti-patterns, or best practices to prevent future agents from repeating the same errors.
+- **Find instructions that could be clearer or more specific** — Improve wording, add examples, or break down complex instructions into actionable steps.
+- **Complete major milestones** — Update completion status (e.g., "test coverage now at 80%+", "migration completed", "feature X implemented").
 
 ### How to Update
 
 - Edit the **existing section** that matches the change (see list above). Do not duplicate sections.
 - Keep the same structure and formatting (headers, lists, code blocks, checklist/avoid blocks).
 - Be concise: add or adjust only what’s needed to reflect the current project; remove or reword anything that’s no longer true.
+- **When removing obsolete instructions:** Explicitly state completion status if relevant (e.g., change "TODO: Add tests" to "✅ 166 tests implemented with 80%+ coverage").
+- **When adding warnings about mistakes:** Be specific about what went wrong and how to avoid it (e.g., "❌ Don’t mark entire enums with @MainActor; only mark methods that create MainActor-isolated types").
+- **When improving clarity:** Add concrete examples, file paths, or code snippets to make instructions actionable.
 
 If a change doesn’t clearly fit any section, add a short note in the most relevant place or in **Important Notes**, and consider whether a new subsection is justified.
+
+### Self-Improvement Mindset
+
+As you work on this project:
+1. **Notice patterns** — If you make the same mistake twice, add guidance to prevent it.
+2. **Question outdated advice** — If instructions don’t match reality, update them immediately.
+3. **Clarify ambiguity** — If you find yourself confused by documentation, improve it for the next agent.
+4. **Document decisions** — When you make architectural choices, explain the reasoning in this file.
+5. **Keep it current** — This guide is a living document. Treat it as your shared memory across sessions.
 
 ## Agent Skills - Available Skills
 
@@ -312,7 +408,8 @@ Invoke skills using the Skill tool when relevant to the task at hand.
 - Maintain Clean Architecture boundaries: Domain should not depend on Data or Presentation
 - When unsure or need to make a significant decision ASK the user for guidance
 - The app has no network layer or external API calls currently
-- No unit tests exist yet in the project
+- Comprehensive unit test suite with 80%+ coverage using Swift Testing framework
+- Run tests regularly to ensure code quality and prevent regressions
 - For external knowledge consult the `context7` tool for most up-to-date software package documentation
 - For internal knowledge consult the `serena` tool before editing code to verify existing function signatures, find references, or map project dependencies
 - Prefer serena's symbol-based reading over full-file reading for large files to maintain a lean context window and efficiency
