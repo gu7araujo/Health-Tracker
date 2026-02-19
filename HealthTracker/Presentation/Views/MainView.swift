@@ -384,5 +384,7 @@ private struct EmptyListRow: View {
 // MARK: - UUID Identifiable Extension
 
 extension UUID: @retroactive Identifiable {
-    public var id: UUID { self }
+    public var id: UUID {
+        self
+    }
 }

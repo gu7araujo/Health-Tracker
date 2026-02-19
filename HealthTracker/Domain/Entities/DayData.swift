@@ -10,7 +10,9 @@ import Foundation
 /// Represents all health tracking data for a single day.
 /// This is the main aggregate entity that holds meals, workouts, water intake, and mood.
 struct DayData: Codable, Equatable, Identifiable {
-    var id: Date { date }
+    var id: Date {
+        date
+    }
 
     let date: Date
     var meals: [Meal]
@@ -136,5 +138,7 @@ enum HealthSection: Equatable, Hashable, Identifiable {
     case meal
     case workout
 
-    var id: Self { self }
+    var id: Self {
+        self
+    }
 }

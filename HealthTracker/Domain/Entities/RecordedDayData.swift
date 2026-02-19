@@ -14,7 +14,9 @@ struct RecordedDayData: Equatable, Identifiable {
     /// The underlying day data, guaranteed to have at least one recorded category.
     let dayData: DayData
 
-    var id: Date { dayData.date }
+    var id: Date {
+        dayData.date
+    }
 
     /// Parses a `DayData` into a `RecordedDayData`.
     /// Returns nil if the day has no recorded health data
