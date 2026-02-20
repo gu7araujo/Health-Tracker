@@ -9,16 +9,17 @@ import Foundation
 @testable import HealthTracker
 import Testing
 
+@MainActor
 struct DayDataContainerTests {
     // MARK: - Initialization Tests
 
-    @Test @MainActor func initialization_withEmptyArray() {
+    @Test func initialization_withEmptyArray() {
         let container = DayDataContainer(days: [])
 
         #expect(container.days.isEmpty)
     }
 
-    @Test @MainActor func initialization_withDays() {
+    @Test func initialization_withDays() {
         let day1 = TestDataBuilder.makeOptimalDay()
         let day2 = TestDataBuilder.makeModerateDay()
         let container = DayDataContainer(days: [day1, day2])
@@ -30,7 +31,7 @@ struct DayDataContainerTests {
 
     // MARK: - Codable Tests
 
-    @Test @MainActor func codable_roundTrip_withEmptyArray() throws {
+    @Test func codable_roundTrip_withEmptyArray() throws {
         let original = DayDataContainer(days: [])
 
         let encoded = try JSONEncoder().encode(original)
@@ -39,7 +40,7 @@ struct DayDataContainerTests {
         #expect(decoded.days.isEmpty)
     }
 
-    @Test @MainActor func codable_roundTrip_withSingleDay() throws {
+    @Test func codable_roundTrip_withSingleDay() throws {
         let day = TestDataBuilder.makeOptimalDay()
         let original = DayDataContainer(days: [day])
 
@@ -50,7 +51,7 @@ struct DayDataContainerTests {
         #expect(decoded.days[0] == day)
     }
 
-    @Test @MainActor func codable_roundTrip_withMultipleDays() throws {
+    @Test func codable_roundTrip_withMultipleDays() throws {
         let day1 = TestDataBuilder.makeOptimalDay(date: TestDataBuilder.fixedDate)
         let day2 = TestDataBuilder.makeModerateDay(date: TestDataBuilder.fixedDatePlusOne)
         let day3 = TestDataBuilder.makePoorDay(date: TestDataBuilder.fixedDate)
@@ -65,7 +66,7 @@ struct DayDataContainerTests {
         #expect(decoded.days[2] == day3)
     }
 
-    @Test @MainActor func codable_preservesAllDayDataProperties() throws {
+    @Test func codable_preservesAllDayDataProperties() throws {
         let day = TestDataBuilder.makeOptimalDay()
         let original = DayDataContainer(days: [day])
 
@@ -80,7 +81,7 @@ struct DayDataContainerTests {
         #expect(decodedDay.mood == day.mood)
     }
 
-    @Test @MainActor func codable_handlesEmptyDays() throws {
+    @Test func codable_handlesEmptyDays() throws {
         let emptyDay = TestDataBuilder.makeEmptyDay()
         let original = DayDataContainer(days: [emptyDay])
 

@@ -9,10 +9,11 @@ import Foundation
 @testable import HealthTracker
 import Testing
 
+@MainActor
 struct MealTests {
     // MARK: - Quantity Enum Tests
 
-    @Test @MainActor func quantity_allCases_areAccessible() {
+    @Test func quantity_allCases_areAccessible() {
         let cases = Meal.Quantity.allCases
 
         #expect(cases.count == 4)
@@ -22,23 +23,29 @@ struct MealTests {
         #expect(cases.contains(.large))
     }
 
-    @Test @MainActor func quantity_localizedNames_areCorrect() {
-        #expect(Meal.Quantity.verySmall.localizedName == "Muito pequena")
-        #expect(Meal.Quantity.small.localizedName == "Pequena")
-        #expect(Meal.Quantity.medium.localizedName == "Média")
-        #expect(Meal.Quantity.large.localizedName == "Grande")
+    @Test(arguments: [
+        (Meal.Quantity.verySmall, "Muito pequena"),
+        (.small, "Pequena"),
+        (.medium, "Média"),
+        (.large, "Grande")
+    ])
+    func quantity_localizedNames(quantity: Meal.Quantity, expectedName: String) {
+        #expect(quantity.localizedName == expectedName)
     }
 
-    @Test @MainActor func quantity_rawValues_areCorrect() {
-        #expect(Meal.Quantity.verySmall.rawValue == 0)
-        #expect(Meal.Quantity.small.rawValue == 1)
-        #expect(Meal.Quantity.medium.rawValue == 2)
-        #expect(Meal.Quantity.large.rawValue == 3)
+    @Test(arguments: [
+        (Meal.Quantity.verySmall, 0),
+        (.small, 1),
+        (.medium, 2),
+        (.large, 3)
+    ])
+    func quantity_rawValues(quantity: Meal.Quantity, expectedValue: Int) {
+        #expect(quantity.rawValue == expectedValue)
     }
 
     // MARK: - Satisfaction Enum Tests
 
-    @Test @MainActor func satisfaction_allCases_areAccessible() {
+    @Test func satisfaction_allCases_areAccessible() {
         let cases = Meal.Satisfaction.allCases
 
         #expect(cases.count == 4)
@@ -48,23 +55,29 @@ struct MealTests {
         #expect(cases.contains(.hundred))
     }
 
-    @Test @MainActor func satisfaction_localizedNames_areCorrect() {
-        #expect(Meal.Satisfaction.thirty.localizedName == "30%")
-        #expect(Meal.Satisfaction.fifty.localizedName == "50%")
-        #expect(Meal.Satisfaction.eighty.localizedName == "80%")
-        #expect(Meal.Satisfaction.hundred.localizedName == "100%")
+    @Test(arguments: [
+        (Meal.Satisfaction.thirty, "30%"),
+        (.fifty, "50%"),
+        (.eighty, "80%"),
+        (.hundred, "100%")
+    ])
+    func satisfaction_localizedNames(satisfaction: Meal.Satisfaction, expectedName: String) {
+        #expect(satisfaction.localizedName == expectedName)
     }
 
-    @Test @MainActor func satisfaction_rawValues_areCorrect() {
-        #expect(Meal.Satisfaction.thirty.rawValue == 0)
-        #expect(Meal.Satisfaction.fifty.rawValue == 1)
-        #expect(Meal.Satisfaction.eighty.rawValue == 2)
-        #expect(Meal.Satisfaction.hundred.rawValue == 3)
+    @Test(arguments: [
+        (Meal.Satisfaction.thirty, 0),
+        (.fifty, 1),
+        (.eighty, 2),
+        (.hundred, 3)
+    ])
+    func satisfaction_rawValues(satisfaction: Meal.Satisfaction, expectedValue: Int) {
+        #expect(satisfaction.rawValue == expectedValue)
     }
 
     // MARK: - Meal Initialization Tests
 
-    @Test @MainActor func initialization_withDefaults() {
+    @Test func initialization_withDefaults() {
         let meal = Meal(description: "Breakfast")
 
         #expect(meal.description == "Breakfast")
@@ -72,7 +85,7 @@ struct MealTests {
         #expect(meal.satisfaction == .fifty)
     }
 
-    @Test @MainActor func initialization_withAllParameters() {
+    @Test func initialization_withAllParameters() {
         let id = UUID()
         let meal = Meal(
             id: id,
@@ -89,7 +102,7 @@ struct MealTests {
 
     // MARK: - Codable Tests
 
-    @Test @MainActor func codable_roundTrip_preservesAllData() throws {
+    @Test func codable_roundTrip_preservesAllData() throws {
         let original = Meal(
             description: "Dinner",
             quantity: .medium,
@@ -105,7 +118,7 @@ struct MealTests {
         #expect(decoded.satisfaction == original.satisfaction)
     }
 
-    @Test @MainActor func codable_roundTrip_withDefaults() throws {
+    @Test func codable_roundTrip_withDefaults() throws {
         let original = Meal(description: "Snack")
 
         let encoded = try JSONEncoder().encode(original)
@@ -119,7 +132,7 @@ struct MealTests {
 
     // MARK: - Equatable Tests
 
-    @Test @MainActor func equatable_sameValues_areEqual() {
+    @Test func equatable_sameValues_areEqual() {
         let id = UUID()
         let meal1 = Meal(id: id, description: "Test", quantity: .small, satisfaction: .fifty)
         let meal2 = Meal(id: id, description: "Test", quantity: .small, satisfaction: .fifty)
@@ -127,14 +140,14 @@ struct MealTests {
         #expect(meal1 == meal2)
     }
 
-    @Test @MainActor func equatable_differentIds_areNotEqual() {
+    @Test func equatable_differentIds_areNotEqual() {
         let meal1 = Meal(description: "Test", quantity: .small, satisfaction: .fifty)
         let meal2 = Meal(description: "Test", quantity: .small, satisfaction: .fifty)
 
         #expect(meal1 != meal2)
     }
 
-    @Test @MainActor func equatable_differentQuantities_areNotEqual() {
+    @Test func equatable_differentQuantities_areNotEqual() {
         let id = UUID()
         let meal1 = Meal(id: id, description: "Test", quantity: .small, satisfaction: .fifty)
         let meal2 = Meal(id: id, description: "Test", quantity: .large, satisfaction: .fifty)
@@ -144,7 +157,7 @@ struct MealTests {
 
     // MARK: - Identifiable Tests
 
-    @Test @MainActor func identifiable_hasUniqueId() {
+    @Test func identifiable_hasUniqueId() {
         let meal1 = Meal(description: "Breakfast")
         let meal2 = Meal(description: "Breakfast")
 

@@ -9,17 +9,18 @@ import Foundation
 @testable import HealthTracker
 import Testing
 
+@MainActor
 struct RecordedDayDataTests {
     // MARK: - Failable Initializer Tests
 
-    @Test @MainActor func initialization_returnsNil_whenCompletelyEmpty() {
+    @Test func initialization_returnsNil_whenCompletelyEmpty() {
         let dayData = TestDataBuilder.makeEmptyDay()
         let recordedDayData = RecordedDayData(dayData)
 
         #expect(recordedDayData == nil)
     }
 
-    @Test @MainActor func initialization_succeeds_withOnlyMeals() {
+    @Test func initialization_succeeds_withOnlyMeals() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
 
@@ -29,7 +30,7 @@ struct RecordedDayDataTests {
         #expect(recordedDayData?.dayData.meals.count == 1)
     }
 
-    @Test @MainActor func initialization_succeeds_withOnlyWorkouts() {
+    @Test func initialization_succeeds_withOnlyWorkouts() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
 
@@ -39,7 +40,7 @@ struct RecordedDayDataTests {
         #expect(recordedDayData?.dayData.workouts.count == 1)
     }
 
-    @Test @MainActor func initialization_succeeds_withOnlyWater() {
+    @Test func initialization_succeeds_withOnlyWater() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.water = 1.5
 
@@ -49,7 +50,7 @@ struct RecordedDayDataTests {
         #expect(recordedDayData?.dayData.water == 1.5)
     }
 
-    @Test @MainActor func initialization_succeeds_withOnlyMood() {
+    @Test func initialization_succeeds_withOnlyMood() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.mood = .good
 
@@ -59,7 +60,7 @@ struct RecordedDayDataTests {
         #expect(recordedDayData?.dayData.mood == .good)
     }
 
-    @Test @MainActor func initialization_succeeds_withMealsAndWater() {
+    @Test func initialization_succeeds_withMealsAndWater() {
         let dayData = TestDataBuilder.makeIncompleteDay()
         let recordedDayData = RecordedDayData(dayData)
 
@@ -68,7 +69,7 @@ struct RecordedDayDataTests {
         #expect(recordedDayData?.dayData.water == 1.0)
     }
 
-    @Test @MainActor func initialization_succeeds_withAllCategories() {
+    @Test func initialization_succeeds_withAllCategories() {
         let dayData = TestDataBuilder.makeOptimalDay()
         let recordedDayData = RecordedDayData(dayData)
 
@@ -79,7 +80,7 @@ struct RecordedDayDataTests {
         #expect(recordedDayData?.dayData.mood == .good)
     }
 
-    @Test @MainActor func initialization_preservesAllDayDataProperties() {
+    @Test func initialization_preservesAllDayDataProperties() {
         let original = TestDataBuilder.makeOptimalDay()
         let recorded = RecordedDayData(original)
 
@@ -93,7 +94,7 @@ struct RecordedDayDataTests {
 
     // MARK: - Identifiable Tests
 
-    @Test @MainActor func identifiable_idEqualsDate() {
+    @Test func identifiable_idEqualsDate() {
         let date = TestDataBuilder.fixedDate
         var dayData = DayData(date: date)
         dayData.water = 1.5
@@ -105,7 +106,7 @@ struct RecordedDayDataTests {
 
     // MARK: - Equatable Tests
 
-    @Test @MainActor func equatable_sameValues_areEqual() {
+    @Test func equatable_sameValues_areEqual() {
         let dayData = TestDataBuilder.makeOptimalDay()
         let recorded1 = RecordedDayData(dayData)
         let recorded2 = RecordedDayData(dayData)
@@ -113,7 +114,7 @@ struct RecordedDayDataTests {
         #expect(recorded1 == recorded2)
     }
 
-    @Test @MainActor func equatable_differentDates_areNotEqual() {
+    @Test func equatable_differentDates_areNotEqual() {
         let dayData1 = TestDataBuilder.makeOptimalDay(date: TestDataBuilder.fixedDate)
         let dayData2 = TestDataBuilder.makeOptimalDay(date: TestDataBuilder.fixedDatePlusOne)
 
@@ -123,7 +124,7 @@ struct RecordedDayDataTests {
         #expect(recorded1 != recorded2)
     }
 
-    @Test @MainActor func equatable_differentMeals_areNotEqual() {
+    @Test func equatable_differentMeals_areNotEqual() {
         var dayData1 = DayData(date: TestDataBuilder.fixedDate)
         dayData1.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
 

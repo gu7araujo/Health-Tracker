@@ -389,6 +389,12 @@ Usage notes:
 </skill>
 
 <skill>
+<name>swift-testing-expert</name>
+<description>'Expert guidance for Swift Testing: test structure, #expect/#require macros, traits and tags, parameterized tests, test plans, parallel execution, async waiting patterns, and XCTest migration. Use when writing new Swift tests, modernizing XCTest suites, debugging flaky tests, or improving test quality and maintainability in Apple-platform or Swift server projects.'</description>
+<location>project</location>
+</skill>
+
+<skill>
 <name>swiftui-expert-skill</name>
 <description>Write, review, or improve SwiftUI code following best practices for state management, view composition, performance, modern APIs, Swift concurrency, and iOS 26+ Liquid Glass adoption. Use when building new SwiftUI features, refactoring existing views, reviewing code quality, or adopting modern SwiftUI patterns.</description>
 <location>project</location>

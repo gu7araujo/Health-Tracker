@@ -9,10 +9,11 @@ import Foundation
 @testable import HealthTracker
 import Testing
 
+@MainActor
 struct HealthDataRepositoryTests {
     // MARK: - Load All Days Tests
 
-    @Test @MainActor func loadAllDays_returnsDataFromDataSource() throws {
+    @Test func loadAllDays_returnsDataFromDataSource() throws {
         let mockDataSource = MockLocalDataSource()
         let day1 = try #require(TestDataBuilder.makeRecordedOptimalDay(date: TestDataBuilder.fixedDate))
         let day2 = try #require(TestDataBuilder.makeRecordedModerateDay(date: TestDataBuilder.fixedDatePlusOne))
@@ -27,7 +28,7 @@ struct HealthDataRepositoryTests {
         #expect(result[1] == day2)
     }
 
-    @Test @MainActor func loadAllDays_returnsEmptyArray_whenNoData() {
+    @Test func loadAllDays_returnsEmptyArray_whenNoData() {
         let mockDataSource = MockLocalDataSource()
         mockDataSource.loadResult = []
 
@@ -40,7 +41,7 @@ struct HealthDataRepositoryTests {
 
     // MARK: - Save Days Tests
 
-    @Test @MainActor func save_callsDataSourceWithCorrectData() throws {
+    @Test func save_callsDataSourceWithCorrectData() throws {
         let mockDataSource = MockLocalDataSource()
         let day1 = try #require(TestDataBuilder.makeRecordedOptimalDay())
         let day2 = try #require(TestDataBuilder.makeRecordedModerateDay())
@@ -57,7 +58,7 @@ struct HealthDataRepositoryTests {
 
     // MARK: - Day Data For Date Tests
 
-    @Test @MainActor func dayData_forDate_findsExistingDay() throws {
+    @Test func dayData_forDate_findsExistingDay() throws {
         let mockDataSource = MockLocalDataSource()
         let date = TestDataBuilder.fixedDate
         let day = try #require(TestDataBuilder.makeRecordedOptimalDay(date: date))
@@ -69,7 +70,7 @@ struct HealthDataRepositoryTests {
         #expect(result == day)
     }
 
-    @Test @MainActor func dayData_forDate_returnsNil_whenNoMatch() {
+    @Test func dayData_forDate_returnsNil_whenNoMatch() {
         let mockDataSource = MockLocalDataSource()
         mockDataSource.loadResult = []
 
@@ -79,7 +80,8 @@ struct HealthDataRepositoryTests {
         #expect(result == nil)
     }
 
-    @Test @MainActor func dayData_forDate_matchesSameCalendarDay() throws {
+    @Test("Finds day data even with different times on same calendar day")
+    func dayData_forDate_matchesSameCalendarDay() throws {
         let mockDataSource = MockLocalDataSource()
         // Create a date at noon in the current calendar
         let calendar = Calendar.current
@@ -104,7 +106,8 @@ struct HealthDataRepositoryTests {
         #expect(result != nil)
     }
 
-    @Test @MainActor func dayData_forDate_doesNotMatchDifferentDay() throws {
+    @Test("Returns nil when querying different calendar day")
+    func dayData_forDate_doesNotMatchDifferentDay() throws {
         let mockDataSource = MockLocalDataSource()
         let storedDate = TestDataBuilder.fixedDate
         let queryDate = TestDataBuilder.fixedDatePlusOne
@@ -120,7 +123,7 @@ struct HealthDataRepositoryTests {
 
     // MARK: - Save Day Data Tests
 
-    @Test @MainActor func saveDayData_addsNewDay_whenNotExists() throws {
+    @Test func saveDayData_addsNewDay_whenNotExists() throws {
         let mockDataSource = MockLocalDataSource()
         mockDataSource.loadResult = []
 
@@ -134,7 +137,7 @@ struct HealthDataRepositoryTests {
         #expect(mockDataSource.saveCalledWith?[0] == newDay)
     }
 
-    @Test @MainActor func saveDayData_updatesExistingDay_whenDateMatches() throws {
+    @Test func saveDayData_updatesExistingDay_whenDateMatches() throws {
         let mockDataSource = MockLocalDataSource()
         let date = TestDataBuilder.fixedDate
         let originalDay = try #require(TestDataBuilder.makeRecordedOptimalDay(date: date))
@@ -150,7 +153,7 @@ struct HealthDataRepositoryTests {
         #expect(mockDataSource.saveCalledWith?[0] == updatedDay)
     }
 
-    @Test @MainActor func saveDayData_preservesOtherDays() throws {
+    @Test func saveDayData_preservesOtherDays() throws {
         let mockDataSource = MockLocalDataSource()
         let day1 = try #require(TestDataBuilder.makeRecordedOptimalDay(date: TestDataBuilder.fixedDate))
         let day2 = try #require(TestDataBuilder.makeRecordedPoorDay(date: TestDataBuilder.fixedDatePlusOne))
@@ -167,7 +170,8 @@ struct HealthDataRepositoryTests {
         #expect(saved?[1] == day2)
     }
 
-    @Test @MainActor func saveDayData_matchesSameCalendarDay_forUpdate() throws {
+    @Test("Updates existing day when saving to same calendar day")
+    func saveDayData_matchesSameCalendarDay_forUpdate() throws {
         let mockDataSource = MockLocalDataSource()
         // Create days for testing - using same fixed date
         let originalDay = TestDataBuilder.makeOptimalDay(date: TestDataBuilder.fixedDate)

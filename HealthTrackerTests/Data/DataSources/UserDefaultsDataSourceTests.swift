@@ -9,6 +9,7 @@ import Foundation
 @testable import HealthTracker
 import Testing
 
+@MainActor
 struct UserDefaultsDataSourceTests {
     // MARK: - Test Helpers
 
@@ -20,7 +21,7 @@ struct UserDefaultsDataSourceTests {
 
     // MARK: - Load Tests
 
-    @Test @MainActor func load_returnsEmptyArray_whenNoData() {
+    @Test func load_returnsEmptyArray_whenNoData() {
         let testDefaults = createTestUserDefaults()
         let dataSource = UserDefaultsDataSource(
             userDefaults: testDefaults,
@@ -32,7 +33,7 @@ struct UserDefaultsDataSourceTests {
         #expect(result.isEmpty)
     }
 
-    @Test @MainActor func load_returnsEmptyArray_whenCorruptedData() {
+    @Test func load_returnsEmptyArray_whenCorruptedData() {
         let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         // Store invalid JSON data
@@ -50,7 +51,7 @@ struct UserDefaultsDataSourceTests {
 
     // MARK: - Save and Load Round-Trip Tests
 
-    @Test @MainActor func saveAndLoad_roundTrip_preservesData() throws {
+    @Test func saveAndLoad_roundTrip_preservesData() throws {
         let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         let dataSource = UserDefaultsDataSource(
@@ -70,7 +71,7 @@ struct UserDefaultsDataSourceTests {
         #expect(loadedDays[1].dayData == day2.dayData)
     }
 
-    @Test @MainActor func saveAndLoad_roundTrip_withSingleDay() throws {
+    @Test func saveAndLoad_roundTrip_withSingleDay() throws {
         let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         let dataSource = UserDefaultsDataSource(
@@ -86,7 +87,7 @@ struct UserDefaultsDataSourceTests {
         #expect(loadedDays[0].dayData == day.dayData)
     }
 
-    @Test @MainActor func saveAndLoad_roundTrip_withEmptyArray() {
+    @Test func saveAndLoad_roundTrip_withEmptyArray() {
         let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         let dataSource = UserDefaultsDataSource(
@@ -100,7 +101,7 @@ struct UserDefaultsDataSourceTests {
         #expect(loadedDays.isEmpty)
     }
 
-    @Test @MainActor func save_overwritesPreviousData() throws {
+    @Test func save_overwritesPreviousData() throws {
         let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         let dataSource = UserDefaultsDataSource(
@@ -124,7 +125,7 @@ struct UserDefaultsDataSourceTests {
 
     // MARK: - Data Integrity Tests
 
-    @Test @MainActor func load_filtersOutEmptyDays() throws {
+    @Test func load_filtersOutEmptyDays() throws {
         let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
 
@@ -148,7 +149,7 @@ struct UserDefaultsDataSourceTests {
         #expect(loadedDays[0].dayData == validDay)
     }
 
-    @Test @MainActor func saveAndLoad_preservesAllDayDataProperties() throws {
+    @Test func saveAndLoad_preservesAllDayDataProperties() throws {
         let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         let dataSource = UserDefaultsDataSource(

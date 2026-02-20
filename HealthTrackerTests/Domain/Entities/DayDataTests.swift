@@ -10,10 +10,11 @@ import Foundation
 @testable import HealthTracker
 import Testing
 
+@MainActor
 struct DayDataTests {
     // MARK: - Initialization Tests
 
-    @Test @MainActor func initialization_createsEmptyDayData() {
+    @Test func initialization_createsEmptyDayData() {
         let date = TestDataBuilder.fixedDate
         let dayData = DayData(date: date)
 
@@ -24,7 +25,7 @@ struct DayDataTests {
         #expect(dayData.mood == nil)
     }
 
-    @Test @MainActor func initialization_withAllParameters() {
+    @Test func initialization_withAllParameters() {
         let date = TestDataBuilder.fixedDate
         let meals = [Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)]
         let workouts = [Workout(description: "Run", duration: .thirtyMin)]
@@ -46,28 +47,29 @@ struct DayDataTests {
 
     // MARK: - Status Computation Tests
 
-    @Test @MainActor func status_isNoData_whenEmpty() {
+    @Test func status_isNoData_whenEmpty() {
         let dayData = TestDataBuilder.makeEmptyDay()
         #expect(dayData.status == .noData)
     }
 
-    @Test @MainActor func status_isIncomplete_whenOnlyOneCategoryFilled() {
+    @Test func status_isIncomplete_whenOnlyOneCategoryFilled() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.water = 1.5
         #expect(dayData.status == .incomplete)
     }
 
-    @Test @MainActor func status_isIncomplete_whenOnlyTwoCategoriesFilled() {
+    @Test func status_isIncomplete_whenOnlyTwoCategoriesFilled() {
         let dayData = TestDataBuilder.makeIncompleteDay()
         #expect(dayData.status == .incomplete)
     }
 
-    @Test @MainActor func status_isOptimal_whenMeetsAllOptimalCriteria() {
+    @Test func status_isOptimal_whenMeetsAllOptimalCriteria() {
         let dayData = TestDataBuilder.makeOptimalDay()
         #expect(dayData.status == .optimal)
     }
 
-    @Test @MainActor func status_isOptimal_withOnlySmallMeals() {
+    @Test("Optimal status allows only small meals")
+    func status_isOptimal_withOnlySmallMeals() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
         dayData.addMeal(Meal(description: "Snack", quantity: .verySmall, satisfaction: .fifty))
@@ -78,7 +80,8 @@ struct DayDataTests {
         #expect(dayData.status == .optimal)
     }
 
-    @Test @MainActor func status_isOptimal_withOneMediumMealAndSmallMeals() {
+    @Test("Optimal status allows at most one medium meal")
+    func status_isOptimal_withOneMediumMealAndSmallMeals() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
         dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty))
@@ -89,7 +92,8 @@ struct DayDataTests {
         #expect(dayData.status == .optimal)
     }
 
-    @Test @MainActor func status_isNotOptimal_withTwoMediumMeals() {
+    @Test("Two medium meals prevent optimal status")
+    func status_isNotOptimal_withTwoMediumMeals() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .medium, satisfaction: .eighty))
         dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty))
@@ -100,7 +104,8 @@ struct DayDataTests {
         #expect(dayData.status != .optimal)
     }
 
-    @Test @MainActor func status_isNotOptimal_whenWaterBelowThreshold() {
+    @Test("Water below 1.8L prevents optimal status")
+    func status_isNotOptimal_whenWaterBelowThreshold() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
         dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
@@ -110,7 +115,8 @@ struct DayDataTests {
         #expect(dayData.status != .optimal)
     }
 
-    @Test @MainActor func status_isNotOptimal_whenMoodNotGood() {
+    @Test("Optimal status requires good mood")
+    func status_isNotOptimal_whenMoodNotGood() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
         dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
@@ -120,12 +126,12 @@ struct DayDataTests {
         #expect(dayData.status != .optimal)
     }
 
-    @Test @MainActor func status_isModerate_withModerateMeals() {
+    @Test func status_isModerate_withModerateMeals() {
         let dayData = TestDataBuilder.makeModerateDay()
         #expect(dayData.status == .moderate)
     }
 
-    @Test @MainActor func status_isModerate_withModerateWater() {
+    @Test func status_isModerate_withModerateWater() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
         dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
@@ -135,7 +141,7 @@ struct DayDataTests {
         #expect(dayData.status == .moderate)
     }
 
-    @Test @MainActor func status_isModerate_withNeutralMood() {
+    @Test func status_isModerate_withNeutralMood() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
         dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
@@ -145,12 +151,12 @@ struct DayDataTests {
         #expect(dayData.status == .moderate)
     }
 
-    @Test @MainActor func status_isPoor_whenNoModerateCriteriaMet() {
+    @Test func status_isPoor_whenNoModerateCriteriaMet() {
         let dayData = TestDataBuilder.makePoorDay()
         #expect(dayData.status == .poor)
     }
 
-    @Test @MainActor func status_isPoor_withLargeMealsAndLowWater() {
+    @Test func status_isPoor_withLargeMealsAndLowWater() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .large, satisfaction: .hundred))
         dayData.addWorkout(Workout(description: "Walk", duration: .thirtyMin))
@@ -162,7 +168,7 @@ struct DayDataTests {
 
     // MARK: - Meal CRUD Operations
 
-    @Test @MainActor func addMeal_increasesMealCount() {
+    @Test func addMeal_increasesMealCount() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let meal = Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)
 
@@ -172,7 +178,7 @@ struct DayDataTests {
         #expect(dayData.meals.first?.description == "Breakfast")
     }
 
-    @Test @MainActor func addMeal_preservesExistingMeals() {
+    @Test func addMeal_preservesExistingMeals() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let meal1 = Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)
         let meal2 = Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty)
@@ -185,7 +191,7 @@ struct DayDataTests {
         #expect(dayData.meals[1].description == "Lunch")
     }
 
-    @Test @MainActor func updateMeal_modifiesMealProperties() {
+    @Test func updateMeal_modifiesMealProperties() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let originalMeal = Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)
         dayData.addMeal(originalMeal)
@@ -201,7 +207,7 @@ struct DayDataTests {
         #expect(dayData.meals.first?.satisfaction == .hundred)
     }
 
-    @Test @MainActor func updateMeal_doesNothing_whenMealNotFound() {
+    @Test func updateMeal_doesNothing_whenMealNotFound() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let meal = Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)
         dayData.addMeal(meal)
@@ -213,7 +219,7 @@ struct DayDataTests {
         #expect(dayData.meals.first?.description == "Breakfast")
     }
 
-    @Test @MainActor func removeMeal_removesMealById() {
+    @Test func removeMeal_removesMealById() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let meal = Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)
         dayData.addMeal(meal)
@@ -223,7 +229,7 @@ struct DayDataTests {
         #expect(dayData.meals.isEmpty)
     }
 
-    @Test @MainActor func removeMeal_preservesOtherMeals() {
+    @Test func removeMeal_preservesOtherMeals() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let meal1 = Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)
         let meal2 = Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty)
@@ -236,7 +242,7 @@ struct DayDataTests {
         #expect(dayData.meals.first?.description == "Lunch")
     }
 
-    @Test @MainActor func removeMeal_doesNothing_whenMealNotFound() {
+    @Test func removeMeal_doesNothing_whenMealNotFound() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let meal = Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)
         dayData.addMeal(meal)
@@ -249,7 +255,7 @@ struct DayDataTests {
 
     // MARK: - Workout CRUD Operations
 
-    @Test @MainActor func addWorkout_increasesWorkoutCount() {
+    @Test func addWorkout_increasesWorkoutCount() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let workout = Workout(description: "Morning run", duration: .thirtyMin)
 
@@ -259,7 +265,7 @@ struct DayDataTests {
         #expect(dayData.workouts.first?.description == "Morning run")
     }
 
-    @Test @MainActor func addWorkout_preservesExistingWorkouts() {
+    @Test func addWorkout_preservesExistingWorkouts() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let workout1 = Workout(description: "Morning run", duration: .thirtyMin)
         let workout2 = Workout(description: "Evening gym", duration: .oneHour)
@@ -272,7 +278,7 @@ struct DayDataTests {
         #expect(dayData.workouts[1].description == "Evening gym")
     }
 
-    @Test @MainActor func updateWorkout_modifiesWorkoutProperties() {
+    @Test func updateWorkout_modifiesWorkoutProperties() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let originalWorkout = Workout(description: "Run", duration: .thirtyMin)
         dayData.addWorkout(originalWorkout)
@@ -288,7 +294,7 @@ struct DayDataTests {
         #expect(dayData.workouts.first?.description == "Long run")
     }
 
-    @Test @MainActor func updateWorkout_doesNothing_whenWorkoutNotFound() {
+    @Test func updateWorkout_doesNothing_whenWorkoutNotFound() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let workout = Workout(description: "Run", duration: .thirtyMin)
         dayData.addWorkout(workout)
@@ -300,7 +306,7 @@ struct DayDataTests {
         #expect(dayData.workouts.first?.description == "Run")
     }
 
-    @Test @MainActor func removeWorkout_removesWorkoutById() {
+    @Test func removeWorkout_removesWorkoutById() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let workout = Workout(description: "Run", duration: .thirtyMin)
         dayData.addWorkout(workout)
@@ -310,7 +316,7 @@ struct DayDataTests {
         #expect(dayData.workouts.isEmpty)
     }
 
-    @Test @MainActor func removeWorkout_preservesOtherWorkouts() {
+    @Test func removeWorkout_preservesOtherWorkouts() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let workout1 = Workout(description: "Morning run", duration: .thirtyMin)
         let workout2 = Workout(description: "Evening gym", duration: .oneHour)
@@ -323,7 +329,7 @@ struct DayDataTests {
         #expect(dayData.workouts.first?.description == "Evening gym")
     }
 
-    @Test @MainActor func removeWorkout_doesNothing_whenWorkoutNotFound() {
+    @Test func removeWorkout_doesNothing_whenWorkoutNotFound() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         let workout = Workout(description: "Run", duration: .thirtyMin)
         dayData.addWorkout(workout)
@@ -336,23 +342,23 @@ struct DayDataTests {
 
     // MARK: - Helper Methods Tests
 
-    @Test @MainActor func filledCategoriesCount_isZero_whenEmpty() {
+    @Test func filledCategoriesCount_isZero_whenEmpty() {
         let dayData = TestDataBuilder.makeEmptyDay()
         #expect(dayData.status == .noData) // Verifies filledCategoriesCount is 0
     }
 
-    @Test @MainActor func filledCategoriesCount_isOne_withOnlyMeals() {
+    @Test func filledCategoriesCount_isOne_withOnlyMeals() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
         #expect(dayData.status == .incomplete)
     }
 
-    @Test @MainActor func filledCategoriesCount_isTwo_withMealsAndWater() {
+    @Test func filledCategoriesCount_isTwo_withMealsAndWater() {
         let dayData = TestDataBuilder.makeIncompleteDay()
         #expect(dayData.status == .incomplete)
     }
 
-    @Test @MainActor func filledCategoriesCount_isThree_withMealsWaterAndWorkouts() {
+    @Test func filledCategoriesCount_isThree_withMealsWaterAndWorkouts() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
         dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
@@ -360,14 +366,14 @@ struct DayDataTests {
         #expect(dayData.status != .incomplete)
     }
 
-    @Test @MainActor func filledCategoriesCount_isFour_withAllCategories() {
+    @Test func filledCategoriesCount_isFour_withAllCategories() {
         let dayData = TestDataBuilder.makeOptimalDay()
         #expect(dayData.status != .incomplete)
     }
 
     // MARK: - Codable Tests
 
-    @Test @MainActor func codable_roundTrip_preservesAllData() throws {
+    @Test func codable_roundTrip_preservesAllData() throws {
         let original = TestDataBuilder.makeOptimalDay()
 
         let encoded = try JSONEncoder().encode(original)
@@ -380,7 +386,7 @@ struct DayDataTests {
         #expect(decoded.mood == original.mood)
     }
 
-    @Test @MainActor func codable_roundTrip_withEmptyDay() throws {
+    @Test func codable_roundTrip_withEmptyDay() throws {
         let original = TestDataBuilder.makeEmptyDay()
 
         let encoded = try JSONEncoder().encode(original)
@@ -391,21 +397,21 @@ struct DayDataTests {
 
     // MARK: - Equatable Tests
 
-    @Test @MainActor func equatable_sameValues_areEqual() {
+    @Test func equatable_sameValues_areEqual() {
         let dayData1 = TestDataBuilder.makeOptimalDay()
         let dayData2 = dayData1 // Same instance should be equal to itself
 
         #expect(dayData1 == dayData2)
     }
 
-    @Test @MainActor func equatable_differentDates_areNotEqual() {
+    @Test func equatable_differentDates_areNotEqual() {
         let dayData1 = TestDataBuilder.makeOptimalDay(date: TestDataBuilder.fixedDate)
         let dayData2 = TestDataBuilder.makeOptimalDay(date: TestDataBuilder.fixedDatePlusOne)
 
         #expect(dayData1 != dayData2)
     }
 
-    @Test @MainActor func equatable_differentMeals_areNotEqual() {
+    @Test func equatable_differentMeals_areNotEqual() {
         var dayData1 = DayData(date: TestDataBuilder.fixedDate)
         dayData1.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
 
@@ -417,7 +423,7 @@ struct DayDataTests {
 
     // MARK: - Identifiable Tests
 
-    @Test @MainActor func identifiable_idEqualsDate() {
+    @Test func identifiable_idEqualsDate() {
         let date = TestDataBuilder.fixedDate
         let dayData = DayData(date: date)
 

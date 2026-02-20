@@ -26,7 +26,7 @@ struct MainViewModelTests {
 
     // MARK: - Initialization Tests
 
-    @Test @MainActor func initialization_setsDefaultState() {
+    @Test func initialization_setsDefaultState() {
         let (viewModel, _) = createViewModel()
 
         #expect(viewModel.days.isEmpty)
@@ -34,7 +34,7 @@ struct MainViewModelTests {
 
     // MARK: - Load Data Tests
 
-    @Test @MainActor func loadData_loadsFromRepository() throws {
+    @Test func loadData_loadsFromRepository() throws {
         let (viewModel, mockRepository) = createViewModel()
         let day1 = try #require(TestDataBuilder.makeRecordedOptimalDay(date: TestDataBuilder.fixedDate))
         let day2 = try #require(TestDataBuilder.makeRecordedModerateDay(date: TestDataBuilder.fixedDatePlusOne))
@@ -50,7 +50,7 @@ struct MainViewModelTests {
         #expect(Calendar.current.isDate(viewModel.days[1].date, inSameDayAs: day2.dayData.date))
     }
 
-    @Test @MainActor func loadData_createsEmptyDayForSelectedDate() {
+    @Test func loadData_createsEmptyDayForSelectedDate() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.selectedDate = TestDataBuilder.fixedDate
@@ -63,7 +63,7 @@ struct MainViewModelTests {
 
     // MARK: - Date Selection Tests
 
-    @Test @MainActor func selectedDate_change_ensuresDayDataExists() {
+    @Test func selectedDate_change_ensuresDayDataExists() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
 
@@ -75,7 +75,7 @@ struct MainViewModelTests {
         #expect(Calendar.current.isDate(viewModel.days[0].date, inSameDayAs: TestDataBuilder.fixedDate))
     }
 
-    @Test @MainActor func selectedDate_change_doesNotDuplicateExistingDay() throws {
+    @Test func selectedDate_change_doesNotDuplicateExistingDay() throws {
         let (viewModel, mockRepository) = createViewModel()
         let existingDay = try #require(TestDataBuilder.makeRecordedOptimalDay(date: TestDataBuilder.fixedDate))
         mockRepository.loadAllDaysResult = [existingDay]
@@ -92,7 +92,7 @@ struct MainViewModelTests {
 
     // MARK: - Current Day Data Tests
 
-    @Test @MainActor func currentDayData_returnsCorrectDay() throws {
+    @Test func currentDayData_returnsCorrectDay() throws {
         let (viewModel, mockRepository) = createViewModel()
         let day1 = try #require(TestDataBuilder.makeRecordedOptimalDay(date: TestDataBuilder.fixedDate))
         let day2 = try #require(TestDataBuilder.makeRecordedModerateDay(date: TestDataBuilder.fixedDatePlusOne))
@@ -106,7 +106,7 @@ struct MainViewModelTests {
 
     // MARK: - Water Management Tests
 
-    @Test @MainActor func updateWater_updatesCurrentDay() {
+    @Test func updateWater_updatesCurrentDay() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -118,7 +118,7 @@ struct MainViewModelTests {
         #expect(mockRepository.saveCalledWithDays != nil)
     }
 
-    @Test @MainActor func updateWater_zeroRemovesWater() {
+    @Test func updateWater_zeroRemovesWater() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -130,7 +130,7 @@ struct MainViewModelTests {
         #expect(viewModel.currentDayData?.water == nil)
     }
 
-    @Test @MainActor func waterIntake_getter_returnsCurrentWater() {
+    @Test func waterIntake_getter_returnsCurrentWater() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -141,7 +141,7 @@ struct MainViewModelTests {
         #expect(viewModel.waterIntake == 2.5)
     }
 
-    @Test @MainActor func waterIntake_getter_returnsZero_whenNil() {
+    @Test func waterIntake_getter_returnsZero_whenNil() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -152,7 +152,7 @@ struct MainViewModelTests {
 
     // MARK: - Mood Management Tests
 
-    @Test @MainActor func updateMood_updatesCurrentDay() {
+    @Test func updateMood_updatesCurrentDay() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -164,7 +164,7 @@ struct MainViewModelTests {
         #expect(mockRepository.saveCalledWithDays != nil)
     }
 
-    @Test @MainActor func updateMood_changesMood() {
+    @Test func updateMood_changesMood() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -178,7 +178,7 @@ struct MainViewModelTests {
 
     // MARK: - Meal Management Tests
 
-    @Test @MainActor func addMeal_addsToCurrentDay() {
+    @Test func addMeal_addsToCurrentDay() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -192,7 +192,7 @@ struct MainViewModelTests {
         #expect(mockRepository.saveCalledWithDays != nil)
     }
 
-    @Test @MainActor func updateMeal_modifiesExistingMeal() {
+    @Test func updateMeal_modifiesExistingMeal() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -209,7 +209,7 @@ struct MainViewModelTests {
         #expect(viewModel.currentDayData?.meals.first?.quantity == .large)
     }
 
-    @Test @MainActor func meal_withId_returnsCorrectMeal() {
+    @Test func meal_withId_returnsCorrectMeal() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -224,7 +224,7 @@ struct MainViewModelTests {
         #expect(result?.description == "Breakfast")
     }
 
-    @Test @MainActor func meal_withId_returnsNil_whenNotFound() {
+    @Test func meal_withId_returnsNil_whenNotFound() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -235,7 +235,7 @@ struct MainViewModelTests {
         #expect(result == nil)
     }
 
-    @Test @MainActor func deleteMeal_withId_removesMeal() {
+    @Test func deleteMeal_withId_removesMeal() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -250,7 +250,7 @@ struct MainViewModelTests {
 
     // MARK: - Workout Management Tests
 
-    @Test @MainActor func addWorkout_addsToCurrentDay() {
+    @Test func addWorkout_addsToCurrentDay() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -264,7 +264,7 @@ struct MainViewModelTests {
         #expect(mockRepository.saveCalledWithDays != nil)
     }
 
-    @Test @MainActor func updateWorkout_modifiesExistingWorkout() {
+    @Test func updateWorkout_modifiesExistingWorkout() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -281,7 +281,7 @@ struct MainViewModelTests {
         #expect(viewModel.currentDayData?.workouts.first?.duration == .oneHour)
     }
 
-    @Test @MainActor func workout_withId_returnsCorrectWorkout() {
+    @Test func workout_withId_returnsCorrectWorkout() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -296,7 +296,7 @@ struct MainViewModelTests {
         #expect(result?.description == "Run")
     }
 
-    @Test @MainActor func workout_withId_returnsNil_whenNotFound() {
+    @Test func workout_withId_returnsNil_whenNotFound() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -307,7 +307,7 @@ struct MainViewModelTests {
         #expect(result == nil)
     }
 
-    @Test @MainActor func deleteWorkout_withId_removesWorkout() {
+    @Test func deleteWorkout_withId_removesWorkout() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
@@ -322,7 +322,7 @@ struct MainViewModelTests {
 
     // MARK: - State Consistency Tests
 
-    @Test @MainActor func multipleOperations_maintainConsistentState() {
+    @Test func multipleOperations_maintainConsistentState() {
         let (viewModel, _) = createViewModel()
         viewModel.loadData()
         viewModel.selectedDate = TestDataBuilder.fixedDate
@@ -340,7 +340,7 @@ struct MainViewModelTests {
         #expect(current?.workouts.count == 1)
     }
 
-    @Test @MainActor func dateSwitch_preservesData() throws {
+    @Test func dateSwitch_preservesData() throws {
         let (viewModel, mockRepository) = createViewModel()
         let day1 = try #require(TestDataBuilder.makeRecordedOptimalDay(date: TestDataBuilder.fixedDate))
         let day2 = try #require(TestDataBuilder.makeRecordedModerateDay(date: TestDataBuilder.fixedDatePlusOne))

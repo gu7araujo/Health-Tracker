@@ -11,10 +11,11 @@ import Foundation
 import SwiftUI
 import Testing
 
+@MainActor
 struct MoodTests {
     // MARK: - Enum Cases Tests
 
-    @Test @MainActor func allCases_containsAllMoods() {
+    @Test func allCases_containsAllMoods() {
         let cases = Mood.allCases
 
         #expect(cases.count == 3)
@@ -25,37 +26,46 @@ struct MoodTests {
 
     // MARK: - Emoji Mapping Tests
 
-    @Test @MainActor func emoji_mappings_areCorrect() {
-        #expect(Mood.good.emoji == "😁")
-        #expect(Mood.neutral.emoji == "😐")
-        #expect(Mood.sad.emoji == "😔")
+    @Test(arguments: [
+        (Mood.good, "😁"),
+        (.neutral, "😐"),
+        (.sad, "😔")
+    ])
+    func emoji_mappings(mood: Mood, expectedEmoji: String) {
+        #expect(mood.emoji == expectedEmoji)
     }
 
     // MARK: - Localized Name Tests
 
-    @Test @MainActor func localizedName_mappings_areCorrect() {
-        #expect(Mood.good.localizedName == "Bom")
-        #expect(Mood.neutral.localizedName == "Neutro")
-        #expect(Mood.sad.localizedName == "Ruim")
+    @Test(arguments: [
+        (Mood.good, "Bom"),
+        (.neutral, "Neutro"),
+        (.sad, "Ruim")
+    ])
+    func localizedName_mappings(mood: Mood, expectedName: String) {
+        #expect(mood.localizedName == expectedName)
     }
 
     // MARK: - Color Mapping Tests
 
-    @Test @MainActor func color_mappings_areCorrect() {
-        #expect(Mood.good.color == .green)
-        #expect(Mood.neutral.color == .orange)
-        #expect(Mood.sad.color == .red)
+    @Test(arguments: [
+        (Mood.good, Color.green),
+        (.neutral, .orange),
+        (.sad, .red)
+    ])
+    func color_mappings(mood: Mood, expectedColor: Color) {
+        #expect(mood.color == expectedColor)
     }
 
     // MARK: - Raw Value Tests
 
-    @Test @MainActor func rawValue_mappings_areCorrect() {
+    @Test func rawValue_mappings_areCorrect() {
         #expect(Mood.good.rawValue == "Good")
         #expect(Mood.neutral.rawValue == "Neutral")
         #expect(Mood.sad.rawValue == "Sad")
     }
 
-    @Test @MainActor func initialization_fromRawValue() {
+    @Test func initialization_fromRawValue() {
         #expect(Mood(rawValue: "Good") == .good)
         #expect(Mood(rawValue: "Neutral") == .neutral)
         #expect(Mood(rawValue: "Sad") == .sad)
@@ -64,7 +74,7 @@ struct MoodTests {
 
     // MARK: - Codable Tests
 
-    @Test @MainActor func codable_roundTrip_good() throws {
+    @Test func codable_roundTrip_good() throws {
         let original = Mood.good
 
         let encoded = try JSONEncoder().encode(original)
@@ -73,7 +83,7 @@ struct MoodTests {
         #expect(decoded == original)
     }
 
-    @Test @MainActor func codable_roundTrip_neutral() throws {
+    @Test func codable_roundTrip_neutral() throws {
         let original = Mood.neutral
 
         let encoded = try JSONEncoder().encode(original)
@@ -82,7 +92,7 @@ struct MoodTests {
         #expect(decoded == original)
     }
 
-    @Test @MainActor func codable_roundTrip_sad() throws {
+    @Test func codable_roundTrip_sad() throws {
         let original = Mood.sad
 
         let encoded = try JSONEncoder().encode(original)
@@ -93,13 +103,13 @@ struct MoodTests {
 
     // MARK: - Equatable Tests
 
-    @Test @MainActor func equatable_sameValues_areEqual() {
+    @Test func equatable_sameValues_areEqual() {
         #expect(Mood.good == Mood.good)
         #expect(Mood.neutral == Mood.neutral)
         #expect(Mood.sad == Mood.sad)
     }
 
-    @Test @MainActor func equatable_differentValues_areNotEqual() {
+    @Test func equatable_differentValues_areNotEqual() {
         #expect(Mood.good != Mood.neutral)
         #expect(Mood.good != Mood.sad)
         #expect(Mood.neutral != Mood.sad)

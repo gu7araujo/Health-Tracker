@@ -9,10 +9,11 @@ import Foundation
 @testable import HealthTracker
 import Testing
 
+@MainActor
 struct SaveDayDataUseCaseTests {
     // MARK: - Batch Save Tests
 
-    @Test @MainActor func execute_saveDays_callsRepositoryWithCorrectData() throws {
+    @Test func execute_saveDays_callsRepositoryWithCorrectData() throws {
         let mockRepository = MockHealthDataRepository()
         let day1 = try #require(TestDataBuilder.makeRecordedOptimalDay(date: TestDataBuilder.fixedDate))
         let day2 = try #require(TestDataBuilder.makeRecordedModerateDay(date: TestDataBuilder.fixedDatePlusOne))
@@ -27,7 +28,7 @@ struct SaveDayDataUseCaseTests {
         #expect(mockRepository.saveCalledWithDays?[1] == day2)
     }
 
-    @Test @MainActor func execute_saveDays_withEmptyArray() {
+    @Test func execute_saveDays_withEmptyArray() {
         let mockRepository = MockHealthDataRepository()
 
         let useCase = SaveDayDataUseCase(repository: mockRepository)
@@ -37,7 +38,7 @@ struct SaveDayDataUseCaseTests {
         #expect(mockRepository.saveCalledWithDays?.isEmpty == true)
     }
 
-    @Test @MainActor func execute_saveDays_withSingleDay() throws {
+    @Test func execute_saveDays_withSingleDay() throws {
         let mockRepository = MockHealthDataRepository()
         let day = try #require(TestDataBuilder.makeRecordedOptimalDay())
 
@@ -51,7 +52,7 @@ struct SaveDayDataUseCaseTests {
 
     // MARK: - Single Day Save Tests
 
-    @Test @MainActor func execute_saveDayData_callsRepositoryWithCorrectData() throws {
+    @Test func execute_saveDayData_callsRepositoryWithCorrectData() throws {
         let mockRepository = MockHealthDataRepository()
         let day = try #require(TestDataBuilder.makeRecordedOptimalDay())
 
@@ -62,7 +63,7 @@ struct SaveDayDataUseCaseTests {
         #expect(mockRepository.saveDayDataCalledWith == day)
     }
 
-    @Test @MainActor func execute_saveDayData_withModerateDay() throws {
+    @Test func execute_saveDayData_withModerateDay() throws {
         let mockRepository = MockHealthDataRepository()
         let day = try #require(TestDataBuilder.makeRecordedModerateDay())
 
@@ -73,7 +74,7 @@ struct SaveDayDataUseCaseTests {
         #expect(mockRepository.saveDayDataCalledWith == day)
     }
 
-    @Test @MainActor func execute_saveDayData_withPoorDay() throws {
+    @Test func execute_saveDayData_withPoorDay() throws {
         let mockRepository = MockHealthDataRepository()
         let day = try #require(TestDataBuilder.makeRecordedPoorDay())
 
@@ -84,7 +85,7 @@ struct SaveDayDataUseCaseTests {
         #expect(mockRepository.saveDayDataCalledWith == day)
     }
 
-    @Test @MainActor func execute_saveDayData_preservesAllProperties() throws {
+    @Test func execute_saveDayData_preservesAllProperties() throws {
         let mockRepository = MockHealthDataRepository()
         let day = try #require(TestDataBuilder.makeRecordedOptimalDay())
 
