@@ -114,7 +114,7 @@ private struct MealsSectionView: View {
     var body: some View {
         Group {
             Text("Refeições")
-                .font(.title3)
+                .font(.title2)
                 .bold()
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
@@ -138,8 +138,7 @@ private struct MealsSectionView: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(meal.description)
-                                    .font(.title3)
-                                    .bold()
+                                    .font(.headline)
                                     .padding(.bottom, 5)
                                 Text("Quantidade: \(meal.quantity.localizedName)")
                                     .font(.subheadline)
@@ -185,7 +184,7 @@ private struct WaterSectionView: View {
     var body: some View {
         Group {
             Text("Água")
-                .font(.title3)
+                .font(.title2)
                 .bold()
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
@@ -207,7 +206,8 @@ private struct WaterSectionView: View {
                 VStack {
                     (Text(water, format: .number.precision(.fractionLength(1)))
                         + Text(" L"))
-                        .font(.title2)
+                        .font(.title)
+                        .bold()
                     Slider(
                         value: Binding(
                             get: { waterIntake },
@@ -242,7 +242,7 @@ private struct WorkoutsSectionView: View {
     var body: some View {
         Group {
             Text("Exercícios")
-                .font(.title3)
+                .font(.title2)
                 .bold()
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
@@ -266,8 +266,7 @@ private struct WorkoutsSectionView: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(workout.description)
-                                    .font(.title3)
-                                    .bold()
+                                    .font(.headline)
                                     .padding(.bottom, 5)
                                 Text("Tempo: \(workout.duration.localizedName)")
                                     .font(.subheadline)
@@ -309,7 +308,7 @@ private struct MoodSectionView: View {
     var body: some View {
         Group {
             Text("Humor")
-                .font(.title3)
+                .font(.title2)
                 .bold()
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
@@ -330,8 +329,7 @@ private struct MoodSectionView: View {
             ) {
                 VStack(alignment: .leading) {
                     Text("Como está o seu humor hoje?")
-                        .font(.title3)
-                        .bold()
+                        .font(.headline)
                         .padding(.bottom, 15)
 
                     HStack {
@@ -359,7 +357,9 @@ private struct MoodSectionView: View {
                 Spacer()
                 VStack {
                     Text(mood.emoji)
+                        .font(.title)
                     Text(mood.localizedName)
+                        .font(.caption)
                 }
                 Spacer()
             }
@@ -374,6 +374,8 @@ private struct EmptyListRow: View {
         HStack {
             Spacer()
             Text("Lista vazia!")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
             Spacer()
         }
         .listRowSeparator(.hidden)
