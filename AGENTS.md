@@ -56,7 +56,11 @@ The codebase follows Clean Architecture principles with three main layers:
 - **Entities**: Core business models (`DayData`, `RecordedDayData`, `Meal`, `Workout`, `Mood`, `DayStatus`)
   - `DayData`: Aggregate root containing all health data for a single day (may be empty for UI purposes)
   - `RecordedDayData`: Parse-don't-validate wrapper that guarantees at least one health category has data. Failable init is the only construction path. Used throughout the persistence chain (data sources, repository, use cases). The ViewModel parses `DayData` to `RecordedDayData` before saving and converts back on load.
-  - Implements business logic for health status computation (optimal/moderate/poor)
+  - `DayStatus`: Enum representing day health status (`.noData`, `.incomplete`, `.poor`, `.moderate`, `.optimal`)
+  - Implements business logic for health status computation:
+    - 0 categories filled → `.noData` (no tracking data)
+    - 1 category filled → `.incomplete` (insufficient data for evaluation)
+    - 2+ categories filled → evaluated for `.optimal` (green) / `.moderate` (yellow) / `.poor` (red)
   - `AnalyticsPeriod`: Time period selection for analytics (thisWeek, last7Days, last30Days, etc.)
   - `AnalyticsData`: Container for all analytics metrics
   - `MealAnalytics`, `WaterAnalytics`, `WorkoutAnalytics`, `MoodAnalytics`, `OverallAnalytics`: Calculated statistics and chart data
@@ -258,7 +262,9 @@ See **Development Commands > Testing** section for test execution commands.
 ☐ ACCESS CONTROL: Preconditions use witnesses, not boolean checks
 ☐ OPERATION ORDER: Sequential operations enforced by witness types when critical
 ☐ NEW FEATURES have corresponding tests (maintain 80%+ coverage)
-☐ RUN TESTS regularly to ensure code quality and prevent regressions
+☐ **TESTS PASS**: Run full test suite after EVERY implementation - zero tolerance for failing tests
+☐ **TESTS UPDATED**: Fix or update affected tests when changing behavior - never leave broken tests
+☐ **NEW TESTS WRITTEN**: Create tests for new features and bug fixes - test-driven development preferred
 </checklist>
 
 ## ANTI-PATTERNS TO AVOID
@@ -294,6 +300,8 @@ The app is currently in Portuguese (Brazil). All UI strings, entity property nam
 3. Update Presentation layer (views, view model)
 4. Use dependency injection for testability
 5. For chart visualizations: Use Swift Charts framework (built-in iOS 16+), create reusable chart components, follow existing patterns in `Presentation/Views/Components/Charts/`
+6. **ALWAYS run the test suite after implementation** to ensure no regressions
+7. **Update/fix/create tests** as needed to maintain passing tests and 80%+ coverage
 
 ### Modifying Views
 - Follow existing section-based composition pattern in `MainView`
@@ -313,9 +321,17 @@ The app is currently in Portuguese (Brazil). All UI strings, entity property nam
 ### Entity Modifications
 - Entities are `Codable`, so changes may require migration logic
 - `DayData` computes health status based on business rules (see `status`, `meetsOptimalCriteria`, `meetsModerateCriteria`)
+  - **Status thresholds**: 0 categories → `.noData`, 1 category → `.incomplete`, 2+ categories → evaluated for `.optimal`/`.moderate`/`.poor`
 - Nested enums have localized names (e.g., `Meal.Quantity.localizedName`)
 
 ### Writing Tests
+
+**⚠️ CRITICAL: Always run tests after implementation!** Every code change MUST be followed by running the full test suite to ensure:
+- All existing tests still pass (no regressions)
+- New/modified behavior has corresponding tests
+- Test failures are fixed immediately, never left broken
+
+**Test Writing Guidelines:**
 - All tests use Swift Testing framework (`import Testing`, `@Test` macro)
 - Use `@testable import HealthTracker` to access internal types
 - Mark all test functions with `@Test @MainActor` due to `@Observable` macro isolation
@@ -323,6 +339,8 @@ The app is currently in Portuguese (Brazil). All UI strings, entity property nam
 - Use `TestDataBuilder` for creating test fixtures
 - Follow existing test organization by layer (Domain/Data/Presentation)
 - Ensure new features have corresponding tests (maintain 80%+ coverage)
+- When changing behavior: update affected tests to reflect new expectations
+- When fixing bugs: add regression tests to prevent reoccurrence
 
 ## Updating This Guide (AGENTS.md)
 
