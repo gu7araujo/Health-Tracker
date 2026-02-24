@@ -19,7 +19,7 @@ enum DayStatus: Equatable {
     /// Has data but doesn't meet optimal or moderate criteria
     case poor
 
-    /// Only 1-2 categories have data (incomplete day)
+    /// Only 1 category has data (incomplete day)
     case incomplete
 
     /// No data recorded for this day

@@ -73,10 +73,10 @@ struct DayData: Codable, Equatable, Identifiable {
         // No data recorded
         guard categoriesCount > 0 else { return .noData }
 
-        // Incomplete: only 1-2 categories have data
-        guard categoriesCount >= 3 else { return .incomplete }
+        // Incomplete: only 1 category has data
+        guard categoriesCount >= 2 else { return .incomplete }
 
-        // 3-4 categories have data: evaluate status
+        // 2-4 categories have data: evaluate status
         if meetsOptimalCriteria { return .optimal }
 
         if meetsModerateCriteria { return .moderate }

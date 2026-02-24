@@ -354,8 +354,11 @@ struct DayDataTests {
     }
 
     @Test func filledCategoriesCount_isTwo_withMealsAndWater() {
-        let dayData = TestDataBuilder.makeIncompleteDay()
-        #expect(dayData.status == .incomplete)
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
+        dayData.water = 1.0
+        // With 2 categories, should be evaluated for status (not incomplete)
+        #expect(dayData.status != .incomplete)
     }
 
     @Test func filledCategoriesCount_isThree_withMealsWaterAndWorkouts() {

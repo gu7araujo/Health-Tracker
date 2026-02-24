@@ -97,13 +97,12 @@ enum TestDataBuilder {
     }
 
     /// Creates an incomplete day (should result in `.incomplete` status).
-    /// Only has 2 categories filled (meals and water).
+    /// Only has 1 category filled (meals only).
     @MainActor
     static func makeIncompleteDay(date: Date = fixedDate) -> DayData {
         makeDayData(
             date: date,
-            meals: [Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)],
-            water: 1.0
+            meals: [Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)]
         )
     }
 
