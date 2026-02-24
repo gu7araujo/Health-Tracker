@@ -4,12 +4,13 @@ This file provides guidance to AI agents when working with code in this reposito
 
 ## Project Overview
 
-HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Swift 6. The app helps users monitor daily habits including meals, water intake, workouts, and mood. It uses a Clean Architecture approach with clear separation between Domain, Data, and Presentation layers.
+HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Swift 6. The app helps users monitor and analyze daily habits including meals, water intake, workouts, and mood with comprehensive charts, insights, and trend visualizations. It uses a Clean Architecture approach with clear separation between Domain, Data, and Presentation layers.
 
 ## Technology Stack
 
 - **Language**: Swift 6
 - **UI Framework**: SwiftUI with iOS 26+ Liquid Glass effects
+- **Charts**: Swift Charts (native iOS 16+)
 - **Target**: iOS 26.0+
 - **Architecture**: Clean Architecture (Domain/Data/Presentation)
 - **Persistence**: iCloud Drive (JSON file) with local Documents fallback; migrated from UserDefaults
@@ -56,12 +57,15 @@ The codebase follows Clean Architecture principles with three main layers:
   - `DayData`: Aggregate root containing all health data for a single day (may be empty for UI purposes)
   - `RecordedDayData`: Parse-don't-validate wrapper that guarantees at least one health category has data. Failable init is the only construction path. Used throughout the persistence chain (data sources, repository, use cases). The ViewModel parses `DayData` to `RecordedDayData` before saving and converts back on load.
   - Implements business logic for health status computation (optimal/moderate/poor)
+  - `AnalyticsPeriod`: Time period selection for analytics (thisWeek, last7Days, last30Days, etc.)
+  - `AnalyticsData`: Container for all analytics metrics
+  - `MealAnalytics`, `WaterAnalytics`, `WorkoutAnalytics`, `MoodAnalytics`, `OverallAnalytics`: Calculated statistics and chart data
 - **Protocols**: Abstract interfaces (`HealthDataRepositoryProtocol`, `LocalDataSourceProtocol`)
-- **Use Cases**: Business operations (`LoadDayDataUseCase`, `SaveDayDataUseCase`)
+- **Use Cases**: Business operations (`LoadDayDataUseCase`, `SaveDayDataUseCase`, `CalculateAnalyticsUseCase`)
 
 ### Data Layer (`HealthTracker/Data/`)
 - **Repositories**: Concrete implementations of domain protocols
-  - `HealthDataRepository`: Orchestrates data operations (defaults to `ICloudDriveDataSource`)
+  - `HealthDataRepository`: Orchestrates data operations (defaults to `ICloudDriveDataSource`). Implements `loadDaysInRange(_ range: ClosedRange<Date>)` for filtered historical data retrieval
 - **DataSources**: Platform-specific storage implementations
   - `ICloudDriveDataSource`: JSON file persistence via iCloud Drive (default). File visible at **Files app > iCloud Drive > HealthTracker > HealthTrackerData.json**. Falls back to local Documents directory when iCloud is unavailable. Uses `NSFileCoordinator` for safe reads/writes.
   - `UserDefaultsDataSource`: Legacy JSON-based persistence using UserDefaults (kept for migration and testing)
@@ -72,12 +76,16 @@ The codebase follows Clean Architecture principles with three main layers:
 
 ### Presentation Layer (`HealthTracker/Presentation/`)
 - **Views**: SwiftUI views with section-based composition
-  - `MainView`: Root view with meals, water, workouts, mood sections
+  - `MainView`: Daily tracking view with meals, water, workouts, mood sections
+  - `AnalyticsView`: Analytics screen with charts and insights for all health metrics
   - `AddEditModal`: Shared modal for adding/editing meals and workouts
-  - **Components**: Reusable UI components (`CardView`, `CalendarStrip`, `CardListView`)
+  - **Components**: Reusable UI components (`CardView`, `CalendarStrip`, `CardListView`, `PeriodSelector`)
+  - **Charts**: Swift Charts-based visualizations (`WaterLineChart`, `OverallHealthRingChart`, `WorkoutsBarChart`, `MoodBarChart`, `MealsBarChart`)
 - **ViewModels**: Observable view models using @Observable macro
   - `MainViewModel`: Manages all health tracking state and coordinates with use cases
+  - `AnalyticsViewModel`: Manages analytics state, period selection, and data loading
   - Uses dependency injection with default convenience initializer
+- **Navigation**: TabView with two tabs: "Hoje" (MainView) and "Gráficos" (AnalyticsView)
 
 ## Key Patterns
 
@@ -100,6 +108,10 @@ convenience init(repository: HealthDataRepositoryProtocol = HealthDataRepository
 4. Use case coordinates with repository
 5. Repository delegates to data source for persistence
 6. SwiftUI observes ViewModel changes and re-renders
+7. Analytics tab loads → `AnalyticsViewModel` calls `CalculateAnalyticsUseCase`
+8. Use case retrieves filtered days from repository (`loadDaysInRange`)
+9. Use case calculates all analytics metrics and returns `AnalyticsData`
+10. View renders charts using Swift Charts framework with computed data
 
 ### Custom View Extensions
 - `View.if(_:transform:)`: Conditional view modifier
@@ -186,14 +198,14 @@ The project uses **Swift Testing framework** (not XCTest) with comprehensive tes
 ```
 HealthTrackerTests/
 ├── Domain/
-│   ├── Entities/           # Entity tests (DayData, RecordedDayData, Meal, Workout, Mood, DayStatus)
-│   └── UseCases/          # Use case tests with mocked repositories
+│   ├── Entities/           # Entity tests (DayData, RecordedDayData, Meal, Workout, Mood, DayStatus, AnalyticsPeriod, analytics entities)
+│   └── UseCases/          # Use case tests with mocked repositories (LoadDayDataUseCase, SaveDayDataUseCase, CalculateAnalyticsUseCase)
 ├── Data/
 │   ├── Repositories/      # Repository tests with mocked data sources
 │   ├── DataSources/       # Data source tests (UserDefaultsDataSource)
 │   └── Models/            # Model tests (DayDataContainer)
 ├── Presentation/
-│   └── ViewModels/        # ViewModel tests with mocked use cases
+│   └── ViewModels/        # ViewModel tests with mocked use cases (MainViewModel, AnalyticsViewModel)
 ├── Mocks/                 # Mock implementations of protocols
 └── TestHelpers/           # Test data builders and utilities
 ```
@@ -226,7 +238,7 @@ HealthTrackerTests/
 - **Data Layer:** 80%+ (persistence and data transformation)
 - **Presentation Layer:** 70%+ (ViewModels and state management)
 - **Overall:** 80%+
-- **Total Tests:** 166 tests across all layers
+- **Total Tests:** 166 tests across all layers (will increase as analytics tests are added)
 
 ### Running Tests
 See **Development Commands > Testing** section for test execution commands.
@@ -281,6 +293,7 @@ The app is currently in Portuguese (Brazil). All UI strings, entity property nam
 2. Implement Data layer changes (repository, data source if needed)
 3. Update Presentation layer (views, view model)
 4. Use dependency injection for testability
+5. For chart visualizations: Use Swift Charts framework (built-in iOS 16+), create reusable chart components, follow existing patterns in `Presentation/Views/Components/Charts/`
 
 ### Modifying Views
 - Follow existing section-based composition pattern in `MainView`

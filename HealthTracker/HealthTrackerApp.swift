@@ -15,7 +15,17 @@ struct HealthTrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainView()
+            TabView {
+                MainView()
+                    .tabItem {
+                        Label("Hoje", systemImage: "calendar")
+                    }
+
+                AnalyticsView()
+                    .tabItem {
+                        Label("Gráficos", systemImage: "chart.xyaxis.line")
+                    }
+            }
         }
     }
 }
