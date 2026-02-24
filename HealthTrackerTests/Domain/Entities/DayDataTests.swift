@@ -6,6 +6,8 @@
 //  CRUD operations for meals and workouts, and helper methods.
 //
 
+// swiftlint:disable type_body_length file_length
+
 import Foundation
 @testable import HealthTracker
 import Testing
@@ -164,6 +166,98 @@ struct DayDataTests {
         dayData.mood = .sad
 
         #expect(dayData.status == .poor)
+    }
+
+    // MARK: - Workout Duration Status Tests
+
+    @Test("Optimal status requires at least 30 minutes of workout")
+    func status_isNotOptimal_whenWorkoutsBelowThirtyMinutes() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
+        dayData.addWorkout(Workout(description: "Quick walk", duration: .fifteenMin))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status != .optimal)
+        #expect(dayData.status == .moderate) // Should be moderate due to low workout duration
+    }
+
+    @Test("Optimal status with exactly 30 minutes of workout")
+    func status_isOptimal_withExactlyThirtyMinutesWorkout() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
+        dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .optimal)
+    }
+
+    @Test("Optimal status with multiple workouts totaling 30+ minutes")
+    func status_isOptimal_withMultipleWorkoutsTotalingThirtyPlus() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
+        dayData.addWorkout(Workout(description: "Morning walk", duration: .fifteenMin))
+        dayData.addWorkout(Workout(description: "Evening walk", duration: .fifteenMin))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .optimal)
+    }
+
+    @Test("Moderate status with no workouts")
+    func status_isModerate_withNoWorkouts() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .moderate) // Moderate due to no workouts (< 30 min)
+    }
+
+    @Test("Moderate status with workouts below 30 minutes")
+    func status_isModerate_withWorkoutsBelowThirty() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
+        dayData.addWorkout(Workout(description: "Quick stretch", duration: .tenMin))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .moderate)
+    }
+
+    @Test("Poor status ignores workout duration")
+    func status_isPoor_regardlessOfWorkouts() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Breakfast", quantity: .medium, satisfaction: .hundred))
+        dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .hundred))
+        dayData.addWorkout(Workout(description: "Long run", duration: .twoHours)) // Even with long workout
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .poor) // Poor due to 2+ medium meals
+    }
+
+    @Test("One medium meal with optimal workout is optimal")
+    func status_isOptimal_withOneMediumMealAndGoodWorkout() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .fifty))
+        dayData.addWorkout(Workout(description: "Run", duration: .oneHour))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .optimal) // 1 medium meal is allowed for optimal
+    }
+
+    @Test("Any large meal triggers poor status")
+    func status_isPoor_withAnyLargeMeal() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Lunch", quantity: .large, satisfaction: .fifty))
+        dayData.addWorkout(Workout(description: "Run", duration: .oneHour))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .poor) // Any large meal triggers poor
     }
 
     // MARK: - Meal CRUD Operations
@@ -433,3 +527,5 @@ struct DayDataTests {
         #expect(dayData.id == date)
     }
 }
+
+// swiftlint:enable type_body_length file_length

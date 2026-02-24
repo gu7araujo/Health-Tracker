@@ -52,6 +52,26 @@ struct WorkoutTests {
         #expect(duration.rawValue == expectedValue)
     }
 
+    @Test(arguments: [
+        (Workout.Duration.tenMin, 10),
+        (.fifteenMin, 15),
+        (.thirtyMin, 30),
+        (.fortyMin, 40),
+        (.oneHour, 60),
+        (.oneHourThirty, 90),
+        (.twoHours, 120)
+    ])
+    func duration_minutes_returnsCorrectValues(duration: Workout.Duration, expectedMinutes: Int) {
+        #expect(duration.minutes == expectedMinutes)
+    }
+
+    @Test func duration_minutes_sumMultipleDurations() {
+        let durations: [Workout.Duration] = [.fifteenMin, .tenMin, .tenMin]
+        let total = durations.reduce(0) { $0 + $1.minutes }
+
+        #expect(total == 35) // 15 + 10 + 10 = 35
+    }
+
     // MARK: - Workout Initialization Tests
 
     @Test func initialization_withDefaults() {

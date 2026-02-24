@@ -35,6 +35,9 @@ swiftformat . --swift-version 6
 
 ### Testing
 ```bash
+# Identify possible simulator ids
+xcrun simctl list devices
+
 # Run all tests
 xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>'
 
@@ -242,7 +245,7 @@ HealthTrackerTests/
 - **Data Layer:** 80%+ (persistence and data transformation)
 - **Presentation Layer:** 70%+ (ViewModels and state management)
 - **Overall:** 80%+
-- **Total Tests:** 166 tests across all layers (will increase as analytics tests are added)
+- **Total Tests:** 211 tests across all layers
 
 ### Running Tests
 See **Development Commands > Testing** section for test execution commands.
@@ -320,8 +323,15 @@ The app is currently in Portuguese (Brazil). All UI strings, entity property nam
 
 ### Entity Modifications
 - Entities are `Codable`, so changes may require migration logic
-- `DayData` computes health status based on business rules (see `status`, `meetsOptimalCriteria`, `meetsModerateCriteria`)
+- `DayData` computes health status based on business rules (see `status`, `meetsOptimalCriteria`, `meetsModerateCriteria`, `meetsPoorCriteria`)
   - **Status thresholds**: 0 categories → `.noData`, 1 category → `.incomplete`, 2+ categories → evaluated for `.optimal`/`.moderate`/`.poor`
+  - **Health Status Logic** (comprehensive evaluation of all 4 categories):
+    - 🟢 **Optimal** (ALL must be true): Only verySmall/small meals OR ≤1 medium meal + Water ≥1.8L + Workouts ≥30 min total + Mood = good
+    - 🟡 **Moderate** (ANY one of): Exactly 1 medium meal (when other criteria prevent optimal) OR Water 1.0-1.7L OR Workouts <30 min OR Mood = neutral
+    - 🔴 **Poor** (ANY one of): 2+ medium meals OR any large meal OR Water <1.0L (or nil) OR Mood = sad (workouts don't affect poor status)
+    - ⚪ **Incomplete**: Only 1 category filled
+    - **Note**: Meal satiety is **completely ignored** - only meal size (verySmall/small/medium/large) affects status
+    - **Workout duration**: Sums all workouts in a day (e.g., 2x 15min = 30min total). Uses `Workout.Duration.minutes` property.
 - Nested enums have localized names (e.g., `Meal.Quantity.localizedName`)
 
 ### Writing Tests

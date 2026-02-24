@@ -81,6 +81,9 @@ struct DayData: Codable, Equatable, Identifiable {
 
         if meetsModerateCriteria { return .moderate }
 
+        if meetsPoorCriteria { return .poor }
+
+        // Fallback: has data but doesn't meet any specific criteria
         return .poor
     }
 
@@ -94,42 +97,69 @@ struct DayData: Codable, Equatable, Identifiable {
         return count
     }
 
+    /// Computes the total workout duration for this day in minutes.
+    private var totalWorkoutDuration: Int {
+        workouts.reduce(0) { $0 + $1.duration.minutes }
+    }
+
     /// Checks if all optimal (green) criteria are met.
-    /// Requirements: meals small/verySmall + 50% satiety (up to 1 medium + 80% allowed), water >= 1.8L, good mood
+    /// Requirements:
+    /// - Meals: Only verySmall/small OR at most 1 medium meal (satiety ignored)
+    /// - Water: >= 1.8L
+    /// - Workouts: Total duration >= 30 minutes
+    /// - Mood: good
     private var meetsOptimalCriteria: Bool {
         guard !meals.isEmpty else { return false }
 
-        // Count meals by category
-        let mediumMealsCount = meals.filter { meal in
-            meal.quantity == .medium && meal.satisfaction == .eighty
-        }.count
-        let optimalMealsCount = meals.filter { meal in
-            (meal.quantity == .small || meal.quantity == .verySmall) && meal.satisfaction == .fifty
-        }.count
+        // Count medium meals (satiety ignored)
+        let mediumMealCount = meals.filter { $0.quantity == .medium }.count
+        let smallMealCount = meals.filter { $0.quantity == .small || $0.quantity == .verySmall }.count
 
-        // Allow at most 1 medium meal; all other meals must be optimal
-        let hasOptimalMeals = mediumMealsCount <= 1 && (mediumMealsCount + optimalMealsCount) == meals.count
+        // Allow only small/verySmall meals OR at most 1 medium meal (rest must be small/verySmall)
+        let hasOptimalMeals = mediumMealCount <= 1 && (mediumMealCount + smallMealCount) == meals.count
 
         let hasOptimalWater = (water ?? 0) >= 1.8
+        let hasOptimalWorkouts = totalWorkoutDuration >= 30
         let hasGoodMood = mood == .good
 
-        return hasOptimalMeals && hasOptimalWater && hasGoodMood
+        return hasOptimalMeals && hasOptimalWater && hasOptimalWorkouts && hasGoodMood
     }
 
     /// Checks if any moderate (yellow) criteria are met.
-    /// Requirements: 1-2 meals with medium + 80% satiety, OR water 1.0-1.7L, OR neutral mood
+    /// Requirements (ANY one of):
+    /// - Meals: Exactly 1 medium meal (satiety ignored)
+    /// - Water: >= 1.0L AND < 1.8L
+    /// - Workouts: Total duration < 30 min
+    /// - Mood: neutral
     private var meetsModerateCriteria: Bool {
-        let moderateMealCount = meals.filter { meal in
-            meal.quantity == .medium && meal.satisfaction == .eighty
-        }.count
-        let hasModerateMeals = moderateMealCount >= 1 && moderateMealCount <= 2
+        let mediumMealCount = meals.filter { $0.quantity == .medium }.count
+        let hasModerateMeals = mediumMealCount == 1
 
         let waterAmount = water ?? 0
         let hasModerateWater = waterAmount >= 1.0 && waterAmount < 1.8
 
+        let hasModerateWorkouts = totalWorkoutDuration < 30
+
         let hasNeutralMood = mood == .neutral
 
-        return hasModerateMeals || hasModerateWater || hasNeutralMood
+        return hasModerateMeals || hasModerateWater || hasModerateWorkouts || hasNeutralMood
+    }
+
+    /// Checks if any poor (red) criteria are met.
+    /// Requirements (ANY one of):
+    /// - Meals: 2+ medium meals OR any large meal (satiety ignored)
+    /// - Water: < 1.0L (or nil)
+    /// - Mood: sad
+    /// Note: Workouts don't affect poor status
+    private var meetsPoorCriteria: Bool {
+        let mediumMealCount = meals.filter { $0.quantity == .medium }.count
+        let hasLargeMeal = meals.contains { $0.quantity == .large }
+        let poorMeals = mediumMealCount >= 2 || hasLargeMeal
+
+        let lowWater = (water ?? 0) < 1.0
+        let badMood = mood == .sad
+
+        return poorMeals || lowWater || badMood
     }
 }
 

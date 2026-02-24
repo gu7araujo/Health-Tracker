@@ -40,7 +40,7 @@ enum TestDataBuilder {
     }
 
     /// Creates an optimal day (should result in `.optimal` status).
-    /// - Meals: 1 small (50%), 1 medium (80%)
+    /// - Meals: 1 small, 1 medium (satiety doesn't matter - only size matters)
     /// - Water: 2.0L
     /// - Workout: 30 min
     /// - Mood: Good
@@ -50,7 +50,7 @@ enum TestDataBuilder {
             date: date,
             meals: [
                 Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty),
-                Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty)
+                Meal(description: "Lunch", quantity: .medium, satisfaction: .fifty)
             ],
             workouts: [Workout(description: "Morning run", duration: .thirtyMin)],
             water: 2.0,
@@ -59,36 +59,35 @@ enum TestDataBuilder {
     }
 
     /// Creates a moderate day (should result in `.moderate` status).
-    /// - Meals: 2 medium (80%)
-    /// - Water: 1.5L
-    /// - Workout: 30 min
+    /// - Meals: 1 medium (triggers moderate when other optimal criteria not fully met)
+    /// - Water: 1.5L (moderate range)
+    /// - Workout: 15 min (< 30 min, triggers moderate)
     /// - Mood: Neutral
     @MainActor
     static func makeModerateDay(date: Date = fixedDate) -> DayData {
         makeDayData(
             date: date,
             meals: [
-                Meal(description: "Breakfast", quantity: .medium, satisfaction: .eighty),
                 Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty)
             ],
-            workouts: [Workout(description: "Light workout", duration: .thirtyMin)],
+            workouts: [Workout(description: "Light workout", duration: .fifteenMin)],
             water: 1.5,
             mood: .neutral
         )
     }
 
     /// Creates a poor day (should result in `.poor` status).
-    /// - Meals: 2 large (100%)
-    /// - Water: 0.5L
-    /// - Workout: 30 min
+    /// - Meals: 2 medium (2+ medium meals triggers poor)
+    /// - Water: 0.5L (< 1.0L triggers poor)
+    /// - Workout: 30 min (workouts don't affect poor status)
     /// - Mood: Sad
     @MainActor
     static func makePoorDay(date: Date = fixedDate) -> DayData {
         makeDayData(
             date: date,
             meals: [
-                Meal(description: "Breakfast", quantity: .large, satisfaction: .hundred),
-                Meal(description: "Lunch", quantity: .large, satisfaction: .hundred)
+                Meal(description: "Breakfast", quantity: .medium, satisfaction: .hundred),
+                Meal(description: "Lunch", quantity: .medium, satisfaction: .hundred)
             ],
             workouts: [Workout(description: "Walk", duration: .thirtyMin)],
             water: 0.5,

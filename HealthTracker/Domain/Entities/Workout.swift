@@ -31,6 +31,19 @@ struct Workout: Identifiable, Codable, Equatable {
             case .twoHours: "2h"
             }
         }
+
+        /// Returns the duration in minutes
+        var minutes: Int {
+            switch self {
+            case .tenMin: 10
+            case .fifteenMin: 15
+            case .thirtyMin: 30
+            case .fortyMin: 40
+            case .oneHour: 60
+            case .oneHourThirty: 90
+            case .twoHours: 120
+            }
+        }
     }
 
     let id: UUID
