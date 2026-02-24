@@ -16,13 +16,7 @@ struct OverallHealthRingChart: View {
         statusDistribution
             .filter { $0.value > 0 }
             .map { status, count in
-                let color: Color = switch status {
-                case .optimal: .green
-                case .moderate: .yellow
-                case .poor: .red
-                case .incomplete: .gray
-                case .noData: .clear
-                }
+                let color: Color = status.color ?? .clear
                 return (status: status, count: count, color: color)
             }
             .sorted { $0.count > $1.count }
