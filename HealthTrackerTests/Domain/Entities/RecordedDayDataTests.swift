@@ -61,7 +61,10 @@ struct RecordedDayDataTests {
     }
 
     @Test func initialization_succeeds_withMealsAndWater() {
-        let dayData = TestDataBuilder.makeIncompleteDay()
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
+        dayData.water = 1.0
+
         let recordedDayData = RecordedDayData(dayData)
 
         #expect(recordedDayData != nil)
