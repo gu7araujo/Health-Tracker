@@ -18,7 +18,13 @@ struct AddEditModal: View {
     @State private var text: String = ""
     @State private var selectedQuantity: Meal.Quantity = .small
     @State private var selectedSatisfaction: Meal.Satisfaction = .fifty
-    @State private var selectedDuration: Workout.Duration = .thirtyMin
+    @State private var selectedDuration: Date = {
+        let calendar = Calendar.current
+        var components = DateComponents()
+        components.hour = 0
+        components.minute = 30
+        return calendar.date(from: components) ?? Date()
+    }()
 
     private var isEditing: Bool {
         mealId != nil || workoutId != nil
@@ -130,10 +136,19 @@ struct AddEditModal: View {
     // MARK: - Workout Fields
 
     private var workoutFields: some View {
-        Picker("Tempo", selection: $selectedDuration) {
-            ForEach(Workout.Duration.allCases, id: \.self) { duration in
-                Text(duration.localizedName).tag(duration)
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tempo")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            DatePicker(
+                "Duração",
+                selection: $selectedDuration,
+                displayedComponents: [.hourAndMinute]
+            )
+            .datePickerStyle(.wheel)
+            .labelsHidden()
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -146,7 +161,12 @@ struct AddEditModal: View {
             selectedSatisfaction = meal.satisfaction
         } else if section == .workout, let workoutId, let workout = viewModel.workout(withId: workoutId) {
             text = workout.description
-            selectedDuration = workout.duration
+            // Convert minutes to Date
+            let calendar = Calendar.current
+            var components = DateComponents()
+            components.hour = workout.duration.minutes / 60
+            components.minute = workout.duration.minutes % 60
+            selectedDuration = calendar.date(from: components) ?? Date()
         }
     }
 
@@ -178,16 +198,22 @@ struct AddEditModal: View {
     }
 
     private func saveWorkout() {
+        // Extract minutes from DatePicker
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute], from: selectedDuration)
+        let totalMinutes = (components.hour ?? 0) * 60 + (components.minute ?? 0)
+        let duration = Workout.Duration(minutes: max(1, totalMinutes))
+
         if let workoutId, var existingWorkout = viewModel.workout(withId: workoutId) {
             // Update existing workout
             existingWorkout.description = text
-            existingWorkout.duration = selectedDuration
+            existingWorkout.duration = duration
             viewModel.updateWorkout(existingWorkout)
         } else {
             // Add new workout
             let workout = Workout(
                 description: text,
-                duration: selectedDuration
+                duration: duration
             )
             viewModel.addWorkout(workout)
         }

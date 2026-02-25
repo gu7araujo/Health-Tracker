@@ -30,7 +30,7 @@ struct DayDataTests {
     @Test func initialization_withAllParameters() {
         let date = TestDataBuilder.fixedDate
         let meals = [Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)]
-        let workouts = [Workout(description: "Run", duration: .thirtyMin)]
+        let workouts = [Workout(description: "Run", duration: Workout.Duration(minutes: 30))]
 
         let dayData = DayData(
             date: date,
@@ -75,7 +75,7 @@ struct DayDataTests {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
         dayData.addMeal(Meal(description: "Snack", quantity: .verySmall, satisfaction: .fifty))
-        dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
         dayData.water = 2.0
         dayData.mood = .good
 
@@ -87,7 +87,7 @@ struct DayDataTests {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
         dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty))
-        dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
         dayData.water = 1.8
         dayData.mood = .good
 
@@ -99,7 +99,7 @@ struct DayDataTests {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .medium, satisfaction: .eighty))
         dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty))
-        dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
         dayData.water = 2.0
         dayData.mood = .good
 
@@ -110,7 +110,7 @@ struct DayDataTests {
     func status_isNotOptimal_whenWaterBelowThreshold() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
-        dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
         dayData.water = 1.7
         dayData.mood = .good
 
@@ -121,7 +121,7 @@ struct DayDataTests {
     func status_isNotOptimal_whenMoodNotGood() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
-        dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
         dayData.water = 2.0
         dayData.mood = .neutral
 
@@ -136,7 +136,7 @@ struct DayDataTests {
     @Test func status_isModerate_withModerateWater() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
-        dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
         dayData.water = 1.5
         dayData.mood = .good
 
@@ -146,7 +146,7 @@ struct DayDataTests {
     @Test func status_isModerate_withNeutralMood() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
-        dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
         dayData.water = 2.0
         dayData.mood = .neutral
 
@@ -161,7 +161,7 @@ struct DayDataTests {
     @Test func status_isPoor_withLargeMealsAndLowWater() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .large, satisfaction: .hundred))
-        dayData.addWorkout(Workout(description: "Walk", duration: .thirtyMin))
+        dayData.addWorkout(Workout(description: "Walk", duration: Workout.Duration(minutes: 30)))
         dayData.water = 0.5
         dayData.mood = .sad
 
@@ -174,7 +174,7 @@ struct DayDataTests {
     func status_isNotOptimal_whenWorkoutsBelowThirtyMinutes() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
-        dayData.addWorkout(Workout(description: "Quick walk", duration: .fifteenMin))
+        dayData.addWorkout(Workout(description: "Quick walk", duration: Workout.Duration(minutes: 15)))
         dayData.water = 2.0
         dayData.mood = .good
 
@@ -186,7 +186,7 @@ struct DayDataTests {
     func status_isOptimal_withExactlyThirtyMinutesWorkout() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
-        dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
         dayData.water = 2.0
         dayData.mood = .good
 
@@ -197,8 +197,8 @@ struct DayDataTests {
     func status_isOptimal_withMultipleWorkoutsTotalingThirtyPlus() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
-        dayData.addWorkout(Workout(description: "Morning walk", duration: .fifteenMin))
-        dayData.addWorkout(Workout(description: "Evening walk", duration: .fifteenMin))
+        dayData.addWorkout(Workout(description: "Morning walk", duration: Workout.Duration(minutes: 15)))
+        dayData.addWorkout(Workout(description: "Evening walk", duration: Workout.Duration(minutes: 15)))
         dayData.water = 2.0
         dayData.mood = .good
 
@@ -219,7 +219,7 @@ struct DayDataTests {
     func status_isModerate_withWorkoutsBelowThirty() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
-        dayData.addWorkout(Workout(description: "Quick stretch", duration: .tenMin))
+        dayData.addWorkout(Workout(description: "Quick stretch", duration: Workout.Duration(minutes: 10)))
         dayData.water = 2.0
         dayData.mood = .good
 
@@ -231,7 +231,7 @@ struct DayDataTests {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .medium, satisfaction: .hundred))
         dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .hundred))
-        dayData.addWorkout(Workout(description: "Long run", duration: .twoHours)) // Even with long workout
+        dayData.addWorkout(Workout(description: "Long run", duration: Workout.Duration(minutes: 120))) // Even with long workout
         dayData.water = 2.0
         dayData.mood = .good
 
@@ -242,7 +242,7 @@ struct DayDataTests {
     func status_isOptimal_withOneMediumMealAndGoodWorkout() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .fifty))
-        dayData.addWorkout(Workout(description: "Run", duration: .oneHour))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 60)))
         dayData.water = 2.0
         dayData.mood = .good
 
@@ -253,7 +253,7 @@ struct DayDataTests {
     func status_isPoor_withAnyLargeMeal() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Lunch", quantity: .large, satisfaction: .fifty))
-        dayData.addWorkout(Workout(description: "Run", duration: .oneHour))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 60)))
         dayData.water = 2.0
         dayData.mood = .good
 
@@ -351,7 +351,7 @@ struct DayDataTests {
 
     @Test func addWorkout_increasesWorkoutCount() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
-        let workout = Workout(description: "Morning run", duration: .thirtyMin)
+        let workout = Workout(description: "Morning run", duration: Workout.Duration(minutes: 30))
 
         dayData.addWorkout(workout)
 
@@ -361,8 +361,8 @@ struct DayDataTests {
 
     @Test func addWorkout_preservesExistingWorkouts() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
-        let workout1 = Workout(description: "Morning run", duration: .thirtyMin)
-        let workout2 = Workout(description: "Evening gym", duration: .oneHour)
+        let workout1 = Workout(description: "Morning run", duration: Workout.Duration(minutes: 30))
+        let workout2 = Workout(description: "Evening gym", duration: Workout.Duration(minutes: 60))
 
         dayData.addWorkout(workout1)
         dayData.addWorkout(workout2)
@@ -374,26 +374,26 @@ struct DayDataTests {
 
     @Test func updateWorkout_modifiesWorkoutProperties() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
-        let originalWorkout = Workout(description: "Run", duration: .thirtyMin)
+        let originalWorkout = Workout(description: "Run", duration: Workout.Duration(minutes: 30))
         dayData.addWorkout(originalWorkout)
 
         var updatedWorkout = originalWorkout
-        updatedWorkout.duration = .oneHour
+        updatedWorkout.duration = Workout.Duration(minutes: 60)
         updatedWorkout.description = "Long run"
         dayData.updateWorkout(updatedWorkout)
 
         #expect(dayData.workouts.count == 1)
         #expect(dayData.workouts.first?.id == originalWorkout.id)
-        #expect(dayData.workouts.first?.duration == .oneHour)
+        #expect(dayData.workouts.first?.duration == Workout.Duration(minutes: 60))
         #expect(dayData.workouts.first?.description == "Long run")
     }
 
     @Test func updateWorkout_doesNothing_whenWorkoutNotFound() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
-        let workout = Workout(description: "Run", duration: .thirtyMin)
+        let workout = Workout(description: "Run", duration: Workout.Duration(minutes: 30))
         dayData.addWorkout(workout)
 
-        let nonExistentWorkout = Workout(description: "Gym", duration: .oneHour)
+        let nonExistentWorkout = Workout(description: "Gym", duration: Workout.Duration(minutes: 60))
         dayData.updateWorkout(nonExistentWorkout)
 
         #expect(dayData.workouts.count == 1)
@@ -402,7 +402,7 @@ struct DayDataTests {
 
     @Test func removeWorkout_removesWorkoutById() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
-        let workout = Workout(description: "Run", duration: .thirtyMin)
+        let workout = Workout(description: "Run", duration: Workout.Duration(minutes: 30))
         dayData.addWorkout(workout)
 
         dayData.removeWorkout(id: workout.id)
@@ -412,8 +412,8 @@ struct DayDataTests {
 
     @Test func removeWorkout_preservesOtherWorkouts() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
-        let workout1 = Workout(description: "Morning run", duration: .thirtyMin)
-        let workout2 = Workout(description: "Evening gym", duration: .oneHour)
+        let workout1 = Workout(description: "Morning run", duration: Workout.Duration(minutes: 30))
+        let workout2 = Workout(description: "Evening gym", duration: Workout.Duration(minutes: 60))
         dayData.addWorkout(workout1)
         dayData.addWorkout(workout2)
 
@@ -425,7 +425,7 @@ struct DayDataTests {
 
     @Test func removeWorkout_doesNothing_whenWorkoutNotFound() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
-        let workout = Workout(description: "Run", duration: .thirtyMin)
+        let workout = Workout(description: "Run", duration: Workout.Duration(minutes: 30))
         dayData.addWorkout(workout)
 
         let nonExistentId = UUID()
@@ -458,7 +458,7 @@ struct DayDataTests {
     @Test func filledCategoriesCount_isThree_withMealsWaterAndWorkouts() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
-        dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
         dayData.water = 1.5
         #expect(dayData.status != .incomplete)
     }

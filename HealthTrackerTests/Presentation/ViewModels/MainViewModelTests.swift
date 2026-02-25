@@ -256,7 +256,7 @@ struct MainViewModelTests {
         viewModel.loadData()
         viewModel.selectedDate = TestDataBuilder.fixedDate
 
-        let workout = Workout(description: "Run", duration: .thirtyMin)
+        let workout = Workout(description: "Run", duration: Workout.Duration(minutes: 30))
         viewModel.addWorkout(workout)
 
         #expect(viewModel.currentDayData?.workouts.count == 1)
@@ -270,15 +270,15 @@ struct MainViewModelTests {
         viewModel.loadData()
         viewModel.selectedDate = TestDataBuilder.fixedDate
 
-        let originalWorkout = Workout(description: "Run", duration: .thirtyMin)
+        let originalWorkout = Workout(description: "Run", duration: Workout.Duration(minutes: 30))
         viewModel.addWorkout(originalWorkout)
 
         var updatedWorkout = originalWorkout
-        updatedWorkout.duration = .oneHour
+        updatedWorkout.duration = Workout.Duration(minutes: 60)
         viewModel.updateWorkout(updatedWorkout)
 
         #expect(viewModel.currentDayData?.workouts.count == 1)
-        #expect(viewModel.currentDayData?.workouts.first?.duration == .oneHour)
+        #expect(viewModel.currentDayData?.workouts.first?.duration == Workout.Duration(minutes: 60))
     }
 
     @Test func workout_withId_returnsCorrectWorkout() {
@@ -287,7 +287,7 @@ struct MainViewModelTests {
         viewModel.loadData()
         viewModel.selectedDate = TestDataBuilder.fixedDate
 
-        let workout = Workout(description: "Run", duration: .thirtyMin)
+        let workout = Workout(description: "Run", duration: Workout.Duration(minutes: 30))
         viewModel.addWorkout(workout)
 
         let result = viewModel.workout(withId: workout.id)
@@ -313,7 +313,7 @@ struct MainViewModelTests {
         viewModel.loadData()
         viewModel.selectedDate = TestDataBuilder.fixedDate
 
-        let workout = Workout(description: "Run", duration: .thirtyMin)
+        let workout = Workout(description: "Run", duration: Workout.Duration(minutes: 30))
         viewModel.addWorkout(workout)
         viewModel.deleteWorkout(withId: workout.id)
 
@@ -331,7 +331,7 @@ struct MainViewModelTests {
         viewModel.updateWater(2.0)
         viewModel.updateMood(.good)
         viewModel.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
-        viewModel.addWorkout(Workout(description: "Run", duration: .thirtyMin))
+        viewModel.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
 
         let current = viewModel.currentDayData
         #expect(current?.water == 2.0)

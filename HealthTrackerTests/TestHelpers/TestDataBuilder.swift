@@ -52,7 +52,7 @@ enum TestDataBuilder {
                 Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty),
                 Meal(description: "Lunch", quantity: .medium, satisfaction: .fifty)
             ],
-            workouts: [Workout(description: "Morning run", duration: .thirtyMin)],
+            workouts: [Workout(description: "Morning run", duration: Workout.Duration(minutes: 30))],
             water: 2.0,
             mood: .good
         )
@@ -70,7 +70,7 @@ enum TestDataBuilder {
             meals: [
                 Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty)
             ],
-            workouts: [Workout(description: "Light workout", duration: .fifteenMin)],
+            workouts: [Workout(description: "Light workout", duration: Workout.Duration(minutes: 15))],
             water: 1.5,
             mood: .neutral
         )
@@ -89,7 +89,7 @@ enum TestDataBuilder {
                 Meal(description: "Breakfast", quantity: .medium, satisfaction: .hundred),
                 Meal(description: "Lunch", quantity: .medium, satisfaction: .hundred)
             ],
-            workouts: [Workout(description: "Walk", duration: .thirtyMin)],
+            workouts: [Workout(description: "Walk", duration: Workout.Duration(minutes: 30))],
             water: 0.5,
             mood: .sad
         )

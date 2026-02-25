@@ -187,10 +187,11 @@ final class CalculateAnalyticsUseCase {
             }
         }
 
-        // Duration distribution
-        var durationDist: [Workout.Duration: Int] = [:]
-        for duration in Workout.Duration.allCases {
-            durationDist[duration] = allWorkouts.filter { $0.duration == duration }.count
+        // Duration distribution by range
+        var durationDist: [DurationRange: Int] = [:]
+        for workout in allWorkouts {
+            let range = DurationRange(minutes: workout.duration.minutes)
+            durationDist[range, default: 0] += 1
         }
 
         return WorkoutAnalytics(

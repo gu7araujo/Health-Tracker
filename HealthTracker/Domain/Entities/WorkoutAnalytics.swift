@@ -7,6 +7,34 @@
 
 import Foundation
 
+/// Duration range categories for analytics grouping
+enum DurationRange: String, Codable {
+    case short = "0-20m"
+    case medium = "20-45m"
+    case long = "45-75m"
+    case veryLong = "75m+"
+
+    /// Creates a duration range from minutes
+    init(minutes: Int) {
+        switch minutes {
+        case 0 ..< 20: self = .short
+        case 20 ..< 45: self = .medium
+        case 45 ..< 75: self = .long
+        default: self = .veryLong
+        }
+    }
+
+    /// Returns localized name for the duration range
+    var localizedName: String {
+        switch self {
+        case .short: "Curto (< 20m)"
+        case .medium: "Médio (20-45m)"
+        case .long: "Longo (45-75m)"
+        case .veryLong: "Muito longo (75m+)"
+        }
+    }
+}
+
 /// Analytics data for workout tracking over a time period
 struct WorkoutAnalytics: Equatable {
     /// Total number of workouts recorded in the period
@@ -30,8 +58,8 @@ struct WorkoutAnalytics: Equatable {
     /// Weekly workout volume for bar chart (week start date → total minutes)
     let weeklyVolume: [Date: Int]
 
-    /// Distribution by duration category
-    let durationDistribution: [Workout.Duration: Int]
+    /// Distribution by duration range
+    let durationDistribution: [DurationRange: Int]
 
     /// Manual Equatable conformance because Swift can't synthesize for dictionary with tuple values
     static func == (lhs: WorkoutAnalytics, rhs: WorkoutAnalytics) -> Bool {

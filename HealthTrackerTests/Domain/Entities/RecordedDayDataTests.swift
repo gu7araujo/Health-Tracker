@@ -32,7 +32,7 @@ struct RecordedDayDataTests {
 
     @Test func initialization_succeeds_withOnlyWorkouts() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
-        dayData.addWorkout(Workout(description: "Run", duration: .thirtyMin))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
 
         let recordedDayData = RecordedDayData(dayData)
 

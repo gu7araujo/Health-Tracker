@@ -79,7 +79,9 @@ The codebase follows Clean Architecture principles with three main layers:
 - **Models**: Shared data transfer objects
   - `DayDataContainer`: Codable wrapper for `[DayData]` array, used by both data sources
 - **Migration**: One-time data migration logic
-  - `DataMigration`: Migrates existing UserDefaults data to iCloud Drive on first launch (runs once, controlled by `iCloudMigrationCompleted` flag)
+  - `DataMigration`: Handles one-time data migrations on app startup
+    - `migrateToICloudDrive()`: Migrates existing UserDefaults data to iCloud Drive (runs once, controlled by `iCloudMigrationCompleted` flag)
+    - `migrateWorkoutDurations()`: Migrates workout durations from enum raw values (0-6) to actual minutes (runs once, controlled by `workoutDurationMigrationCompleted` flag). Maps legacy values: 0→15min, 1→30min, 2→60min, 3→90min, 4→10min, 5→40min, 6→120min
 
 ### Presentation Layer (`HealthTracker/Presentation/`)
 - **Views**: SwiftUI views with section-based composition
@@ -331,7 +333,7 @@ The app is currently in Portuguese (Brazil). All UI strings, entity property nam
     - 🔴 **Poor** (ANY one of): 2+ medium meals OR any large meal OR Water <1.0L (or nil) OR Mood = sad (workouts don't affect poor status)
     - ⚪ **Incomplete**: Only 1 category filled
     - **Note**: Meal satiety is **completely ignored** - only meal size (verySmall/small/medium/large) affects status
-    - **Workout duration**: Sums all workouts in a day (e.g., 2x 15min = 30min total). Uses `Workout.Duration.minutes` property.
+    - **Workout duration**: `Workout.Duration` is a struct storing minutes as Int (1-300 range). Sums all workouts in a day (e.g., 2x 15min = 30min total). Supports free-form time input via DatePicker in AddEditModal with `Duration(minutes:)` constructor.
 - Nested enums have localized names (e.g., `Meal.Quantity.localizedName`)
 
 ### Writing Tests
