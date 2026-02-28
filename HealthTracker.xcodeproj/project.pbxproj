@@ -19,6 +19,9 @@
 /* Begin PBXFileReference section */
 		B72D843A2F472FBA002027B5 /* HealthTrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B756C6122EA3F8900057DE0C /* HealthTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AFC760438A7A4C8A972E9626 /* NotificationServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationServiceProtocol.swift; sourceTree = "<group>"; };
+		E556ABB4B9584FEA981B1026 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		BBA82BCFE5C84492864F4ACB /* RequestNotificationPermissionUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestNotificationPermissionUseCase.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -218,7 +221,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-			);
+			
+				CA87A2C327B34C4C938FAEB1 /* NotificationServiceProtocol.swift in Sources */,
+				002F0EE759B04C308ECF5D9F /* NotificationService.swift in Sources */,
+				91BE386B13A34FF7ADE99BD0 /* RequestNotificationPermissionUseCase.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B756C60E2EA3F8900057DE0C /* Sources */ = {
