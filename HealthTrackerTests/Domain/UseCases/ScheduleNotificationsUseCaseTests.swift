@@ -95,16 +95,18 @@ struct ScheduleNotificationsUseCaseTests {
         #expect(mockService.scheduleNotificationBodies.count == 2)
     }
 
-    @Test func execute_usesHealthTrackerAsTitle() async throws {
+    @Test func execute_usesDynamicAppNameAsTitle() async throws {
         let mockService = MockNotificationService()
         mockService.authorizationStatusResult = .authorized
 
         let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
         try await useCase.execute()
 
-        // Verify "HealthTracker" used as title for both notifications
+        let expectedTitle = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "HealthTracker"
+
+        // Verify dynamic app name used as title for both notifications
         #expect(mockService.scheduleNotificationTitles.count == 2)
-        #expect(mockService.scheduleNotificationTitles.allSatisfy { $0 == "HealthTracker" })
+        #expect(mockService.scheduleNotificationTitles.allSatisfy { $0 == expectedTitle })
     }
 
     // MARK: - Edge Cases
