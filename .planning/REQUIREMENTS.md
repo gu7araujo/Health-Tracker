@@ -25,10 +25,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Smart Cancellation
 
-- [ ] **NOTIF-11**: App cancels all pending notifications when user logs any data for today
-- [ ] **NOTIF-12**: Any data type (meal, workout, water, mood) counts as "logged"
-- [ ] **NOTIF-13**: Day boundary logic matches app's existing calendar handling
-- [ ] **NOTIF-14**: Notification cancellation works even if app terminates immediately after data save
+- [x] **NOTIF-11**: App cancels all pending notifications when user logs any data for today
+- [x] **NOTIF-12**: Any data type (meal, workout, water, mood) counts as "logged"
+- [x] **NOTIF-13**: Day boundary logic matches app's existing calendar handling
+- [x] **NOTIF-14**: Notification cancellation works even if app terminates immediately after data save
 
 ### Architecture Integration
 
@@ -98,10 +98,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTIF-08 | Phase 2 | Complete |
 | NOTIF-09 | Phase 2 | Complete |
 | NOTIF-10 | Phase 2 | Complete |
-| NOTIF-11 | Phase 3 | Pending |
-| NOTIF-12 | Phase 3 | Pending |
-| NOTIF-13 | Phase 3 | Pending |
-| NOTIF-14 | Phase 3 | Pending |
+| NOTIF-11 | Phase 3 | Complete |
+| NOTIF-12 | Phase 3 | Complete |
+| NOTIF-13 | Phase 3 | Complete |
+| NOTIF-14 | Phase 3 | Complete |
 | NOTIF-15 | Phase 1 | Complete |
 | NOTIF-16 | Phase 1 | Complete |
 | NOTIF-17 | Phase 1 | Complete |
