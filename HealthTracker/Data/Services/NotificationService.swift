@@ -49,6 +49,41 @@ final class NotificationService: NotificationServiceProtocol {
             print("[NotificationService] Delegate removed")
         }
     }
+
+    // MARK: - Scheduling Methods
+
+    func scheduleNotification(
+        identifier: String,
+        title: String,
+        body: String,
+        dateComponents: DateComponents,
+        repeats: Bool
+    ) async throws {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+
+        // Calendar-based trigger fires when date components match the current date/time.
+        // When only hour/minute are specified (without timeZone), iOS automatically uses
+        // the device's local time zone, handling time zone changes and DST transitions.
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: dateComponents,
+            repeats: repeats
+        )
+
+        let request = UNNotificationRequest(
+            identifier: identifier,
+            content: content,
+            trigger: trigger
+        )
+
+        try await notificationCenter.add(request)
+    }
+
+    func cancelAllNotifications() {
+        notificationCenter.removeAllPendingNotificationRequests()
+    }
 }
 
 // MARK: - Type Mapping Extensions
