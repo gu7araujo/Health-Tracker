@@ -45,6 +45,17 @@ final class MockNotificationService: NotificationServiceProtocol {
     /// Tracks whether setDelegate was called
     var setDelegateCalled = false
 
+    // MARK: - Scheduling Methods
+
+    /// Tracking properties for scheduling methods
+    var scheduleNotificationCalled = false
+    var scheduleNotificationIdentifiers: [String] = []
+    var scheduleNotificationBodies: [String] = []
+    var scheduleNotificationRepeats: [Bool] = []
+    var scheduleNotificationDateComponents: [DateComponents] = []
+
+    var cancelAllNotificationsCalled = false
+
     // MARK: - NotificationServiceProtocol Implementation
 
     func requestAuthorization(options: NotificationAuthorizationOptions) async throws -> Bool {
@@ -65,5 +76,23 @@ final class MockNotificationService: NotificationServiceProtocol {
 
     func setDelegate(_: NotificationCenterDelegate?) {
         setDelegateCalled = true
+    }
+
+    func scheduleNotification(
+        identifier: String,
+        title _: String,
+        body: String,
+        dateComponents: DateComponents,
+        repeats: Bool
+    ) async throws {
+        scheduleNotificationCalled = true
+        scheduleNotificationIdentifiers.append(identifier)
+        scheduleNotificationBodies.append(body)
+        scheduleNotificationRepeats.append(repeats)
+        scheduleNotificationDateComponents.append(dateComponents)
+    }
+
+    func cancelAllNotifications() {
+        cancelAllNotificationsCalled = true
     }
 }
