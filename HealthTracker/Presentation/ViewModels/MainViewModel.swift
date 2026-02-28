@@ -15,6 +15,7 @@ final class MainViewModel {
 
     private let loadUseCase: LoadDayDataUseCase
     private let saveUseCase: SaveDayDataUseCase
+    private let cancelNotificationsUseCase: CancelNotificationsUseCase
 
     // MARK: - State
 
@@ -41,17 +42,23 @@ final class MainViewModel {
 
     init(
         loadUseCase: LoadDayDataUseCase,
-        saveUseCase: SaveDayDataUseCase
+        saveUseCase: SaveDayDataUseCase,
+        cancelNotificationsUseCase: CancelNotificationsUseCase
     ) {
         self.loadUseCase = loadUseCase
         self.saveUseCase = saveUseCase
+        self.cancelNotificationsUseCase = cancelNotificationsUseCase
     }
 
     /// Convenience initializer with default dependencies.
-    convenience init(repository: HealthDataRepositoryProtocol = HealthDataRepository()) {
+    convenience init(
+        repository: HealthDataRepositoryProtocol = HealthDataRepository(),
+        notificationService: NotificationServiceProtocol = NotificationService()
+    ) {
         self.init(
             loadUseCase: LoadDayDataUseCase(repository: repository),
-            saveUseCase: SaveDayDataUseCase(repository: repository)
+            saveUseCase: SaveDayDataUseCase(repository: repository),
+            cancelNotificationsUseCase: CancelNotificationsUseCase(notificationService: notificationService)
         )
     }
 
@@ -174,5 +181,11 @@ final class MainViewModel {
     private func persistChanges() {
         let recordedDays = days.compactMap(RecordedDayData.init)
         saveUseCase.execute(days: recordedDays)
+
+        // Cancel notifications after successful save (NOTIF-11, NOTIF-12)
+        // Fire-and-forget: don't await, don't block save flow
+        Task {
+            try? await cancelNotificationsUseCase.execute()
+        }
     }
 }
