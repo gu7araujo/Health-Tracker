@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T15:30:02.180Z"
+last_updated: "2026-02-28T17:27:56.061Z"
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 6
 ---
 
 # Project State
@@ -18,22 +18,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** Users remember to log their daily health data consistently, building a habit through timely, non-intrusive reminders.
-**Current focus:** Phase 1: Notification Service Foundation
+**Current focus:** Phase 2: Basic Notification Scheduling
 
 ## Current Position
 
-Phase: 1 of 4 (Notification Service Foundation)
-Plan: 3 of 3 in current phase
+Phase: 2 of 4 (Basic Notification Scheduling)
+Plan: 1 of 3 in current phase
 Status: Complete
-Last activity: 2026-02-28 — Completed 01-03-PLAN.md (Permission Request Integration & Test Coverage)
+Last activity: 2026-02-28 — Completed 02-01-PLAN.md (Notification Service Protocol Extensions)
 
-Progress: [██████████] 100%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 7 min
+- Total plans completed: 4
+- Average duration: 5 min
 - Total execution time: 0.3 hours
 
 **By Phase:**
@@ -41,10 +41,12 @@ Progress: [██████████] 100%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 3 | 17 min | 6 min |
+| 02 | 1 | 3 min | 3 min |
 
 | Phase 01 P01 | 3 min | 1 tasks | 1 files |
 | Phase 01 P02 | 3 | 2 tasks | 2 files |
 | Phase 01 P03 | 11 | 4 tasks | 4 files |
+| Phase 02 P01 | 3 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -68,6 +70,9 @@ Recent decisions affecting current work:
 - [Phase 01-03]: MainActor isolation for requestIfFirstLaunch - NotificationService and UseCase require MainActor context, isolated method ensures proper actor boundary
 - [Phase 01-03]: Task-based async call in App init - non-blocking initialization, permission request happens after views render per iOS standard behavior
 - [Phase 01-03]: Graceful error handling with do-catch - satisfies NOTIF-03, errors logged but never crash app, graceful degradation
+- [Phase 02-01]: UNCalendarNotificationTrigger for scheduling - respects time zones and DST automatically, better than time interval triggers
+- [Phase 02-01]: Omit timeZone from DateComponents - iOS defaults to device's local time zone for correct behavior across locations
+- [Phase 02-01]: Comprehensive mock tracking - tracks all scheduling parameters in arrays for detailed test assertions
 
 ### Pending Todos
 
@@ -80,5 +85,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28 (plan execution)
-Stopped at: Completed 01-03-PLAN.md - Phase 1 Complete
+Stopped at: Completed 02-01-PLAN.md (Notification Service Protocol Extensions)
 Resume file: None

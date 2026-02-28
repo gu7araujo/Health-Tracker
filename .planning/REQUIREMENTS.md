@@ -16,12 +16,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Notification Scheduling
 
-- [ ] **NOTIF-05**: App schedules daily notification at 1:00 PM
-- [ ] **NOTIF-06**: App schedules daily notification at 8:00 PM
+- [x] **NOTIF-05**: App schedules daily notification at 1:00 PM
+- [x] **NOTIF-06**: App schedules daily notification at 8:00 PM
 - [ ] **NOTIF-07**: Lunch notification shows time-specific message ("Time to log your lunch!")
 - [ ] **NOTIF-08**: Evening notification shows time-specific message ("How was your day? Log your health data")
-- [ ] **NOTIF-09**: Notifications use calendar-based triggers that respect time zones
-- [ ] **NOTIF-10**: Notifications recur daily automatically
+- [x] **NOTIF-09**: Notifications use calendar-based triggers that respect time zones
+- [x] **NOTIF-10**: Notifications recur daily automatically
 
 ### Smart Cancellation
 
@@ -92,12 +92,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTIF-02 | Phase 1 | Complete |
 | NOTIF-03 | Phase 1 | Complete |
 | NOTIF-04 | Phase 1 | Complete |
-| NOTIF-05 | Phase 2 | Pending |
-| NOTIF-06 | Phase 2 | Pending |
+| NOTIF-05 | Phase 2 | Complete |
+| NOTIF-06 | Phase 2 | Complete |
 | NOTIF-07 | Phase 2 | Pending |
 | NOTIF-08 | Phase 2 | Pending |
-| NOTIF-09 | Phase 2 | Pending |
-| NOTIF-10 | Phase 2 | Pending |
+| NOTIF-09 | Phase 2 | Complete |
+| NOTIF-10 | Phase 2 | Complete |
 | NOTIF-11 | Phase 3 | Pending |
 | NOTIF-12 | Phase 3 | Pending |
 | NOTIF-13 | Phase 3 | Pending |
