@@ -22,12 +22,16 @@ final class ScheduleNotificationsUseCase {
         self.notificationService = notificationService
     }
 
-    /// Schedules both daily notifications (lunch and evening reminders).
+    /// Schedules 30 days of date-specific notifications (lunch and evening reminders).
     ///
     /// Checks authorization status before scheduling. If not authorized, returns
     /// gracefully without throwing (satisfies NOTIF-03 graceful degradation).
     ///
-    /// Debug builds use testable times (2-3 minutes from now) for quick verification.
+    /// Schedules 60 individual non-repeating notifications (30 days × 2 per day) with
+    /// date-specific identifiers (e.g., "lunch-reminder-2026-02-28") to enable
+    /// targeted cancellation without affecting future days.
+    ///
+    /// Debug builds use testable times (2-3 minutes from now) for today's notifications.
     /// Release builds use production times (1 PM, 8 PM).
     ///
     /// - Throws: An error if scheduling fails (e.g., system error)
@@ -42,56 +46,100 @@ final class ScheduleNotificationsUseCase {
         // Clear any existing notifications before scheduling fresh (prevents duplicates)
         notificationService.cancelAllNotifications()
 
-        // Determine timing based on build configuration
-        let (lunchComponents, eveningComponents) = notificationTiming()
+        // Schedule 30 days of notifications upfront
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
 
-        // Schedule lunch notification (NOTIF-05, NOTIF-07)
-        try await notificationService.scheduleNotification(
-            identifier: "lunch-reminder",
-            title: Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "HealthTracker",
-            body: "Registre o que você comeu hoje",
-            dateComponents: lunchComponents,
-            repeats: true
-        )
+        for dayOffset in 0 ..< 30 {
+            guard let targetDate = calendar.date(byAdding: .day, value: dayOffset, to: today) else {
+                continue
+            }
 
-        // Schedule evening notification (NOTIF-06, NOTIF-08)
-        try await notificationService.scheduleNotification(
-            identifier: "evening-reminder",
-            title: Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "HealthTracker",
-            body: "Registre suas refeições e atividades",
-            dateComponents: eveningComponents,
-            repeats: true
-        )
+            let dateString = formatDateForIdentifier(targetDate)
+            let (lunchComponents, eveningComponents) = notificationTiming(for: targetDate)
 
-        print("[ScheduleNotifications] Notifications scheduled successfully")
+            // Schedule lunch notification (NOTIF-05, NOTIF-07)
+            try await notificationService.scheduleNotification(
+                identifier: "lunch-reminder-\(dateString)",
+                title: Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "HealthTracker",
+                body: "Registre o que você comeu hoje",
+                dateComponents: lunchComponents,
+                repeats: false
+            )
+
+            // Schedule evening notification (NOTIF-06, NOTIF-08)
+            try await notificationService.scheduleNotification(
+                identifier: "evening-reminder-\(dateString)",
+                title: Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "HealthTracker",
+                body: "Registre suas refeições e atividades",
+                dateComponents: eveningComponents,
+                repeats: false
+            )
+        }
+
+        print("[ScheduleNotifications] Scheduled 60 notifications (30 days × 2 daily)")
     }
 
     // MARK: - Private Helpers
 
-    /// Returns date components for lunch and evening notification timing.
+    /// Returns date components for lunch and evening notification timing for a specific date.
     ///
-    /// Debug builds return testable times (2-3 minutes from now) for quick verification.
-    /// Release builds return production times (1 PM, 8 PM).
+    /// Debug builds return testable times (2-3 minutes from now) for today's notifications.
+    /// Future days use production times (1 PM, 8 PM). Release builds use production times for all days.
     ///
-    /// - Returns: Tuple of (lunch, evening) DateComponents
-    private func notificationTiming() -> (lunch: DateComponents, evening: DateComponents) {
+    /// - Parameter date: The target date for the notification
+    /// - Returns: Tuple of (lunch, evening) DateComponents with full date (year, month, day, hour, minute)
+    private func notificationTiming(for date: Date) -> (lunch: DateComponents, evening: DateComponents) {
+        let calendar = Calendar.current
+
         #if DEBUG
             // Debug builds: testable times (NOTIF-23)
+            // Use provided date with testable hour/minute
             let now = Date()
-            let lunchDate = now.addingTimeInterval(120) // 2 minutes from now
-            let eveningDate = now.addingTimeInterval(180) // 3 minutes from now
+            let isToday = calendar.isDate(date, inSameDayAs: now)
 
-            let calendar = Calendar.current
-            let lunchComponents = calendar.dateComponents([.hour, .minute], from: lunchDate)
-            let eveningComponents = calendar.dateComponents([.hour, .minute], from: eveningDate)
+            if isToday {
+                // Today: 2-3 minutes from now for immediate testing
+                let lunchDate = now.addingTimeInterval(120)
+                let eveningDate = now.addingTimeInterval(180)
 
-            return (lunchComponents, eveningComponents)
+                let lunchComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: lunchDate)
+                let eveningComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: eveningDate)
+
+                return (lunchComponents, eveningComponents)
+            } else {
+                // Future days: use provided date with testable hours (13:00, 20:00)
+                var lunchComponents = calendar.dateComponents([.year, .month, .day], from: date)
+                lunchComponents.hour = 13
+                lunchComponents.minute = 0
+
+                var eveningComponents = calendar.dateComponents([.year, .month, .day], from: date)
+                eveningComponents.hour = 20
+                eveningComponents.minute = 0
+
+                return (lunchComponents, eveningComponents)
+            }
         #else
             // Release builds: production times (NOTIF-05, NOTIF-06)
-            let lunchComponents = DateComponents(hour: 13, minute: 0) // 1 PM
-            let eveningComponents = DateComponents(hour: 20, minute: 0) // 8 PM
+            var lunchComponents = calendar.dateComponents([.year, .month, .day], from: date)
+            lunchComponents.hour = 13
+            lunchComponents.minute = 0
+
+            var eveningComponents = calendar.dateComponents([.year, .month, .day], from: date)
+            eveningComponents.hour = 20
+            eveningComponents.minute = 0
 
             return (lunchComponents, eveningComponents)
         #endif
+    }
+
+    /// Formats a date as a string for use in notification identifiers.
+    /// - Parameter date: The date to format
+    /// - Returns: Date string in "yyyy-MM-dd" format (e.g., "2026-02-28")
+    private func formatDateForIdentifier(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.calendar = Calendar.current
+        return formatter.string(from: date)
     }
 }
