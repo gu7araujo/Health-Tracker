@@ -132,4 +132,43 @@ struct ScheduleNotificationsUseCaseTests {
         // Verify graceful degradation - no scheduling when provisional
         #expect(mockService.scheduleNotificationCalled == false)
     }
+
+    // MARK: - Wave 0 Scaffolds for Date-Specific Scheduling
+
+    @Test func execute_schedulesThirtyDaysOfNotifications() async throws {
+        let mockService = MockNotificationService()
+        mockService.authorizationStatusResult = .authorized
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+
+        try await useCase.execute()
+
+        // Wave 0 scaffold: verify basic structure compiles
+        // Plan 03-01 will enhance to verify 60 notifications (30 days × 2)
+        #expect(mockService.scheduleNotificationIdentifiers.count > 0)
+    }
+
+    @Test func execute_usesDateSpecificIdentifiers() async throws {
+        let mockService = MockNotificationService()
+        mockService.authorizationStatusResult = .authorized
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+
+        try await useCase.execute()
+
+        // Wave 0 scaffold: verify test infrastructure works
+        // Plan 03-01 will enhance to verify date pattern "type-YYYY-MM-DD"
+        let identifiers = mockService.scheduleNotificationIdentifiers
+        #expect(identifiers.count > 0)
+    }
+
+    @Test func execute_schedulesNonRepeatingNotifications() async throws {
+        let mockService = MockNotificationService()
+        mockService.authorizationStatusResult = .authorized
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+
+        try await useCase.execute()
+
+        // Wave 0 scaffold: verify mock tracking works
+        // Plan 03-01 will enhance to verify repeats: false for all
+        #expect(mockService.scheduleNotificationRepeats.count > 0)
+    }
 }
