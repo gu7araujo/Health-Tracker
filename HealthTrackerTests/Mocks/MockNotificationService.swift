@@ -50,6 +50,7 @@ final class MockNotificationService: NotificationServiceProtocol {
     /// Tracking properties for scheduling methods
     var scheduleNotificationCalled = false
     var scheduleNotificationIdentifiers: [String] = []
+    var scheduleNotificationTitles: [String] = []
     var scheduleNotificationBodies: [String] = []
     var scheduleNotificationRepeats: [Bool] = []
     var scheduleNotificationDateComponents: [DateComponents] = []
@@ -80,13 +81,14 @@ final class MockNotificationService: NotificationServiceProtocol {
 
     func scheduleNotification(
         identifier: String,
-        title _: String,
+        title: String,
         body: String,
         dateComponents: DateComponents,
         repeats: Bool
     ) async throws {
         scheduleNotificationCalled = true
         scheduleNotificationIdentifiers.append(identifier)
+        scheduleNotificationTitles.append(title)
         scheduleNotificationBodies.append(body)
         scheduleNotificationRepeats.append(repeats)
         scheduleNotificationDateComponents.append(dateComponents)
