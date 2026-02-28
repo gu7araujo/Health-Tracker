@@ -14,11 +14,12 @@ Cancel all pending notifications when the user logs any type of health data (mea
 ## Implementation Decisions
 
 ### Cancellation Trigger Points
-- Each ViewModel (MealViewModel, WorkoutViewModel, WaterViewModel, MoodViewModel) calls CancelNotificationsUseCase after successfully saving data
-- Explicit, predictable trigger points that follow existing Clean Architecture pattern
+- MainViewModel.persistChanges() calls CancelNotificationsUseCase after successfully saving data
+- This is the single point where all data mutations (meal, workout, water, mood) are persisted
+- Individual ViewModels don't have their own save methods - they all funnel through MainViewModel.persistChanges()
 - Cancellation only happens if save succeeds - failed saves don't cancel notifications
-- Async fire-and-forget execution - ViewModels don't await cancellation completion
-- All data types (meal, workout, water, mood) trigger cancellation equally
+- Async fire-and-forget execution - MainViewModel doesn't await cancellation completion
+- All data types (meal, workout, water, mood) trigger cancellation equally through this unified flow
 
 ### Day Boundary Logic
 - "Today" defined by matching the app's existing calendar logic for consistency (NOTIF-13 requirement)
