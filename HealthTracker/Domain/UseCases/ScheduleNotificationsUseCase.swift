@@ -48,7 +48,7 @@ final class ScheduleNotificationsUseCase {
         // Schedule lunch notification (NOTIF-05, NOTIF-07)
         try await notificationService.scheduleNotification(
             identifier: "lunch-reminder",
-            title: "HealthTracker",
+            title: Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "HealthTracker",
             body: "Registre o que você comeu hoje",
             dateComponents: lunchComponents,
             repeats: true
@@ -57,7 +57,7 @@ final class ScheduleNotificationsUseCase {
         // Schedule evening notification (NOTIF-06, NOTIF-08)
         try await notificationService.scheduleNotification(
             identifier: "evening-reminder",
-            title: "HealthTracker",
+            title: Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "HealthTracker",
             body: "Registre suas refeições e atividades",
             dateComponents: eveningComponents,
             repeats: true
