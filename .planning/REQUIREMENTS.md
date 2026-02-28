@@ -18,8 +18,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **NOTIF-05**: App schedules daily notification at 1:00 PM
 - [x] **NOTIF-06**: App schedules daily notification at 8:00 PM
-- [ ] **NOTIF-07**: Lunch notification shows time-specific message ("Time to log your lunch!")
-- [ ] **NOTIF-08**: Evening notification shows time-specific message ("How was your day? Log your health data")
+- [x] **NOTIF-07**: Lunch notification shows time-specific message ("Time to log your lunch!")
+- [x] **NOTIF-08**: Evening notification shows time-specific message ("How was your day? Log your health data")
 - [x] **NOTIF-09**: Notifications use calendar-based triggers that respect time zones
 - [x] **NOTIF-10**: Notifications recur daily automatically
 
@@ -35,7 +35,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **NOTIF-15**: Notification logic follows Clean Architecture pattern with protocol abstraction
 - [x] **NOTIF-16**: NotificationServiceProtocol defined in Domain layer
 - [x] **NOTIF-17**: NotificationService implementation in Data layer wraps UserNotifications framework
-- [ ] **NOTIF-18**: Use Cases coordinate notification operations (Schedule, Cancel, Request Permission)
+- [x] **NOTIF-18**: Use Cases coordinate notification operations (Schedule, Cancel, Request Permission)
 - [x] **NOTIF-19**: ViewModels never directly import UserNotifications framework
 
 ### Testing & Quality
@@ -43,7 +43,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **NOTIF-20**: Notification service has unit tests with mock protocol implementation
 - [ ] **NOTIF-21**: Use Cases have unit tests covering scheduling and cancellation logic
 - [ ] **NOTIF-22**: Manual test plan covers device testing for actual notification firing
-- [ ] **NOTIF-23**: Debug configuration allows testable notification times (not hardcoded 1 PM/8 PM)
+- [x] **NOTIF-23**: Debug configuration allows testable notification times (not hardcoded 1 PM/8 PM)
 
 ## v2 Requirements
 
@@ -94,8 +94,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTIF-04 | Phase 1 | Complete |
 | NOTIF-05 | Phase 2 | Complete |
 | NOTIF-06 | Phase 2 | Complete |
-| NOTIF-07 | Phase 2 | Pending |
-| NOTIF-08 | Phase 2 | Pending |
+| NOTIF-07 | Phase 2 | Complete |
+| NOTIF-08 | Phase 2 | Complete |
 | NOTIF-09 | Phase 2 | Complete |
 | NOTIF-10 | Phase 2 | Complete |
 | NOTIF-11 | Phase 3 | Pending |
@@ -105,12 +105,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTIF-15 | Phase 1 | Complete |
 | NOTIF-16 | Phase 1 | Complete |
 | NOTIF-17 | Phase 1 | Complete |
-| NOTIF-18 | Phase 2 | Pending |
+| NOTIF-18 | Phase 2 | Complete |
 | NOTIF-19 | Phase 1 | Complete |
 | NOTIF-20 | Phase 4 | Pending |
 | NOTIF-21 | Phase 4 | Pending |
 | NOTIF-22 | Phase 4 | Pending |
-| NOTIF-23 | Phase 2 | Pending |
+| NOTIF-23 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 23 total
