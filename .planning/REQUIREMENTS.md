@@ -88,35 +88,35 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NOTIF-01 | Pending | Pending |
-| NOTIF-02 | Pending | Pending |
-| NOTIF-03 | Pending | Pending |
-| NOTIF-04 | Pending | Pending |
-| NOTIF-05 | Pending | Pending |
-| NOTIF-06 | Pending | Pending |
-| NOTIF-07 | Pending | Pending |
-| NOTIF-08 | Pending | Pending |
-| NOTIF-09 | Pending | Pending |
-| NOTIF-10 | Pending | Pending |
-| NOTIF-11 | Pending | Pending |
-| NOTIF-12 | Pending | Pending |
-| NOTIF-13 | Pending | Pending |
-| NOTIF-14 | Pending | Pending |
-| NOTIF-15 | Pending | Pending |
-| NOTIF-16 | Pending | Pending |
-| NOTIF-17 | Pending | Pending |
-| NOTIF-18 | Pending | Pending |
-| NOTIF-19 | Pending | Pending |
-| NOTIF-20 | Pending | Pending |
-| NOTIF-21 | Pending | Pending |
-| NOTIF-22 | Pending | Pending |
-| NOTIF-23 | Pending | Pending |
+| NOTIF-01 | Phase 1 | Pending |
+| NOTIF-02 | Phase 1 | Pending |
+| NOTIF-03 | Phase 1 | Pending |
+| NOTIF-04 | Phase 1 | Pending |
+| NOTIF-05 | Phase 2 | Pending |
+| NOTIF-06 | Phase 2 | Pending |
+| NOTIF-07 | Phase 2 | Pending |
+| NOTIF-08 | Phase 2 | Pending |
+| NOTIF-09 | Phase 2 | Pending |
+| NOTIF-10 | Phase 2 | Pending |
+| NOTIF-11 | Phase 3 | Pending |
+| NOTIF-12 | Phase 3 | Pending |
+| NOTIF-13 | Phase 3 | Pending |
+| NOTIF-14 | Phase 3 | Pending |
+| NOTIF-15 | Phase 1 | Pending |
+| NOTIF-16 | Phase 1 | Pending |
+| NOTIF-17 | Phase 1 | Pending |
+| NOTIF-18 | Phase 2 | Pending |
+| NOTIF-19 | Phase 1 | Pending |
+| NOTIF-20 | Phase 4 | Pending |
+| NOTIF-21 | Phase 4 | Pending |
+| NOTIF-22 | Phase 4 | Pending |
+| NOTIF-23 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 23 total
-- Mapped to phases: 0 (roadmap not yet created)
-- Unmapped: 23 ⚠️
+- Mapped to phases: 23 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-28*
-*Last updated: 2026-02-28 after initial definition*
+*Last updated: 2026-02-28 after roadmap creation*
