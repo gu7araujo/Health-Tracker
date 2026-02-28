@@ -13,7 +13,7 @@ This roadmap delivers iOS local notifications to remind users to log health data
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Notification Service Foundation** - Establish Clean Architecture integration with permission handling
-- [ ] **Phase 2: Basic Notification Scheduling** - Implement daily 1 PM and 8 PM notifications with time-aware messages
+- [x] **Phase 2: Basic Notification Scheduling** - Implement daily 1 PM and 8 PM notifications with time-aware messages
 - [ ] **Phase 3: Smart Cancellation Logic** - Cancel notifications when user logs any data type
 - [ ] **Phase 4: Testing and Refinement** - Comprehensive testing with edge case validation
 
@@ -41,15 +41,18 @@ Plans:
 **Depends on**: Phase 1
 **Requirements**: NOTIF-05, NOTIF-06, NOTIF-07, NOTIF-08, NOTIF-09, NOTIF-10, NOTIF-18, NOTIF-23
 **Success Criteria** (what must be TRUE):
-  1. User receives notification at 1:00 PM with message "Time to log your lunch!"
-  2. User receives notification at 8:00 PM with message "How was your day? Log your health data"
+  1. User receives notification at 1:00 PM with Portuguese-BR message "Registre o que você comeu hoje"
+  2. User receives notification at 8:00 PM with Portuguese-BR message "Registre suas refeições e atividades"
   3. Notifications recur daily automatically without manual rescheduling
   4. Notifications fire at correct local time after time zone changes or DST transitions
   5. Debug configuration allows testable notification times for development
-**Plans**: TBD
+**Plans**: 4
 
 Plans:
-- [ ] 02-01: TBD
+- [x] 02-01: NotificationServiceProtocol scheduling methods (Wave 1)
+- [x] 02-02: ScheduleNotificationsUseCase implementation (Wave 2)
+- [x] 02-03: Unit tests for ScheduleNotificationsUseCase (Wave 3)
+- [x] 02-04: Use dynamic app name for notification title (Wave 4)
 
 ### Phase 3: Smart Cancellation Logic
 **Goal**: Notifications cancel intelligently when user logs any data, preventing notification fatigue
@@ -87,7 +90,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Notification Service Foundation | 0/3 | Ready to execute | - |
-| 2. Basic Notification Scheduling | 0/TBD | Not started | - |
+| 1. Notification Service Foundation | 3/3 | Complete | 2026-02-28 |
+| 2. Basic Notification Scheduling | 4/4 | Complete | 2026-02-28 |
 | 3. Smart Cancellation Logic | 0/TBD | Not started | - |
 | 4. Testing and Refinement | 0/TBD | Not started | - |
