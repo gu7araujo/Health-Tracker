@@ -33,7 +33,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Architecture Integration
 
 - [ ] **NOTIF-15**: Notification logic follows Clean Architecture pattern with protocol abstraction
-- [ ] **NOTIF-16**: NotificationServiceProtocol defined in Domain layer
+- [x] **NOTIF-16**: NotificationServiceProtocol defined in Domain layer
 - [ ] **NOTIF-17**: NotificationService implementation in Data layer wraps UserNotifications framework
 - [ ] **NOTIF-18**: Use Cases coordinate notification operations (Schedule, Cancel, Request Permission)
 - [ ] **NOTIF-19**: ViewModels never directly import UserNotifications framework
@@ -103,7 +103,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTIF-13 | Phase 3 | Pending |
 | NOTIF-14 | Phase 3 | Pending |
 | NOTIF-15 | Phase 1 | Pending |
-| NOTIF-16 | Phase 1 | Pending |
+| NOTIF-16 | Phase 1 | Complete |
 | NOTIF-17 | Phase 1 | Pending |
 | NOTIF-18 | Phase 2 | Pending |
 | NOTIF-19 | Phase 1 | Pending |

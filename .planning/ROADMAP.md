@@ -29,10 +29,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. NotificationServiceProtocol exists in Domain layer with no UserNotifications imports
   4. NotificationService implementation wraps UNUserNotificationCenter in Data layer
   5. ViewModels can use notification operations without importing UserNotifications framework
-**Plans**: TBD
+**Plans**: 3
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01: Create Domain layer protocol and types (Wave 1)
+- [ ] 01-02: Implement Data layer service and Use Case (Wave 2)
+- [ ] 01-03: Integrate permission request and add tests (Wave 3)
 
 ### Phase 2: Basic Notification Scheduling
 **Goal**: Users receive daily notifications at 1 PM and 8 PM with time-specific messages
@@ -85,7 +87,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Notification Service Foundation | 0/TBD | Not started | - |
+| 1. Notification Service Foundation | 0/3 | Ready to execute | - |
 | 2. Basic Notification Scheduling | 0/TBD | Not started | - |
 | 3. Smart Cancellation Logic | 0/TBD | Not started | - |
 | 4. Testing and Refinement | 0/TBD | Not started | - |
