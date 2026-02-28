@@ -30,6 +30,10 @@ actor NotificationPermissionManager {
     /// to handle the permission request. The result (granted or denied) is logged but
     /// the app continues normally in either case.
     ///
+    /// If permission is granted, this method automatically schedules the daily notifications
+    /// (lunch at 1 PM, evening at 8 PM) using ScheduleNotificationsUseCase. This ensures
+    /// notifications are set up immediately after the user grants permission.
+    ///
     /// Permission denial or errors are handled gracefully - they are logged but do NOT
     /// crash the app. This satisfies NOTIF-03 (graceful degradation requirement).
     ///
@@ -52,6 +56,13 @@ actor NotificationPermissionManager {
         do {
             let granted = try await useCase.execute()
             print("[NotificationPermissionManager] Notification permission: \(granted ? "granted" : "denied")")
+
+            // Schedule notifications if permission granted
+            if granted {
+                let scheduleUseCase = ScheduleNotificationsUseCase(notificationService: notificationService)
+                try await scheduleUseCase.execute()
+                print("[NotificationPermissionManager] Notifications scheduled successfully")
+            }
 
             // Set delegate for future notification handling (Phase 2 will implement actual delegate)
             notificationService.setDelegate(nil)
