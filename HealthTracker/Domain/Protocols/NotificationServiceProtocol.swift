@@ -42,6 +42,31 @@ protocol NotificationServiceProtocol {
     ///
     /// - Parameter delegate: The delegate object, or nil to remove the current delegate
     func setDelegate(_ delegate: NotificationCenterDelegate?)
+
+    /// Schedules a notification with calendar-based trigger.
+    ///
+    /// This method creates a notification request with the specified content and timing.
+    /// The notification will fire when the date components match the current date/time.
+    ///
+    /// - Parameters:
+    ///   - identifier: Unique identifier for the notification. Used to replace or cancel later.
+    ///   - title: Notification title (shown in bold)
+    ///   - body: Notification body text
+    ///   - dateComponents: When to fire (e.g., DateComponents(hour: 13, minute: 0))
+    ///   - repeats: Whether notification should recur when date components match again
+    /// - Throws: An error if scheduling fails
+    func scheduleNotification(
+        identifier: String,
+        title: String,
+        body: String,
+        dateComponents: DateComponents,
+        repeats: Bool
+    ) async throws
+
+    /// Cancels all pending notifications scheduled by this app.
+    ///
+    /// Use this to clear notifications before rescheduling or when user logs data.
+    func cancelAllNotifications()
 }
 
 // MARK: - Domain Types
