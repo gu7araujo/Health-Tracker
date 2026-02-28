@@ -19,7 +19,6 @@
 /* Begin PBXFileReference section */
 		B72D843A2F472FBA002027B5 /* HealthTrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B756C6122EA3F8900057DE0C /* HealthTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		52F50A62DCA44C3DA2D5D018 /* RequestNotificationPermissionUseCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestNotificationPermissionUseCaseTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -219,8 +218,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-			
-				918E1D82DB1346408DDDA7E9 /* RequestNotificationPermissionUseCaseTests.swift in Sources */,);
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B756C60E2EA3F8900057DE0C /* Sources */ = {
