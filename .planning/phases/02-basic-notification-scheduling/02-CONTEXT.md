@@ -18,7 +18,7 @@ This phase focuses on the scheduling mechanism and notification delivery. User i
 ### Notification Content (Portuguese-BR)
 - **1 PM notification:** "Registre o que você comeu hoje" (action-focused, covers meals that may not be logged yet)
 - **8 PM notification:** "Registre suas refeições e atividades" (comprehensive reminder for end-of-day logging)
-- Notifications should use app name "HealthTracker" as the title
+- Notifications should use CFBundleDisplayName from project configuration as the title, with fallback to "HealthTracker"
 - Content is action-oriented and acknowledges user may not have logged data yet
 
 ### Notification Presentation
