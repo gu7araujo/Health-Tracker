@@ -9,10 +9,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Notification Foundation
 
-- [ ] **NOTIF-01**: App requests notification permission on first launch
+- [x] **NOTIF-01**: App requests notification permission on first launch
 - [x] **NOTIF-02**: App checks notification authorization status before scheduling
-- [ ] **NOTIF-03**: App handles notification permission denial gracefully
-- [ ] **NOTIF-04**: App configures UNUserNotificationCenter delegate at launch
+- [x] **NOTIF-03**: App handles notification permission denial gracefully
+- [x] **NOTIF-04**: App configures UNUserNotificationCenter delegate at launch
 
 ### Notification Scheduling
 
@@ -32,7 +32,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Architecture Integration
 
-- [ ] **NOTIF-15**: Notification logic follows Clean Architecture pattern with protocol abstraction
+- [x] **NOTIF-15**: Notification logic follows Clean Architecture pattern with protocol abstraction
 - [x] **NOTIF-16**: NotificationServiceProtocol defined in Domain layer
 - [x] **NOTIF-17**: NotificationService implementation in Data layer wraps UserNotifications framework
 - [ ] **NOTIF-18**: Use Cases coordinate notification operations (Schedule, Cancel, Request Permission)
@@ -88,10 +88,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NOTIF-01 | Phase 1 | Pending |
+| NOTIF-01 | Phase 1 | Complete |
 | NOTIF-02 | Phase 1 | Complete |
-| NOTIF-03 | Phase 1 | Pending |
-| NOTIF-04 | Phase 1 | Pending |
+| NOTIF-03 | Phase 1 | Complete |
+| NOTIF-04 | Phase 1 | Complete |
 | NOTIF-05 | Phase 2 | Pending |
 | NOTIF-06 | Phase 2 | Pending |
 | NOTIF-07 | Phase 2 | Pending |
@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTIF-12 | Phase 3 | Pending |
 | NOTIF-13 | Phase 3 | Pending |
 | NOTIF-14 | Phase 3 | Pending |
-| NOTIF-15 | Phase 1 | Pending |
+| NOTIF-15 | Phase 1 | Complete |
 | NOTIF-16 | Phase 1 | Complete |
 | NOTIF-17 | Phase 1 | Complete |
 | NOTIF-18 | Phase 2 | Pending |
