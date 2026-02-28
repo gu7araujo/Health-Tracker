@@ -67,6 +67,23 @@ protocol NotificationServiceProtocol {
     ///
     /// Use this to clear notifications before rescheduling or when user logs data.
     func cancelAllNotifications()
+
+    /// Cancels pending notifications with the specified identifiers.
+    ///
+    /// This method removes scheduled notifications that have not yet been delivered.
+    /// Use this to prevent future notifications from firing.
+    ///
+    /// - Parameter identifiers: Array of notification identifiers to cancel
+    func cancelNotifications(withIdentifiers identifiers: [String])
+
+    /// Removes delivered notifications with the specified identifiers.
+    ///
+    /// This method clears notifications that have already been delivered and are
+    /// visible in the Notification Center. Use this to clean up notifications
+    /// after the user has taken action.
+    ///
+    /// - Parameter identifiers: Array of notification identifiers to remove
+    func removeDeliveredNotifications(withIdentifiers identifiers: [String])
 }
 
 // MARK: - Domain Types
