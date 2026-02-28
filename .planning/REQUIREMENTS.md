@@ -10,7 +10,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Notification Foundation
 
 - [ ] **NOTIF-01**: App requests notification permission on first launch
-- [ ] **NOTIF-02**: App checks notification authorization status before scheduling
+- [x] **NOTIF-02**: App checks notification authorization status before scheduling
 - [ ] **NOTIF-03**: App handles notification permission denial gracefully
 - [ ] **NOTIF-04**: App configures UNUserNotificationCenter delegate at launch
 
@@ -34,9 +34,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **NOTIF-15**: Notification logic follows Clean Architecture pattern with protocol abstraction
 - [x] **NOTIF-16**: NotificationServiceProtocol defined in Domain layer
-- [ ] **NOTIF-17**: NotificationService implementation in Data layer wraps UserNotifications framework
+- [x] **NOTIF-17**: NotificationService implementation in Data layer wraps UserNotifications framework
 - [ ] **NOTIF-18**: Use Cases coordinate notification operations (Schedule, Cancel, Request Permission)
-- [ ] **NOTIF-19**: ViewModels never directly import UserNotifications framework
+- [x] **NOTIF-19**: ViewModels never directly import UserNotifications framework
 
 ### Testing & Quality
 
@@ -89,7 +89,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | NOTIF-01 | Phase 1 | Pending |
-| NOTIF-02 | Phase 1 | Pending |
+| NOTIF-02 | Phase 1 | Complete |
 | NOTIF-03 | Phase 1 | Pending |
 | NOTIF-04 | Phase 1 | Pending |
 | NOTIF-05 | Phase 2 | Pending |
@@ -104,9 +104,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTIF-14 | Phase 3 | Pending |
 | NOTIF-15 | Phase 1 | Pending |
 | NOTIF-16 | Phase 1 | Complete |
-| NOTIF-17 | Phase 1 | Pending |
+| NOTIF-17 | Phase 1 | Complete |
 | NOTIF-18 | Phase 2 | Pending |
-| NOTIF-19 | Phase 1 | Pending |
+| NOTIF-19 | Phase 1 | Complete |
 | NOTIF-20 | Phase 4 | Pending |
 | NOTIF-21 | Phase 4 | Pending |
 | NOTIF-22 | Phase 4 | Pending |
