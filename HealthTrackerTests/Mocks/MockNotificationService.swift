@@ -57,6 +57,13 @@ final class MockNotificationService: NotificationServiceProtocol {
 
     var cancelAllNotificationsCalled = false
 
+    // Tracking properties for cancellation methods
+    var cancelNotificationsCalled = false
+    var cancelNotificationsIdentifiers: [[String]] = []
+
+    var removeDeliveredNotificationsCalled = false
+    var removeDeliveredNotificationsIdentifiers: [[String]] = []
+
     // MARK: - NotificationServiceProtocol Implementation
 
     func requestAuthorization(options: NotificationAuthorizationOptions) async throws -> Bool {
@@ -96,5 +103,23 @@ final class MockNotificationService: NotificationServiceProtocol {
 
     func cancelAllNotifications() {
         cancelAllNotificationsCalled = true
+    }
+
+    func cancelNotifications(withIdentifiers identifiers: [String]) {
+        cancelNotificationsCalled = true
+        cancelNotificationsIdentifiers.append(identifiers)
+    }
+
+    func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
+        removeDeliveredNotificationsCalled = true
+        removeDeliveredNotificationsIdentifiers.append(identifiers)
+    }
+
+    /// Resets cancellation tracking state for fresh test assertions.
+    func resetCancellationTracking() {
+        cancelNotificationsCalled = false
+        cancelNotificationsIdentifiers = []
+        removeDeliveredNotificationsCalled = false
+        removeDeliveredNotificationsIdentifiers = []
     }
 }
