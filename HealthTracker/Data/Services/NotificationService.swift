@@ -84,6 +84,14 @@ final class NotificationService: NotificationServiceProtocol {
     func cancelAllNotifications() {
         notificationCenter.removeAllPendingNotificationRequests()
     }
+
+    func cancelNotifications(withIdentifiers identifiers: [String]) {
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+
+    func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
+        notificationCenter.removeDeliveredNotifications(withIdentifiers: identifiers)
+    }
 }
 
 // MARK: - Type Mapping Extensions
