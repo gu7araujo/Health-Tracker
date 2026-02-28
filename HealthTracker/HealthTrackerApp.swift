@@ -11,6 +11,11 @@ import SwiftUI
 struct HealthTrackerApp: App {
     init() {
         DataMigration.migrateIfNeeded()
+
+        // Request notification permission on first launch
+        Task {
+            await NotificationPermissionManager.requestIfFirstLaunch()
+        }
     }
 
     var body: some Scene {
