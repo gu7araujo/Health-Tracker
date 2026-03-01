@@ -39,6 +39,25 @@ expected: Build release configuration (Product > Scheme > Edit Scheme > Run > Bu
 result: [pending/pass/fail]
 notes: [record actual firing times and any delays]
 
+### 4. Permission Denial Graceful Degradation
+expected: Fresh install (delete app, then install). Launch app. When permission prompt appears, tap "Don't Allow". App should continue functioning normally:
+  - No crashes or freezes
+  - Data logging works (can add meals, workouts, water, mood)
+  - No error messages shown to user
+  - No notifications scheduled (check iOS Settings > Notifications > HealthTracker - should show "Not Allowed")
+  - App remains usable for core health tracking functionality
+result: [pending/pass/fail]
+notes: [record any crashes or user-visible errors]
+
+### 5. Permission Grant Flow
+expected: Fresh install. Launch app. When permission prompt appears, tap "Allow". Verify:
+  - No crashes or errors
+  - iOS Settings > Notifications > HealthTracker shows "Immediate Delivery" enabled
+  - Notifications scheduled immediately (will fire at debug times or production times depending on build)
+  - Unit tests in RequestNotificationPermissionUseCaseTests validated this flow
+result: [pending/pass/fail]
+notes: [record any unexpected behavior]
+
 ## Summary
 
 total: 10
