@@ -15,9 +15,10 @@ struct ScheduleNotificationsUseCaseTests {
 
     @Test func execute_schedulesBothNotificationsWhenAuthorized() async throws {
         let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
         mockService.authorizationStatusResult = .authorized
 
-        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
         // Verify scheduling was called
@@ -36,9 +37,10 @@ struct ScheduleNotificationsUseCaseTests {
 
     @Test func execute_cancelsExistingNotificationsBeforeScheduling() async throws {
         let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
         mockService.authorizationStatusResult = .authorized
 
-        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
         // Verify cancellation called to prevent duplicates
@@ -47,9 +49,10 @@ struct ScheduleNotificationsUseCaseTests {
 
     @Test func execute_skipsSchedulingWhenNotAuthorized() async throws {
         let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
         mockService.authorizationStatusResult = .denied
 
-        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
         // Verify no scheduling occurred (graceful degradation per NOTIF-03)
@@ -61,9 +64,10 @@ struct ScheduleNotificationsUseCaseTests {
 
     @Test func execute_schedulesWithDateComponents() async throws {
         let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
         mockService.authorizationStatusResult = .authorized
 
-        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
         // Verify DateComponents used (NOTIF-09)
@@ -80,9 +84,10 @@ struct ScheduleNotificationsUseCaseTests {
 
     @Test func execute_usesPortugueseBRMessages() async throws {
         let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
         mockService.authorizationStatusResult = .authorized
 
-        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
         // Verify exact Portuguese-BR messages (NOTIF-07, NOTIF-08)
@@ -95,9 +100,10 @@ struct ScheduleNotificationsUseCaseTests {
 
     @Test func execute_usesDynamicAppNameAsTitle() async throws {
         let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
         mockService.authorizationStatusResult = .authorized
 
-        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
         let expectedTitle = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "HealthTracker"
@@ -111,9 +117,10 @@ struct ScheduleNotificationsUseCaseTests {
 
     @Test func execute_handlesNotDeterminedStatus() async throws {
         let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
         mockService.authorizationStatusResult = .notDetermined
 
-        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
         // Verify graceful degradation - no scheduling when not determined
@@ -122,9 +129,10 @@ struct ScheduleNotificationsUseCaseTests {
 
     @Test func execute_handlesProvisionalStatus() async throws {
         let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
         mockService.authorizationStatusResult = .provisional
 
-        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
         // Verify graceful degradation - no scheduling when provisional
@@ -135,8 +143,9 @@ struct ScheduleNotificationsUseCaseTests {
 
     @Test func execute_schedulesThirtyDaysOfNotifications() async throws {
         let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
         mockService.authorizationStatusResult = .authorized
-        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
 
         try await useCase.execute()
 
@@ -146,8 +155,9 @@ struct ScheduleNotificationsUseCaseTests {
 
     @Test func execute_usesDateSpecificIdentifiers() async throws {
         let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
         mockService.authorizationStatusResult = .authorized
-        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
 
         try await useCase.execute()
 
@@ -177,8 +187,9 @@ struct ScheduleNotificationsUseCaseTests {
 
     @Test func execute_schedulesNonRepeatingNotifications() async throws {
         let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
         mockService.authorizationStatusResult = .authorized
-        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
 
         try await useCase.execute()
 
@@ -189,8 +200,9 @@ struct ScheduleNotificationsUseCaseTests {
 
     @Test func execute_schedulesFullDateComponents() async throws {
         let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
         mockService.authorizationStatusResult = .authorized
-        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
 
         try await useCase.execute()
 

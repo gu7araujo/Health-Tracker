@@ -13,7 +13,8 @@ import Testing
 struct CancelNotificationsUseCaseTests {
     @Test func execute_cancelsPendingNotifications() async throws {
         let mockService = MockNotificationService()
-        let useCase = CancelNotificationsUseCase(notificationService: mockService)
+        let mockLogger = MockLogger()
+        let useCase = CancelNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
         // Verify pending notifications were cancelled (NOTIF-11)
@@ -22,7 +23,8 @@ struct CancelNotificationsUseCaseTests {
 
     @Test func execute_removesDeliveredNotifications() async throws {
         let mockService = MockNotificationService()
-        let useCase = CancelNotificationsUseCase(notificationService: mockService)
+        let mockLogger = MockLogger()
+        let useCase = CancelNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
         // Verify delivered notifications were removed (NOTIF-14)
@@ -31,7 +33,8 @@ struct CancelNotificationsUseCaseTests {
 
     @Test func execute_usesTodayDateForIdentifiers() async throws {
         let mockService = MockNotificationService()
-        let useCase = CancelNotificationsUseCase(notificationService: mockService)
+        let mockLogger = MockLogger()
+        let useCase = CancelNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
         // Calculate today's date string
@@ -55,7 +58,8 @@ struct CancelNotificationsUseCaseTests {
 
     @Test func execute_cancelsOnlyTwoNotifications() async throws {
         let mockService = MockNotificationService()
-        let useCase = CancelNotificationsUseCase(notificationService: mockService)
+        let mockLogger = MockLogger()
+        let useCase = CancelNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
         // Verify exactly 2 identifiers in first cancellation call
@@ -75,7 +79,8 @@ struct CancelNotificationsUseCaseTests {
 
     @Test func execute_handlesMultipleCancellationCalls() async throws {
         let mockService = MockNotificationService()
-        let useCase = CancelNotificationsUseCase(notificationService: mockService)
+        let mockLogger = MockLogger()
+        let useCase = CancelNotificationsUseCase(notificationService: mockService, logger: mockLogger)
 
         // Execute twice to simulate rapid data entry
         try await useCase.execute()
@@ -88,7 +93,8 @@ struct CancelNotificationsUseCaseTests {
 
     @Test func execute_worksAcrossDayBoundaries() async throws {
         let mockService = MockNotificationService()
-        let useCase = CancelNotificationsUseCase(notificationService: mockService)
+        let mockLogger = MockLogger()
+        let useCase = CancelNotificationsUseCase(notificationService: mockService, logger: mockLogger)
 
         try await useCase.execute()
 

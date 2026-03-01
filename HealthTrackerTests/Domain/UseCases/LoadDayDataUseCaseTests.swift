@@ -15,11 +15,12 @@ struct LoadDayDataUseCaseTests {
 
     @Test func execute_loadAllDays_returnsDataFromRepository() throws {
         let mockRepository = MockHealthDataRepository()
+        let mockLogger = MockLogger()
         let day1 = try #require(TestDataBuilder.makeRecordedOptimalDay(date: TestDataBuilder.fixedDate))
         let day2 = try #require(TestDataBuilder.makeRecordedModerateDay(date: TestDataBuilder.fixedDatePlusOne))
         mockRepository.loadAllDaysResult = [day1, day2]
 
-        let useCase = LoadDayDataUseCase(repository: mockRepository)
+        let useCase = LoadDayDataUseCase(repository: mockRepository, logger: mockLogger)
         let result = useCase.execute()
 
         #expect(mockRepository.loadAllDaysCalled)
@@ -30,9 +31,10 @@ struct LoadDayDataUseCaseTests {
 
     @Test func execute_loadAllDays_returnsEmptyArray_whenNoData() {
         let mockRepository = MockHealthDataRepository()
+        let mockLogger = MockLogger()
         mockRepository.loadAllDaysResult = []
 
-        let useCase = LoadDayDataUseCase(repository: mockRepository)
+        let useCase = LoadDayDataUseCase(repository: mockRepository, logger: mockLogger)
         let result = useCase.execute()
 
         #expect(mockRepository.loadAllDaysCalled)
@@ -41,10 +43,11 @@ struct LoadDayDataUseCaseTests {
 
     @Test func execute_loadAllDays_returnsSingleDay() throws {
         let mockRepository = MockHealthDataRepository()
+        let mockLogger = MockLogger()
         let day = try #require(TestDataBuilder.makeRecordedOptimalDay())
         mockRepository.loadAllDaysResult = [day]
 
-        let useCase = LoadDayDataUseCase(repository: mockRepository)
+        let useCase = LoadDayDataUseCase(repository: mockRepository, logger: mockLogger)
         let result = useCase.execute()
 
         #expect(mockRepository.loadAllDaysCalled)
@@ -56,11 +59,12 @@ struct LoadDayDataUseCaseTests {
 
     @Test func execute_forDate_returnsExistingDay() throws {
         let mockRepository = MockHealthDataRepository()
+        let mockLogger = MockLogger()
         let date = TestDataBuilder.fixedDate
         let recordedDay = try #require(TestDataBuilder.makeRecordedOptimalDay(date: date))
         mockRepository.dayDataForDateResult = [date: recordedDay]
 
-        let useCase = LoadDayDataUseCase(repository: mockRepository)
+        let useCase = LoadDayDataUseCase(repository: mockRepository, logger: mockLogger)
         let result = useCase.execute(for: date)
 
         #expect(mockRepository.dayDataForDateCalledWith == date)
@@ -69,10 +73,11 @@ struct LoadDayDataUseCaseTests {
 
     @Test func execute_forDate_returnsEmptyDay_whenNoDataExists() {
         let mockRepository = MockHealthDataRepository()
+        let mockLogger = MockLogger()
         let date = TestDataBuilder.fixedDate
         mockRepository.dayDataForDateResult = [:] // No data
 
-        let useCase = LoadDayDataUseCase(repository: mockRepository)
+        let useCase = LoadDayDataUseCase(repository: mockRepository, logger: mockLogger)
         let result = useCase.execute(for: date)
 
         #expect(mockRepository.dayDataForDateCalledWith == date)
@@ -85,12 +90,13 @@ struct LoadDayDataUseCaseTests {
 
     @Test func execute_forDate_returnsEmptyDay_forDifferentDate() throws {
         let mockRepository = MockHealthDataRepository()
+        let mockLogger = MockLogger()
         let storedDate = TestDataBuilder.fixedDate
         let requestedDate = TestDataBuilder.fixedDatePlusOne
         let recordedDay = try #require(TestDataBuilder.makeRecordedOptimalDay(date: storedDate))
         mockRepository.dayDataForDateResult = [storedDate: recordedDay]
 
-        let useCase = LoadDayDataUseCase(repository: mockRepository)
+        let useCase = LoadDayDataUseCase(repository: mockRepository, logger: mockLogger)
         let result = useCase.execute(for: requestedDate)
 
         #expect(mockRepository.dayDataForDateCalledWith == requestedDate)
@@ -100,11 +106,12 @@ struct LoadDayDataUseCaseTests {
 
     @Test func execute_forDate_preservesAllDayDataProperties() throws {
         let mockRepository = MockHealthDataRepository()
+        let mockLogger = MockLogger()
         let date = TestDataBuilder.fixedDate
         let recordedDay = try #require(TestDataBuilder.makeRecordedOptimalDay(date: date))
         mockRepository.dayDataForDateResult = [date: recordedDay]
 
-        let useCase = LoadDayDataUseCase(repository: mockRepository)
+        let useCase = LoadDayDataUseCase(repository: mockRepository, logger: mockLogger)
         let result = useCase.execute(for: date)
 
         #expect(result.date == date)
