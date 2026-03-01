@@ -57,7 +57,10 @@ final class MainViewModel {
     ) {
         self.init(
             loadUseCase: LoadDayDataUseCase(repository: repository),
-            saveUseCase: SaveDayDataUseCase(repository: repository),
+            saveUseCase: SaveDayDataUseCase(
+                repository: repository,
+                logger: LoggerFactory.domainLogger(category: "Data.Save")
+            ),
             cancelNotificationsUseCase: CancelNotificationsUseCase(notificationService: notificationService)
         )
     }
