@@ -17,9 +17,11 @@ import Foundation
 /// Release builds use production times (1 PM, 8 PM) matching user requirements.
 final class ScheduleNotificationsUseCase {
     private let notificationService: NotificationServiceProtocol
+    private let logger: LoggerProtocol
 
-    init(notificationService: NotificationServiceProtocol) {
+    init(notificationService: NotificationServiceProtocol, logger: LoggerProtocol) {
         self.notificationService = notificationService
+        self.logger = logger
     }
 
     /// Schedules 30 days of date-specific notifications (lunch and evening reminders).
@@ -36,10 +38,12 @@ final class ScheduleNotificationsUseCase {
     ///
     /// - Throws: An error if scheduling fails (e.g., system error)
     func execute() async throws {
+        logger.debug("Scheduling notifications for next 30 days")
+
         // Check authorization (NOTIF-02)
         let status = await notificationService.authorizationStatus()
         guard status == .authorized else {
-            print("[ScheduleNotifications] Not authorized, skipping scheduling")
+            logger.warning("Not authorized to schedule notifications, skipping")
             return
         }
 
@@ -49,6 +53,8 @@ final class ScheduleNotificationsUseCase {
         // Schedule 30 days of notifications upfront
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
+
+        var scheduledCount = 0
 
         for dayOffset in 0 ..< 30 {
             guard let targetDate = calendar.date(byAdding: .day, value: dayOffset, to: today) else {
@@ -75,9 +81,11 @@ final class ScheduleNotificationsUseCase {
                 dateComponents: eveningComponents,
                 repeats: false
             )
+
+            scheduledCount += 2
         }
 
-        print("[ScheduleNotifications] Scheduled 60 notifications (30 days × 2 daily)")
+        logger.info("Successfully scheduled \(scheduledCount) notifications")
     }
 
     // MARK: - Private Helpers

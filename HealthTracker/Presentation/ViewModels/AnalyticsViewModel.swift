@@ -37,7 +37,10 @@ final class AnalyticsViewModel {
     /// Convenience initializer with default dependencies.
     convenience init(repository: HealthDataRepositoryProtocol = HealthDataRepository()) {
         self.init(
-            calculateAnalyticsUseCase: CalculateAnalyticsUseCase(repository: repository)
+            calculateAnalyticsUseCase: CalculateAnalyticsUseCase(
+                repository: repository,
+                logger: LoggerFactory.domainLogger(category: "Analytics")
+            )
         )
     }
 

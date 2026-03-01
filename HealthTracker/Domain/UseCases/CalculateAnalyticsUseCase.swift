@@ -10,9 +10,11 @@ import Foundation
 /// Use case for calculating comprehensive analytics across all health metrics
 final class CalculateAnalyticsUseCase {
     private let repository: HealthDataRepositoryProtocol
+    private let logger: LoggerProtocol
 
-    init(repository: HealthDataRepositoryProtocol) {
+    init(repository: HealthDataRepositoryProtocol, logger: LoggerProtocol) {
         self.repository = repository
+        self.logger = logger
     }
 
     /// Calculates analytics for the specified period
@@ -20,9 +22,11 @@ final class CalculateAnalyticsUseCase {
     /// - Returns: Complete analytics data for all health metrics
     func execute(for period: AnalyticsPeriod) -> AnalyticsData {
         let days = repository.loadDaysInRange(period.dateRange)
+        logger.debug("Calculating analytics for \(days.count) days")
+
         let dayDataArray = days.map(\.dayData)
 
-        return AnalyticsData(
+        let analytics = AnalyticsData(
             mealAnalytics: calculateMealAnalytics(from: dayDataArray, period: period),
             waterAnalytics: calculateWaterAnalytics(from: dayDataArray),
             workoutAnalytics: calculateWorkoutAnalytics(from: dayDataArray),
@@ -30,6 +34,10 @@ final class CalculateAnalyticsUseCase {
             overallAnalytics: calculateOverallAnalytics(from: dayDataArray),
             period: period
         )
+
+        logger.info("Analytics calculated: \(analytics.mealAnalytics.totalMeals) meals, \(analytics.workoutAnalytics.totalWorkouts) workouts")
+
+        return analytics
     }
 
     // MARK: - Meal Analytics

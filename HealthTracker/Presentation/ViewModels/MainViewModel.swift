@@ -56,12 +56,18 @@ final class MainViewModel {
         notificationService: NotificationServiceProtocol = NotificationService()
     ) {
         self.init(
-            loadUseCase: LoadDayDataUseCase(repository: repository),
+            loadUseCase: LoadDayDataUseCase(
+                repository: repository,
+                logger: LoggerFactory.domainLogger(category: "Data.Load")
+            ),
             saveUseCase: SaveDayDataUseCase(
                 repository: repository,
                 logger: LoggerFactory.domainLogger(category: "Data.Save")
             ),
-            cancelNotificationsUseCase: CancelNotificationsUseCase(notificationService: notificationService)
+            cancelNotificationsUseCase: CancelNotificationsUseCase(
+                notificationService: notificationService,
+                logger: LoggerFactory.domainLogger(category: "Notifications.Cancel")
+            )
         )
     }
 

@@ -51,7 +51,11 @@ actor NotificationPermissionManager {
 
         // First launch - request notification permission
         let notificationService = NotificationService()
-        let useCase = RequestNotificationPermissionUseCase(notificationService: notificationService)
+        let logger = LoggerFactory.domainLogger(category: "Notifications")
+        let useCase = RequestNotificationPermissionUseCase(
+            notificationService: notificationService,
+            logger: logger
+        )
 
         do {
             let granted = try await useCase.execute()
@@ -59,7 +63,10 @@ actor NotificationPermissionManager {
 
             // Schedule notifications if permission granted
             if granted {
-                let scheduleUseCase = ScheduleNotificationsUseCase(notificationService: notificationService)
+                let scheduleUseCase = ScheduleNotificationsUseCase(
+                    notificationService: notificationService,
+                    logger: logger
+                )
                 try await scheduleUseCase.execute()
                 print("[NotificationPermissionManager] Notifications scheduled successfully")
             }

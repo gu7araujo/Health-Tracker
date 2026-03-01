@@ -20,9 +20,11 @@ import Foundation
 /// Satisfies requirements NOTIF-11, NOTIF-12, NOTIF-13, NOTIF-14.
 final class CancelNotificationsUseCase {
     private let notificationService: NotificationServiceProtocol
+    private let logger: LoggerProtocol
 
-    init(notificationService: NotificationServiceProtocol) {
+    init(notificationService: NotificationServiceProtocol, logger: LoggerProtocol) {
         self.notificationService = notificationService
+        self.logger = logger
     }
 
     /// Cancels all notifications for today (both pending and delivered).
@@ -44,6 +46,8 @@ final class CancelNotificationsUseCase {
         let today = Calendar.current.startOfDay(for: Date())
         let dateString = formatDateForIdentifier(today)
 
+        logger.debug("Canceling notifications for date: \(dateString)")
+
         let identifiers = [
             "lunch-reminder-\(dateString)",
             "evening-reminder-\(dateString)"
@@ -55,7 +59,7 @@ final class CancelNotificationsUseCase {
         // Remove delivered notifications (visible in Notification Center)
         notificationService.removeDeliveredNotifications(withIdentifiers: identifiers)
 
-        print("[CancelNotifications] Canceled notifications for \(dateString)")
+        logger.info("Successfully canceled notifications for date: \(dateString)")
     }
 
     // MARK: - Private Helpers

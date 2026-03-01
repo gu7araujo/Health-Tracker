@@ -17,13 +17,16 @@ import Foundation
 /// directly, maintaining Clean Architecture separation of concerns.
 final class RequestNotificationPermissionUseCase {
     private let notificationService: NotificationServiceProtocol
+    private let logger: LoggerProtocol
 
     /// Initializes the use case with a notification service dependency.
     ///
     /// - Parameter notificationService: The service that handles notification operations.
     ///   This is typically a NotificationService instance but can be a mock for testing.
-    init(notificationService: NotificationServiceProtocol) {
+    /// - Parameter logger: The logger for tracking permission requests.
+    init(notificationService: NotificationServiceProtocol, logger: LoggerProtocol) {
         self.notificationService = notificationService
+        self.logger = logger
     }
 
     // MARK: - Public Methods
@@ -37,8 +40,23 @@ final class RequestNotificationPermissionUseCase {
     /// - Returns: `true` if permission was granted, `false` if denied
     /// - Throws: An error if the authorization request fails
     func execute() async throws -> Bool {
-        let options: NotificationAuthorizationOptions = [.alert, .sound, .badge]
-        return try await notificationService.requestAuthorization(options: options)
+        logger.debug("Requesting notification permission")
+
+        do {
+            let options: NotificationAuthorizationOptions = [.alert, .sound, .badge]
+            let granted = try await notificationService.requestAuthorization(options: options)
+
+            if granted {
+                logger.info("Notification permission granted")
+            } else {
+                logger.warning("Notification permission denied")
+            }
+
+            return granted
+        } catch {
+            logger.error("Failed to request notification permission: \(error.localizedDescription)")
+            throw error
+        }
 
         // Future: Could track permission status in analytics
         // Future: Could persist status in UserDefaults for first-run tracking
