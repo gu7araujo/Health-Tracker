@@ -24,6 +24,21 @@ expected: Open Xcode. Press Cmd+U to run full test suite. All tests in HealthTra
 result: [pending/pass/fail]
 notes: [optional: record any failures or unexpected behavior]
 
+### 2. Notifications Fire in Debug Mode (Testable Times)
+expected: Build and run debug configuration (Cmd+R in Xcode). When permission prompt appears, tap "Allow". Wait 2-3 minutes after granting permission. Two notifications should appear from HealthTracker:
+  - First notification with Portuguese-BR message "Registre o que você comeu hoje"
+  - Second notification with Portuguese-BR message "Registre suas refeições e atividades"
+  - Both notifications show title matching app name (HealthTracker or CFBundleDisplayName)
+  - Notifications appear in quick succession (about 1 minute apart)
+  - Debug builds use shortened times for rapid testing (not production 1 PM/8 PM schedule)
+result: [pending/pass/fail]
+notes: [record actual timing and any discrepancies]
+
+### 3. Production Times Verified (Release Build)
+expected: Build release configuration (Product > Scheme > Edit Scheme > Run > Build Configuration > Release, then Cmd+R). Delete app first if already installed. Grant permissions. Check Notification Center at 1:00 PM local time - lunch notification should appear. Check again at 8:00 PM local time - evening notification should appear. Messages match Portuguese-BR text from debug test.
+result: [pending/pass/fail]
+notes: [record actual firing times and any delays]
+
 ## Summary
 
 total: 10
