@@ -23,13 +23,11 @@ struct ScheduleNotificationsUseCaseTests {
         // Verify scheduling was called
         #expect(mockService.scheduleNotificationCalled == true)
 
-        // Verify both notifications scheduled (NOTIF-05, NOTIF-06)
-        #expect(mockService.scheduleNotificationIdentifiers.count == 2)
-        #expect(mockService.scheduleNotificationIdentifiers.contains("lunch-reminder"))
-        #expect(mockService.scheduleNotificationIdentifiers.contains("evening-reminder"))
+        // Verify 60 notifications scheduled (30 days × 2 notification types) (NOTIF-05, NOTIF-06)
+        #expect(mockService.scheduleNotificationIdentifiers.count == 60)
 
-        // Verify repeats enabled for daily recurrence (NOTIF-10)
-        #expect(mockService.scheduleNotificationRepeats.allSatisfy { $0 == true })
+        // Verify repeats disabled for per-day cancellation (NOTIF-10)
+        #expect(mockService.scheduleNotificationRepeats.allSatisfy { $0 == false })
 
         // Verify Portuguese-BR messages present (NOTIF-07, NOTIF-08)
         #expect(mockService.scheduleNotificationBodies.contains("Registre o que você comeu hoje"))
@@ -69,7 +67,7 @@ struct ScheduleNotificationsUseCaseTests {
         try await useCase.execute()
 
         // Verify DateComponents used (NOTIF-09)
-        #expect(mockService.scheduleNotificationDateComponents.count == 2)
+        #expect(mockService.scheduleNotificationDateComponents.count == 60)
 
         // Verify all components have hour and minute set (calendar-based timing)
         for component in mockService.scheduleNotificationDateComponents {
@@ -91,8 +89,8 @@ struct ScheduleNotificationsUseCaseTests {
         #expect(mockService.scheduleNotificationBodies.contains("Registre o que você comeu hoje"))
         #expect(mockService.scheduleNotificationBodies.contains("Registre suas refeições e atividades"))
 
-        // Verify both messages scheduled
-        #expect(mockService.scheduleNotificationBodies.count == 2)
+        // Verify 60 messages scheduled (30 days × 2 notification types)
+        #expect(mockService.scheduleNotificationBodies.count == 60)
     }
 
     @Test func execute_usesDynamicAppNameAsTitle() async throws {
@@ -104,8 +102,8 @@ struct ScheduleNotificationsUseCaseTests {
 
         let expectedTitle = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "HealthTracker"
 
-        // Verify dynamic app name used as title for both notifications
-        #expect(mockService.scheduleNotificationTitles.count == 2)
+        // Verify dynamic app name used as title for all 60 notifications
+        #expect(mockService.scheduleNotificationTitles.count == 60)
         #expect(mockService.scheduleNotificationTitles.allSatisfy { $0 == expectedTitle })
     }
 
@@ -133,7 +131,7 @@ struct ScheduleNotificationsUseCaseTests {
         #expect(mockService.scheduleNotificationCalled == false)
     }
 
-    // MARK: - Wave 0 Scaffolds for Date-Specific Scheduling
+    // MARK: - Date-Specific Scheduling Tests
 
     @Test func execute_schedulesThirtyDaysOfNotifications() async throws {
         let mockService = MockNotificationService()
@@ -142,9 +140,8 @@ struct ScheduleNotificationsUseCaseTests {
 
         try await useCase.execute()
 
-        // Wave 0 scaffold: verify basic structure compiles
-        // Plan 03-01 will enhance to verify 60 notifications (30 days × 2)
-        #expect(mockService.scheduleNotificationIdentifiers.count > 0)
+        // Verify 60 notifications scheduled (30 days × 2 notification types) (NOTIF-05, NOTIF-06)
+        #expect(mockService.scheduleNotificationIdentifiers.count == 60)
     }
 
     @Test func execute_usesDateSpecificIdentifiers() async throws {
@@ -154,10 +151,28 @@ struct ScheduleNotificationsUseCaseTests {
 
         try await useCase.execute()
 
-        // Wave 0 scaffold: verify test infrastructure works
-        // Plan 03-01 will enhance to verify date pattern "type-YYYY-MM-DD"
+        // Split identifiers into lunch and evening groups
         let identifiers = mockService.scheduleNotificationIdentifiers
-        #expect(identifiers.count > 0)
+        let lunchIdentifiers = identifiers.filter { $0.contains("lunch-reminder-") }
+        let eveningIdentifiers = identifiers.filter { $0.contains("evening-reminder-") }
+
+        // Verify 30 lunch and 30 evening identifiers
+        #expect(lunchIdentifiers.count == 30)
+        #expect(eveningIdentifiers.count == 30)
+
+        // Verify date portion has valid format (5 components: ["lunch", "reminder", "YYYY", "MM", "DD"])
+        for identifier in identifiers {
+            let components = identifier.split(separator: "-")
+            #expect(components.count == 5) // e.g., "lunch-reminder-2026-03-01"
+
+            // Verify year has 4 digits, month has 2 digits, day has 2 digits
+            let year = String(components[2])
+            let month = String(components[3])
+            let day = String(components[4])
+            #expect(year.count == 4)
+            #expect(month.count == 2)
+            #expect(day.count == 2)
+        }
     }
 
     @Test func execute_schedulesNonRepeatingNotifications() async throws {
@@ -167,8 +182,26 @@ struct ScheduleNotificationsUseCaseTests {
 
         try await useCase.execute()
 
-        // Wave 0 scaffold: verify mock tracking works
-        // Plan 03-01 will enhance to verify repeats: false for all
-        #expect(mockService.scheduleNotificationRepeats.count > 0)
+        // Verify all 60 notifications have repeats: false
+        #expect(mockService.scheduleNotificationRepeats.count == 60)
+        #expect(mockService.scheduleNotificationRepeats.allSatisfy { $0 == false })
+    }
+
+    @Test func execute_schedulesFullDateComponents() async throws {
+        let mockService = MockNotificationService()
+        mockService.authorizationStatusResult = .authorized
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService)
+
+        try await useCase.execute()
+
+        // Verify each DateComponent has year, month, day, hour, minute set
+        #expect(mockService.scheduleNotificationDateComponents.count == 60)
+        for component in mockService.scheduleNotificationDateComponents {
+            #expect(component.year != nil)
+            #expect(component.month != nil)
+            #expect(component.day != nil)
+            #expect(component.hour != nil)
+            #expect(component.minute != nil)
+        }
     }
 }

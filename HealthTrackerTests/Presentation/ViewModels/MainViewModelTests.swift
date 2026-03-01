@@ -20,7 +20,13 @@ struct MainViewModelTests {
         let mockRepository = MockHealthDataRepository()
         let loadUseCase = LoadDayDataUseCase(repository: mockRepository)
         let saveUseCase = SaveDayDataUseCase(repository: mockRepository)
-        let viewModel = MainViewModel(loadUseCase: loadUseCase, saveUseCase: saveUseCase)
+        let mockNotificationService = MockNotificationService()
+        let cancelNotificationsUseCase = CancelNotificationsUseCase(notificationService: mockNotificationService)
+        let viewModel = MainViewModel(
+            loadUseCase: loadUseCase,
+            saveUseCase: saveUseCase,
+            cancelNotificationsUseCase: cancelNotificationsUseCase
+        )
         return (viewModel, mockRepository)
     }
 
