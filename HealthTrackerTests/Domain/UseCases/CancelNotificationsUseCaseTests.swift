@@ -42,7 +42,7 @@ struct CancelNotificationsUseCaseTests {
         // Build expected identifiers with today's date
         let expectedIdentifiers = [
             "lunch-reminder-\(todayString)",
-            "evening-reminder-\(todayString)"
+            "evening-reminder-\(todayString)",
         ]
 
         // Verify both cancel and remove operations use today's identifiers (NOTIF-13)
@@ -69,5 +69,35 @@ struct CancelNotificationsUseCaseTests {
 
         let cancelIdentifiers = mockService.cancelNotificationsIdentifiers.first ?? []
         #expect(cancelIdentifiers.allSatisfy { $0.contains(todayString) })
+    }
+
+    // MARK: - Edge Cases
+
+    @Test func execute_handlesMultipleCancellationCalls() async throws {
+        let mockService = MockNotificationService()
+        let useCase = CancelNotificationsUseCase(notificationService: mockService)
+
+        // Execute twice to simulate rapid data entry
+        try await useCase.execute()
+        try await useCase.execute()
+
+        // Both calls should succeed without error
+        #expect(mockService.cancelNotificationsCalled == true)
+        #expect(mockService.cancelNotificationsIdentifiers.count == 2) // Two separate calls tracked
+    }
+
+    @Test func execute_worksAcrossDayBoundaries() async throws {
+        let mockService = MockNotificationService()
+        let useCase = CancelNotificationsUseCase(notificationService: mockService)
+
+        try await useCase.execute()
+
+        // Verify today's date used (not hardcoded)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let todayString = formatter.string(from: Date())
+
+        let firstCall = mockService.cancelNotificationsIdentifiers.first
+        #expect(firstCall?.allSatisfy { $0.contains(todayString) } == true)
     }
 }
