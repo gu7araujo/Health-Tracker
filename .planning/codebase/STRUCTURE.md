@@ -1,11 +1,21 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-02-26
+**Analysis Date:** 2026-03-01
 
 ## Directory Layout
 
 ```
 HealthTracker/
+├── .claude/                           # Claude Code configuration and skills
+│   └── skills/                        # AI agent expert skills
+│       ├── swift-concurrency/         # Swift Concurrency expert guidance
+│       ├── swiftui-expert-skill/      # SwiftUI best practices
+│       ├── swift-api-design-guidelines/ # Apple API design patterns
+│       └── swift-testing-expert/      # Swift Testing framework guidance
+├── .cursor/                           # Cursor AI configuration
+│   └── skills/                        # Cursor AI expert skills (mirrors .claude/skills)
+├── .planning/                         # GSD framework planning artifacts
+│   └── codebase/                      # Codebase analysis documents
 ├── HealthTracker/                     # Main app target
 │   ├── HealthTrackerApp.swift         # App entry point
 │   ├── Domain/                        # Business logic layer
@@ -16,6 +26,7 @@ HealthTracker/
 │   │   ├── DataSources/               # Storage implementations
 │   │   ├── Repositories/              # Repository implementations
 │   │   ├── Models/                    # Data transfer objects
+│   │   ├── Services/                  # System framework wrappers
 │   │   └── Migration/                 # Data migration logic
 │   ├── Presentation/                  # UI layer
 │   │   ├── Views/                     # SwiftUI views
@@ -46,13 +57,13 @@ HealthTracker/
 
 **HealthTracker/Domain/Protocols:**
 - Purpose: Domain-level abstractions for dependency inversion
-- Contains: `HealthDataRepositoryProtocol.swift`
-- Key files: `HealthDataRepositoryProtocol.swift` (defines repository contract)
+- Contains: `HealthDataRepositoryProtocol.swift`, `NotificationServiceProtocol.swift`
+- Key files: `HealthDataRepositoryProtocol.swift` (defines repository contract), `NotificationServiceProtocol.swift` (defines notification operations)
 
 **HealthTracker/Domain/UseCases:**
 - Purpose: Single-purpose business operations
-- Contains: `LoadDayDataUseCase.swift`, `SaveDayDataUseCase.swift`, `CalculateAnalyticsUseCase.swift`
-- Key files: All three use cases are critical for app functionality
+- Contains: `LoadDayDataUseCase.swift`, `SaveDayDataUseCase.swift`, `CalculateAnalyticsUseCase.swift`, `ScheduleNotificationsUseCase.swift`, `CancelNotificationsUseCase.swift`, `RequestNotificationPermissionUseCase.swift`
+- Key files: All use cases are critical for app functionality
 
 **HealthTracker/Data/DataSources:**
 - Purpose: Concrete storage implementations
@@ -68,6 +79,11 @@ HealthTracker/
 - Purpose: Data transfer objects for serialization
 - Contains: `DayDataContainer.swift`
 - Key files: `DayDataContainer.swift` (JSON wrapper for days array)
+
+**HealthTracker/Data/Services:**
+- Purpose: System framework wrappers (abstractions for testing)
+- Contains: `NotificationService.swift`, `NotificationPermissionManager.swift`
+- Key files: `NotificationService.swift` (implements `NotificationServiceProtocol`), `NotificationPermissionManager.swift` (wraps UNUserNotificationCenter permission requests)
 
 **HealthTracker/Data/Migration:**
 - Purpose: One-time data migrations
@@ -104,6 +120,25 @@ HealthTracker/
 - Contains: Test files mirroring source structure, mocks, test helpers
 - Key files: Tests organized by layer (Domain/, Data/, Presentation/)
 
+**.claude/skills/**
+- Purpose: Claude Code AI agent expert skills
+- Contains: Swift Concurrency, SwiftUI, API Design, Testing expert guidance documents
+- Key skills:
+  - `swift-concurrency/` - Expert guidance on async/await, actors, tasks, Sendable, Swift 6 migration
+  - `swiftui-expert-skill/` - SwiftUI best practices, state management, performance, iOS 26+ Liquid Glass
+  - `swift-api-design-guidelines/` - Apple's Swift API Design Guidelines
+  - `swift-testing-expert/` - Swift Testing framework patterns, migration from XCTest
+
+**.cursor/skills/**
+- Purpose: Cursor AI expert skills (mirrors .claude/skills structure)
+- Contains: Same expert skill documents as .claude/skills/
+- Pattern: Identical content for cross-IDE compatibility
+
+**.planning/codebase/**
+- Purpose: GSD framework codebase analysis documents
+- Contains: ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, TESTING.md, STACK.md, INTEGRATIONS.md, CONCERNS.md
+- Key files: Used by `/gsd:plan-phase` and `/gsd:execute-phase` commands for context-aware planning and execution
+
 ## Key File Locations
 
 **Entry Points:**
@@ -119,6 +154,9 @@ HealthTracker/
 - `HealthTracker/Domain/UseCases/SaveDayDataUseCase.swift`: Persistence orchestration
 - `HealthTracker/Data/Repositories/HealthDataRepository.swift`: Data access coordination
 
+**AI Agent Documentation:**
+- `AGENTS.md`: Comprehensive guide for AI agents working on this codebase (architecture, patterns, testing, skills)
+
 **Testing:**
 - `HealthTrackerTests/Mocks/`: Test doubles for repositories and data sources
 - `HealthTrackerTests/TestHelpers/`: Shared test utilities
@@ -133,10 +171,11 @@ HealthTracker/
 - Use Cases: `[Verb][Noun]UseCase.swift`
 - Protocols: `[Name]Protocol.swift` or `[Name]` (e.g., `LocalDataSourceProtocol`)
 - Extensions: `[Type]+Extensions.swift`
+- Services: `[Name]Service.swift` or `[Name]Manager.swift`
 
 **Directories:**
 - Pattern: PascalCase, plural for collections
-- Examples: `Entities/`, `UseCases/`, `ViewModels/`, `Components/`, `Charts/`
+- Examples: `Entities/`, `UseCases/`, `ViewModels/`, `Components/`, `Charts/`, `Services/`
 
 ## Where to Add New Code
 
@@ -169,6 +208,12 @@ HealthTracker/
 - Tests: `HealthTrackerTests/Data/DataSources/[Source]DataSourceTests.swift`
 - Pattern: Conform to `LocalDataSourceProtocol`, implement `load()` and `save()`
 
+**New Service:**
+- Protocol: `HealthTracker/Domain/Protocols/[Name]ServiceProtocol.swift`
+- Implementation: `HealthTracker/Data/Services/[Name]Service.swift`
+- Tests: `HealthTrackerTests/Data/Services/[Name]ServiceTests.swift`
+- Pattern: Protocol in Domain, implementation in Data wrapping system frameworks
+
 **Utilities:**
 - Shared helpers: `HealthTracker/Extensions/[Type]+Extensions.swift`
 - View extensions: `HealthTracker/Extensions/View+Extensions.swift`
@@ -192,7 +237,7 @@ HealthTracker/
 
 **.planning/codebase:**
 - Purpose: GSD codebase analysis documents
-- Generated: Yes (by /gsd:map-codebase)
+- Generated: Yes (by `/gsd:map-codebase`)
 - Committed: Yes (used by other GSD commands)
 
 **.claude:**
@@ -200,11 +245,54 @@ HealthTracker/
 - Generated: Yes (by Claude Code)
 - Committed: Yes (contains commands and agents)
 
+**.claude/skills:**
+- Purpose: AI agent expert skills for domain-specific guidance
+- Generated: No (manually curated reference documentation)
+- Committed: Yes (provides specialized knowledge to AI agents)
+- Skills available:
+  - `swift-concurrency` - Async/await, actors, tasks, Sendable, Swift 6 migration
+  - `swiftui-expert-skill` - State management, view composition, performance, Liquid Glass
+  - `swift-api-design-guidelines` - Apple's Swift API Design Guidelines
+  - `swift-testing-expert` - Swift Testing framework patterns and best practices
+
+**.cursor/skills:**
+- Purpose: Cursor AI expert skills (mirrors .claude/skills for IDE compatibility)
+- Generated: No (manually maintained in sync with .claude/skills)
+- Committed: Yes
+
 **.serena:**
 - Purpose: AI agent memory/cache (different AI tool)
 - Generated: Yes
 - Committed: No (.gitignore'd)
 
+## AI Agent Skills System
+
+The project includes specialized AI agent skills in both `.claude/skills/` and `.cursor/skills/` directories. These skills provide expert guidance for specific Swift/SwiftUI domains:
+
+**Swift Concurrency (`swift-concurrency/`):**
+- Expert guidance on async/await patterns, actors, tasks, Sendable conformance
+- Swift 6 migration strategies and strict concurrency checking
+- Reference files: async-await-basics.md, actors.md, tasks.md, sendable.md, threading.md, testing.md, migration.md, and more
+- Use when: Writing async code, fixing data race warnings, migrating to Swift 6, actor isolation issues
+
+**SwiftUI Expert (`swiftui-expert-skill/`):**
+- Best practices for state management, view composition, performance
+- Modern API usage, iOS 26+ Liquid Glass adoption
+- Reference files: state-management.md, view-structure.md, performance-patterns.md, liquid-glass.md, animation-basics.md, and more
+- Use when: Building SwiftUI features, reviewing code quality, optimizing performance, adopting modern patterns
+
+**Swift API Design Guidelines (`swift-api-design-guidelines/`):**
+- Apple's official Swift API Design Guidelines
+- Naming conventions, clarity at point of use, fluent usage patterns
+- Reference file: reference.md
+- Use when: Writing Swift APIs, naming types and methods, designing library interfaces
+
+**Swift Testing Expert (`swift-testing-expert/`):**
+- Swift Testing framework patterns with @Test macro and #expect/#require
+- Parameterized tests, traits and tags, parallel execution, async testing
+- Reference files: fundamentals.md, expectations.md, parameterized-testing.md, async-testing-and-waiting.md, migration-from-xctest.md, and more
+- Use when: Writing tests, modernizing XCTest suites, debugging flaky tests, improving test quality
+
 ---
 
-*Structure analysis: 2026-02-26*
+*Structure analysis: 2026-03-01*
