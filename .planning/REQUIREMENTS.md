@@ -42,7 +42,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **NOTIF-20**: Notification service has unit tests with mock protocol implementation
 - [x] **NOTIF-21**: Use Cases have unit tests covering scheduling and cancellation logic
-- [ ] **NOTIF-22**: Manual test plan covers device testing for actual notification firing
+- [x] **NOTIF-22**: Manual test plan covers device testing for actual notification firing
 - [x] **NOTIF-23**: Debug configuration allows testable notification times (not hardcoded 1 PM/8 PM)
 
 ## v2 Requirements
@@ -109,7 +109,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTIF-19 | Phase 1 | Complete |
 | NOTIF-20 | Phase 4 | Complete |
 | NOTIF-21 | Phase 4 | Complete |
-| NOTIF-22 | Phase 4 | Pending |
+| NOTIF-22 | Phase 4 | Complete |
 | NOTIF-23 | Phase 2 | Complete |
 
 **Coverage:**
