@@ -17,26 +17,44 @@ import UserNotifications
 /// This is the ONLY file in the project that should import UserNotifications framework.
 final class NotificationService: NotificationServiceProtocol {
     private let notificationCenter: UNUserNotificationCenter
+    private let logger: LoggerProtocol
 
-    /// Initializes the notification service with a notification center.
+    /// Initializes the notification service with a notification center and logger.
     ///
-    /// - Parameter notificationCenter: The UNUserNotificationCenter instance to use.
-    ///   Defaults to the current notification center. The default parameter allows
-    ///   dependency injection for testing.
-    init(notificationCenter: UNUserNotificationCenter = .current()) {
+    /// - Parameters:
+    ///   - notificationCenter: The UNUserNotificationCenter instance to use.
+    ///     Defaults to the current notification center. The default parameter allows
+    ///     dependency injection for testing.
+    ///   - logger: Logger instance for tracking notification operations.
+    init(
+        notificationCenter: UNUserNotificationCenter = .current(),
+        logger: LoggerProtocol = LoggerFactory.dataLogger(category: "NotificationService")
+    ) {
         self.notificationCenter = notificationCenter
+        self.logger = logger
     }
 
     // MARK: - NotificationServiceProtocol Implementation
 
     func requestAuthorization(options: NotificationAuthorizationOptions) async throws -> Bool {
+        logger.debug("Requesting notification authorization with options: \(options)")
         let unOptions = options.toUNAuthorizationOptions()
-        return try await notificationCenter.requestAuthorization(options: unOptions)
+        do {
+            let granted = try await notificationCenter.requestAuthorization(options: unOptions)
+            logger.info("Notification authorization result: \(granted)")
+            return granted
+        } catch {
+            logger.error("Failed to request notification authorization: \(error.localizedDescription)")
+            throw error
+        }
     }
 
     func authorizationStatus() async -> NotificationAuthorizationStatus {
+        logger.debug("Checking notification authorization status")
         let settings = await notificationCenter.notificationSettings()
-        return NotificationAuthorizationStatus.from(settings.authorizationStatus)
+        let status = NotificationAuthorizationStatus.from(settings.authorizationStatus)
+        logger.debug("Current authorization status: \(status)")
+        return status
     }
 
     func setDelegate(_ delegate: NotificationCenterDelegate?) {
@@ -44,9 +62,9 @@ final class NotificationService: NotificationServiceProtocol {
         // Phase 2 will implement actual delegate bridging to handle foreground notifications
         // and user interactions. For now, we just log to indicate the method was called.
         if delegate != nil {
-            print("[NotificationService] Delegate set (Phase 2 will implement bridging)")
+            logger.debug("Delegate set (Phase 2 will implement bridging)")
         } else {
-            print("[NotificationService] Delegate removed")
+            logger.debug("Delegate removed")
         }
     }
 
@@ -59,6 +77,8 @@ final class NotificationService: NotificationServiceProtocol {
         dateComponents: DateComponents,
         repeats: Bool
     ) async throws {
+        logger.debug("Scheduling notification: \(identifier), repeats: \(repeats)")
+
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
@@ -78,19 +98,31 @@ final class NotificationService: NotificationServiceProtocol {
             trigger: trigger
         )
 
-        try await notificationCenter.add(request)
+        do {
+            try await notificationCenter.add(request)
+            logger.info("Notification scheduled successfully: \(identifier)")
+        } catch {
+            logger.error("Failed to schedule notification \(identifier): \(error.localizedDescription)")
+            throw error
+        }
     }
 
     func cancelAllNotifications() {
+        logger.debug("Canceling all pending notifications")
         notificationCenter.removeAllPendingNotificationRequests()
+        logger.info("All pending notifications canceled")
     }
 
     func cancelNotifications(withIdentifiers identifiers: [String]) {
+        logger.debug("Canceling notifications: \(identifiers)")
         notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
+        logger.info("Canceled \(identifiers.count) notification(s)")
     }
 
     func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
+        logger.debug("Removing delivered notifications: \(identifiers)")
         notificationCenter.removeDeliveredNotifications(withIdentifiers: identifiers)
+        logger.info("Removed \(identifiers.count) delivered notification(s)")
     }
 }
 

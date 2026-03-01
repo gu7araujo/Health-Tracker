@@ -16,6 +16,7 @@ final class MainViewModel {
     private let loadUseCase: LoadDayDataUseCase
     private let saveUseCase: SaveDayDataUseCase
     private let cancelNotificationsUseCase: CancelNotificationsUseCase
+    private let logger: LoggerProtocol
 
     // MARK: - State
 
@@ -43,11 +44,13 @@ final class MainViewModel {
     init(
         loadUseCase: LoadDayDataUseCase,
         saveUseCase: SaveDayDataUseCase,
-        cancelNotificationsUseCase: CancelNotificationsUseCase
+        cancelNotificationsUseCase: CancelNotificationsUseCase,
+        logger: LoggerProtocol = LoggerFactory.presentationLogger(category: "MainViewModel")
     ) {
         self.loadUseCase = loadUseCase
         self.saveUseCase = saveUseCase
         self.cancelNotificationsUseCase = cancelNotificationsUseCase
+        self.logger = logger
     }
 
     /// Convenience initializer with default dependencies.
@@ -76,8 +79,10 @@ final class MainViewModel {
     /// Loads initial data from storage.
     /// Converts `RecordedDayData` from the persistence layer back to `DayData` for in-memory use.
     func loadData() {
+        logger.debug("Loading day data from storage")
         days = loadUseCase.execute().map(\.dayData)
         ensureDayDataExists(for: selectedDate)
+        logger.info("Loaded \(days.count) day(s) from storage")
     }
 
     // MARK: - Water Management
@@ -85,10 +90,15 @@ final class MainViewModel {
     /// Updates water intake for the current day.
     /// - Parameter value: The new water intake value in liters.
     func updateWater(_ value: Double) {
-        guard let index = currentDayIndex else { return }
+        guard let index = currentDayIndex else {
+            logger.error("Failed to update water: no current day data")
+            return
+        }
+        logger.debug("Updating water intake to \(value)L")
         // If value is 0, treat it as removing the water information
         days[index].water = value > 0 ? value : nil
         persistChanges()
+        logger.info("Water intake updated successfully")
     }
 
     /// Creates a binding-compatible getter/setter for water intake.
@@ -102,9 +112,14 @@ final class MainViewModel {
     /// Updates mood for the current day.
     /// - Parameter mood: The new mood value.
     func updateMood(_ mood: Mood) {
-        guard let index = currentDayIndex else { return }
+        guard let index = currentDayIndex else {
+            logger.error("Failed to update mood: no current day data")
+            return
+        }
+        logger.debug("Updating mood to \(mood)")
         days[index].mood = mood
         persistChanges()
+        logger.info("Mood updated successfully")
     }
 
     // MARK: - Meal Management
@@ -112,17 +127,27 @@ final class MainViewModel {
     /// Adds a new meal to the current day.
     /// - Parameter meal: The meal to add.
     func addMeal(_ meal: Meal) {
-        guard let index = currentDayIndex else { return }
+        guard let index = currentDayIndex else {
+            logger.error("Failed to add meal: no current day data")
+            return
+        }
+        logger.debug("Adding meal: \(meal.description)")
         days[index].addMeal(meal)
         persistChanges()
+        logger.info("Meal added successfully")
     }
 
     /// Updates an existing meal.
     /// - Parameter meal: The updated meal data.
     func updateMeal(_ meal: Meal) {
-        guard let index = currentDayIndex else { return }
+        guard let index = currentDayIndex else {
+            logger.error("Failed to update meal: no current day data")
+            return
+        }
+        logger.debug("Updating meal: \(meal.description)")
         days[index].updateMeal(meal)
         persistChanges()
+        logger.info("Meal updated successfully")
     }
 
     /// Retrieves a meal by ID for editing.
@@ -135,9 +160,14 @@ final class MainViewModel {
     /// Deletes a meal by ID from the current day.
     /// - Parameter id: The meal's unique identifier.
     func deleteMeal(withId id: UUID) {
-        guard let index = currentDayIndex else { return }
+        guard let index = currentDayIndex else {
+            logger.error("Failed to delete meal: no current day data")
+            return
+        }
+        logger.debug("Deleting meal with ID: \(id)")
         days[index].removeMeal(id: id)
         persistChanges()
+        logger.info("Meal deleted successfully")
     }
 
     // MARK: - Workout Management
@@ -145,17 +175,27 @@ final class MainViewModel {
     /// Adds a new workout to the current day.
     /// - Parameter workout: The workout to add.
     func addWorkout(_ workout: Workout) {
-        guard let index = currentDayIndex else { return }
+        guard let index = currentDayIndex else {
+            logger.error("Failed to add workout: no current day data")
+            return
+        }
+        logger.debug("Adding workout: \(workout.description)")
         days[index].addWorkout(workout)
         persistChanges()
+        logger.info("Workout added successfully")
     }
 
     /// Updates an existing workout.
     /// - Parameter workout: The updated workout data.
     func updateWorkout(_ workout: Workout) {
-        guard let index = currentDayIndex else { return }
+        guard let index = currentDayIndex else {
+            logger.error("Failed to update workout: no current day data")
+            return
+        }
+        logger.debug("Updating workout: \(workout.description)")
         days[index].updateWorkout(workout)
         persistChanges()
+        logger.info("Workout updated successfully")
     }
 
     /// Retrieves a workout by ID for editing.
@@ -168,9 +208,14 @@ final class MainViewModel {
     /// Deletes a workout by ID from the current day.
     /// - Parameter id: The workout's unique identifier.
     func deleteWorkout(withId id: UUID) {
-        guard let index = currentDayIndex else { return }
+        guard let index = currentDayIndex else {
+            logger.error("Failed to delete workout: no current day data")
+            return
+        }
+        logger.debug("Deleting workout with ID: \(id)")
         days[index].removeWorkout(id: id)
         persistChanges()
+        logger.info("Workout deleted successfully")
     }
 
     // MARK: - Private Methods
@@ -188,13 +233,19 @@ final class MainViewModel {
     /// Persists the current state to storage.
     /// Parses `DayData` to `RecordedDayData`, filtering out empty entries by construction.
     private func persistChanges() {
+        logger.debug("Persisting changes to storage")
         let recordedDays = days.compactMap(RecordedDayData.init)
         saveUseCase.execute(days: recordedDays)
 
         // Cancel notifications after successful save (NOTIF-11, NOTIF-12)
         // Fire-and-forget: don't await, don't block save flow
         Task {
-            try? await cancelNotificationsUseCase.execute()
+            do {
+                try await cancelNotificationsUseCase.execute()
+                logger.debug("Notification cancellation triggered after save")
+            } catch {
+                logger.error("Failed to cancel notifications: \(error.localizedDescription)")
+            }
         }
     }
 }

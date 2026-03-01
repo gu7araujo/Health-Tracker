@@ -14,6 +14,7 @@ final class AnalyticsViewModel {
     // MARK: - Dependencies
 
     private let calculateAnalyticsUseCase: CalculateAnalyticsUseCase
+    private let logger: LoggerProtocol
 
     // MARK: - State
 
@@ -23,6 +24,7 @@ final class AnalyticsViewModel {
     var selectedPeriod: AnalyticsPeriod = .last7Days {
         didSet {
             if selectedPeriod != oldValue {
+                logger.debug("Period changed from \(oldValue) to \(selectedPeriod)")
                 loadAnalytics()
             }
         }
@@ -30,8 +32,12 @@ final class AnalyticsViewModel {
 
     // MARK: - Initialization
 
-    init(calculateAnalyticsUseCase: CalculateAnalyticsUseCase) {
+    init(
+        calculateAnalyticsUseCase: CalculateAnalyticsUseCase,
+        logger: LoggerProtocol = LoggerFactory.presentationLogger(category: "AnalyticsViewModel")
+    ) {
         self.calculateAnalyticsUseCase = calculateAnalyticsUseCase
+        self.logger = logger
     }
 
     /// Convenience initializer with default dependencies.
@@ -48,8 +54,17 @@ final class AnalyticsViewModel {
 
     /// Loads analytics data for the currently selected period.
     func loadAnalytics() {
+        logger.debug("Loading analytics for period: \(selectedPeriod)")
         isLoading = true
-        analyticsData = calculateAnalyticsUseCase.execute(for: selectedPeriod)
+
+        do {
+            analyticsData = calculateAnalyticsUseCase.execute(for: selectedPeriod)
+            logger.info("Analytics loaded successfully for period: \(selectedPeriod)")
+        } catch {
+            logger.error("Failed to load analytics: \(error.localizedDescription)")
+            analyticsData = nil
+        }
+
         isLoading = false
     }
 }
