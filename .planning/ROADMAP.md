@@ -78,10 +78,11 @@ Plans:
   2. Manual device test plan confirms notifications fire at actual 1 PM and 8 PM
   3. Edge cases verified (rapid data entry, force quit, time zone changes, DST transitions)
   4. Debug logging provides visibility into notification scheduling and cancellation operations
-**Plans**: TBD
+**Plans**: 2
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01: Enhance Use Case Unit Tests (Wave 1)
+- [ ] 04-02: Create Manual Device Test Plan (Wave 2)
 
 ## Progress
 
@@ -92,5 +93,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Notification Service Foundation | 3/3 | Complete | 2026-02-28 |
 | 2. Basic Notification Scheduling | 4/4 | Complete | 2026-02-28 |
-| 3. Smart Cancellation Logic | 4/3 | Complete   | 2026-02-28 |
-| 4. Testing and Refinement | 0/TBD | Not started | - |
+| 3. Smart Cancellation Logic | 3/3 | Complete   | 2026-02-28 |
+| 4. Testing and Refinement | 0/2 | Planned | - |
