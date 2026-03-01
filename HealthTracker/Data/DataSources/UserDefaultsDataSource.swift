@@ -43,7 +43,7 @@ final class UserDefaultsDataSource: LocalDataSourceProtocol {
         } catch {
             // Log error in debug builds, return empty array for graceful degradation
             #if DEBUG
-                print("UserDefaultsDataSource: Failed to decode stored data - \(error)")
+                // Failed to decode stored data - returning empty array
             #endif
             return []
         }
@@ -59,7 +59,7 @@ final class UserDefaultsDataSource: LocalDataSourceProtocol {
             userDefaults.set(data, forKey: storageKey)
         } catch {
             #if DEBUG
-                print("UserDefaultsDataSource: Failed to encode data - \(error)")
+                // Failed to encode data
             #endif
         }
     }

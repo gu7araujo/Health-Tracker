@@ -59,7 +59,7 @@ actor NotificationPermissionManager {
 
         do {
             let granted = try await useCase.execute()
-            print("[NotificationPermissionManager] Notification permission: \(granted ? "granted" : "denied")")
+            logger.info("Notification permission: \(granted ? "granted" : "denied")")
 
             // Schedule notifications if permission granted
             if granted {
@@ -68,14 +68,14 @@ actor NotificationPermissionManager {
                     logger: logger
                 )
                 try await scheduleUseCase.execute()
-                print("[NotificationPermissionManager] Notifications scheduled successfully")
+                logger.info("Notifications scheduled successfully")
             }
 
             // Set delegate for future notification handling (Phase 2 will implement actual delegate)
             notificationService.setDelegate(nil)
         } catch {
             // Log error but DON'T crash - graceful degradation per NOTIF-03
-            print("[NotificationPermissionManager] Failed to request notification permission: \(error)")
+            logger.error("Failed to request notification permission: \(error.localizedDescription)")
         }
 
         // Mark as requested regardless of result (granted, denied, or error)

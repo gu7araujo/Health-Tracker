@@ -51,14 +51,14 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
                 result = container.days.compactMap(RecordedDayData.init)
             } catch {
                 #if DEBUG
-                    print("ICloudDriveDataSource: Failed to load data - \(error)")
+                    // Error during load - data will be empty
                 #endif
             }
         }
 
         if let coordinatorError {
             #if DEBUG
-                print("ICloudDriveDataSource: File coordination error on read - \(coordinatorError)")
+                // File coordination error on read
             #endif
         }
 
@@ -89,14 +89,14 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
                 try data.write(to: coordinatedURL, options: .atomic)
             } catch {
                 #if DEBUG
-                    print("ICloudDriveDataSource: Failed to save data - \(error)")
+                    // Error during save
                 #endif
             }
         }
 
         if let coordinatorError {
             #if DEBUG
-                print("ICloudDriveDataSource: File coordination error on write - \(coordinatorError)")
+                // File coordination error on write
             #endif
         }
     }
