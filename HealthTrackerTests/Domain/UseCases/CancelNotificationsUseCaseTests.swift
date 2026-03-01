@@ -11,54 +11,63 @@ import Testing
 
 @MainActor
 struct CancelNotificationsUseCaseTests {
-    @Test func execute_cancelsPendingNotifications() {
+    @Test func execute_cancelsPendingNotifications() async throws {
         let mockService = MockNotificationService()
-        // Wave 0: This will fail until Plan 03-02 creates CancelNotificationsUseCase
-        // Uncommenting will be done in Plan 03-02 Task 3
-        // let useCase = CancelNotificationsUseCase(notificationService: mockService)
-        // try await useCase.execute()
-        // #expect(mockService.cancelNotificationsCalled == true)
+        let useCase = CancelNotificationsUseCase(notificationService: mockService)
+        try await useCase.execute()
 
-        // Placeholder: verify mock structure exists
-        #expect(mockService.cancelNotificationsCalled == false)
+        // Verify pending notifications were cancelled (NOTIF-11)
+        #expect(mockService.cancelNotificationsCalled == true)
     }
 
-    @Test func execute_removesDeliveredNotifications() {
+    @Test func execute_removesDeliveredNotifications() async throws {
         let mockService = MockNotificationService()
-        // Wave 0: This will fail until Plan 03-02 creates CancelNotificationsUseCase
-        // Uncommenting will be done in Plan 03-02 Task 3
-        // let useCase = CancelNotificationsUseCase(notificationService: mockService)
-        // try await useCase.execute()
-        // #expect(mockService.removeDeliveredNotificationsCalled == true)
+        let useCase = CancelNotificationsUseCase(notificationService: mockService)
+        try await useCase.execute()
 
-        // Placeholder: verify mock structure exists
-        #expect(mockService.removeDeliveredNotificationsCalled == false)
+        // Verify delivered notifications were removed (NOTIF-14)
+        #expect(mockService.removeDeliveredNotificationsCalled == true)
     }
 
-    @Test func execute_usesTodayDateForIdentifiers() {
+    @Test func execute_usesTodayDateForIdentifiers() async throws {
         let mockService = MockNotificationService()
-        // Wave 0: This will fail until Plan 03-02 creates CancelNotificationsUseCase
-        // Uncommenting will be done in Plan 03-02 Task 3
-        // let useCase = CancelNotificationsUseCase(notificationService: mockService)
-        // let beforeDate = Calendar.current.startOfDay(for: Date())
-        // try await useCase.execute()
+        let useCase = CancelNotificationsUseCase(notificationService: mockService)
+        try await useCase.execute()
 
-        // Placeholder: verify date formatting helper works
+        // Calculate today's date string
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let todayString = formatter.string(from: Date())
-        #expect(todayString.count == 10) // "yyyy-MM-dd" format
+
+        // Build expected identifiers with today's date
+        let expectedIdentifiers = [
+            "lunch-reminder-\(todayString)",
+            "evening-reminder-\(todayString)"
+        ]
+
+        // Verify both cancel and remove operations use today's identifiers (NOTIF-13)
+        let cancelIdentifiers = mockService.cancelNotificationsIdentifiers.first ?? []
+        let removeIdentifiers = mockService.removeDeliveredNotificationsIdentifiers.first ?? []
+
+        #expect(cancelIdentifiers == expectedIdentifiers)
+        #expect(removeIdentifiers == expectedIdentifiers)
     }
 
-    @Test func execute_cancelsOnlyTwoNotifications() {
+    @Test func execute_cancelsOnlyTwoNotifications() async throws {
         let mockService = MockNotificationService()
-        // Wave 0: This will fail until Plan 03-02 creates CancelNotificationsUseCase
-        // Uncommenting will be done in Plan 03-02 Task 3
-        // let useCase = CancelNotificationsUseCase(notificationService: mockService)
-        // try await useCase.execute()
+        let useCase = CancelNotificationsUseCase(notificationService: mockService)
+        try await useCase.execute()
 
-        // Placeholder: verify tracking arrays work
-        #expect(mockService.cancelNotificationsIdentifiers.count == 0)
-        #expect(mockService.removeDeliveredNotificationsIdentifiers.count == 0)
+        // Verify exactly 2 identifiers in first cancellation call
+        #expect(mockService.cancelNotificationsIdentifiers.first?.count == 2)
+        #expect(mockService.removeDeliveredNotificationsIdentifiers.first?.count == 2)
+
+        // Verify identifiers are for today only (not future days)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let todayString = formatter.string(from: Date())
+
+        let cancelIdentifiers = mockService.cancelNotificationsIdentifiers.first ?? []
+        #expect(cancelIdentifiers.allSatisfy { $0.contains(todayString) })
     }
 }
