@@ -58,6 +58,49 @@ expected: Fresh install. Launch app. When permission prompt appears, tap "Allow"
 result: [pending/pass/fail]
 notes: [record any unexpected behavior]
 
+### 6. Time Zone Change Handling
+expected: Install app, grant permissions. Note current time zone. Open iOS Settings > General > Date & Time. Disable "Set Automatically". Change time zone to different region (e.g., Pacific to Eastern, or vice versa). Return to home screen. Wait for notification time in NEW time zone:
+  - Debug build: Wait 2-3 minutes from app launch in new time zone
+  - Release build: Wait for 1 PM or 8 PM in new time zone
+  - Notifications should fire at correct local time in new time zone
+  - iOS UNCalendarNotificationTrigger automatically respects time zone changes (NOTIF-09)
+result: [pending/pass/fail]
+notes: [record old time zone, new time zone, and actual firing times]
+
+### 7. DST Transition Handling
+expected: (Best tested during actual DST transition dates, or simulate by changing device date):
+  - Change device date/time to day before DST transition (e.g., March 9, 2026 before Spring Forward)
+  - Launch app, grant permissions
+  - Change device date to DST transition day (e.g., March 10, 2026 - clocks spring forward at 2 AM)
+  - For release build: Notifications should fire at 1 PM and 8 PM DST time (accounts for hour change)
+  - For debug build: Notifications fire 2-3 minutes after launch regardless of DST
+  - iOS calendar triggers handle DST automatically (NOTIF-09)
+result: [pending/pass/fail]
+notes: [record DST dates tested and any timing discrepancies]
+
+### 8. Force Quit Persistence
+expected: Launch app, grant permissions. Log any health data (meal, workout, water, or mood) to trigger cancellation. Immediately force quit app (double-tap home/swipe up to app switcher, swipe app away). Relaunch app. Wait for notification time (debug: 2-3 min, release: 1 PM/8 PM). No notifications should fire today because cancellation persisted through force quit. This validates NOTIF-14 (cancellation works even if app terminates immediately).
+result: [pending/pass/fail]
+notes: [record data type logged and whether notifications were correctly suppressed]
+
+### 9. Rapid Data Entry Cancellation
+expected: Launch app, grant permissions. In quick succession (within 30 seconds), log multiple data types:
+  - Add a meal
+  - Add a workout
+  - Add water intake
+  - Add mood entry
+  - Wait for notification time (debug or release)
+  - No notifications should fire today
+  - Multiple cancellation calls should not cause crashes or errors
+  - App should remain responsive (non-blocking fire-and-forget pattern)
+result: [pending/pass/fail]
+notes: [record if any lag, crashes, or notifications still fired]
+
+### 10. Delivered Notification Cleanup
+expected: Wait for notification to fire and deliver (appears in Notification Center). Do NOT tap the notification - leave it delivered. Pull down Notification Center - HealthTracker notification visible. Open app and log any health data. Pull down Notification Center again - HealthTracker notification should be removed. This validates removeDeliveredNotifications() works correctly to prevent notification fatigue.
+result: [pending/pass/fail]
+notes: [record if delivered notification was successfully removed]
+
 ## Summary
 
 total: 10
