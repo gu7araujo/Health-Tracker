@@ -10,6 +10,7 @@ import Foundation
 /// Handles one-time data migrations.
 /// Checks migration flags to ensure each migration runs only once.
 enum DataMigration {
+    private static let logger = LoggerFactory.dataLogger(category: "Data.Migration")
     private static let iCloudMigrationKey = "iCloudMigrationCompleted"
     private static let durationMigrationKey = "workoutDurationMigrationCompleted"
 
@@ -47,9 +48,7 @@ enum DataMigration {
         userDefaults.removeObject(forKey: "store")
         userDefaults.set(true, forKey: iCloudMigrationKey)
 
-        #if DEBUG
-            print("DataMigration: Successfully migrated \(existingData.count) day(s) to iCloud Drive")
-        #endif
+        logger.info("Successfully migrated \(existingData.count) day(s) to iCloud Drive")
     }
 
     /// Migrates workout durations from old format to new format on disk.
@@ -61,47 +60,37 @@ enum DataMigration {
         let userDefaults = UserDefaults.standard
 
         guard !userDefaults.bool(forKey: durationMigrationKey) else {
-            #if DEBUG
-                print("DataMigration: Workout duration migration already completed, skipping")
-            #endif
+            logger.debug("Workout duration migration already completed, skipping")
             return
         }
 
-        #if DEBUG
-            print("DataMigration: Starting workout duration migration...")
-        #endif
+        logger.debug("Starting workout duration migration...")
 
         let dataSource = ICloudDriveDataSource()
         let allRecordedDays = dataSource.load() // Codable automatically converts old format on load
 
-        #if DEBUG
-            // Count workouts that were likely converted from old format
-            var convertedCount = 0
-            for recordedDay in allRecordedDays {
-                for workout in recordedDay.dayData.workouts {
-                    // These minute values indicate they were converted from old enum values
-                    if [10, 15, 30, 40, 60, 90, 120].contains(workout.duration.minutes) {
-                        print("  - Loaded (auto-converted): '\(workout.description)' = \(workout.duration.minutes)min")
-                        convertedCount += 1
-                    }
+        // Count workouts that were likely converted from old format
+        var convertedCount = 0
+        for recordedDay in allRecordedDays {
+            for workout in recordedDay.dayData.workouts {
+                // These minute values indicate they were converted from old enum values
+                if [10, 15, 30, 40, 60, 90, 120].contains(workout.duration.minutes) {
+                    logger.debug("Loaded (auto-converted): '\(workout.description)' = \(workout.duration.minutes)min")
+                    convertedCount += 1
                 }
             }
-            if convertedCount > 0 {
-                print("DataMigration: Auto-converted \(convertedCount) workout(s) during load")
-            }
-        #endif
+        }
+        if convertedCount > 0 {
+            logger.debug("Auto-converted \(convertedCount) workout(s) during load")
+        }
 
         // Re-save all data to persist the new format to disk
         // This ensures the JSON file is updated from old format (integers) to new format ({"minutes": X})
         if !allRecordedDays.isEmpty {
             dataSource.save(allRecordedDays)
-            #if DEBUG
-                print("DataMigration: Re-saved \(allRecordedDays.count) day(s) with new duration format")
-            #endif
+            logger.info("Re-saved \(allRecordedDays.count) day(s) with new duration format")
         } else {
-            #if DEBUG
-                print("DataMigration: No data to migrate")
-            #endif
+            logger.debug("No data to migrate")
         }
 
         userDefaults.set(true, forKey: durationMigrationKey)
@@ -128,17 +117,17 @@ enum DataMigration {
                         Workout(description: "Test 3→90min", duration: Workout.Duration(minutes: 3)),
                         Workout(description: "Test 4→10min", duration: Workout.Duration(minutes: 4)),
                         Workout(description: "Test 5→40min", duration: Workout.Duration(minutes: 5)),
-                        Workout(description: "Test 6→120min", duration: Workout.Duration(minutes: 6)),
+                        Workout(description: "Test 6→120min", duration: Workout.Duration(minutes: 6))
                     ],
                     water: nil,
                     mood: nil
-                ),
+                )
             ]
             let recordedDays = testDays.compactMap(RecordedDayData.init)
             dataSource.save(recordedDays)
 
-            print("DataMigration: Created test data with old enum values (0-6)")
-            print("  Next app launch will migrate these to actual minutes")
+            logger.debug("Created test data with old enum values (0-6)")
+            logger.debug("Next app launch will migrate these to actual minutes")
         }
     #endif
 }
