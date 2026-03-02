@@ -91,7 +91,7 @@ struct OverallHealthRingChart: View {
         .optimal: 5,
         .moderate: 3,
         .poor: 1,
-        .incomplete: 2
+        .incomplete: 2,
     ])
     .padding()
 }

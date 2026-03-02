@@ -262,7 +262,7 @@ final class CalculateAnalyticsUseCase {
             .moderate: 0,
             .poor: 0,
             .incomplete: 0,
-            .noData: 0
+            .noData: 0,
         ]
 
         for day in recordedDays {

@@ -50,7 +50,7 @@ final class CancelNotificationsUseCase {
 
         let identifiers = [
             "lunch-reminder-\(dateString)",
-            "evening-reminder-\(dateString)"
+            "evening-reminder-\(dateString)",
         ]
 
         // Cancel pending notifications (not yet delivered)

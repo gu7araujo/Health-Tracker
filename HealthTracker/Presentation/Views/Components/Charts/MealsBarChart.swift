@@ -48,7 +48,7 @@ struct MealsBarChart: View {
         .verySmall: 3,
         .small: 8,
         .medium: 5,
-        .large: 2
+        .large: 2,
     ])
     .padding()
 }

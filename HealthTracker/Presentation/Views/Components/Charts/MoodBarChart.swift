@@ -54,7 +54,7 @@ struct MoodBarChart: View {
     MoodBarChart(distribution: [
         .good: 5,
         .neutral: 3,
-        .sad: 2
+        .sad: 2,
     ])
     .padding()
 }

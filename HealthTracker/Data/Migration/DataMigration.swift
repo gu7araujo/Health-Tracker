@@ -128,11 +128,11 @@ enum DataMigration {
                         Workout(description: "Test 3→90min", duration: Workout.Duration(minutes: 3)),
                         Workout(description: "Test 4→10min", duration: Workout.Duration(minutes: 4)),
                         Workout(description: "Test 5→40min", duration: Workout.Duration(minutes: 5)),
-                        Workout(description: "Test 6→120min", duration: Workout.Duration(minutes: 6))
+                        Workout(description: "Test 6→120min", duration: Workout.Duration(minutes: 6)),
                     ],
                     water: nil,
                     mood: nil
-                )
+                ),
             ]
             let recordedDays = testDays.compactMap(RecordedDayData.init)
             dataSource.save(recordedDays)

@@ -28,11 +28,11 @@ struct DataMigrationTests {
                 workouts: [
                     Workout(description: "Run", duration: Workout.Duration(minutes: 0)), // Should convert 0 → 15
                     Workout(description: "Gym", duration: Workout.Duration(minutes: 1)), // Should convert 1 → 30
-                    Workout(description: "Bike", duration: Workout.Duration(minutes: 2)) // Should convert 2 → 60
+                    Workout(description: "Bike", duration: Workout.Duration(minutes: 2)), // Should convert 2 → 60
                 ],
                 water: nil,
                 mood: nil
-            )
+            ),
         ]
         let recordedDays = testDays.compactMap(RecordedDayData.init)
         dataSource.save(recordedDays)
@@ -77,7 +77,7 @@ struct DataMigrationTests {
             (3, 90), // oneHourThirty
             (4, 10), // tenMin
             (5, 40), // fortyMin
-            (6, 120) // twoHours
+            (6, 120), // twoHours
         ]
 
         // These mappings are what the migration logic should apply
