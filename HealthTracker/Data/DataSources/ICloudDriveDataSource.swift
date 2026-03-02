@@ -16,6 +16,11 @@ import Foundation
 final class ICloudDriveDataSource: LocalDataSourceProtocol {
     private let fileName = "HealthTrackerData.json"
     private let fileCoordinator = NSFileCoordinator()
+    private let logger: LoggerProtocol
+
+    init(logger: LoggerProtocol = LoggerFactory.dataLogger(category: "Storage.iCloud")) {
+        self.logger = logger
+    }
 
     /// Resolves the file URL: iCloud Documents if available, local Documents otherwise.
     /// Uses `FileManager.url(forUbiquityContainerIdentifier: nil)` for the first container.
@@ -36,6 +41,7 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
     /// - Returns: Array of `RecordedDayData`, or empty array if file doesn't exist or decoding fails.
     ///   Empty entries are filtered out during the parse from `DayData` to `RecordedDayData`.
     func load() -> [RecordedDayData] {
+        logger.debug("Loading data from iCloud Drive")
         let url = fileURL
         var coordinatorError: NSError?
         var result: [RecordedDayData] = []
@@ -49,17 +55,14 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
                 let data = try Data(contentsOf: coordinatedURL)
                 let container = try JSONDecoder().decode(DayDataContainer.self, from: data)
                 result = container.days.compactMap(RecordedDayData.init)
+                logger.info("Successfully loaded \(container.days.count) days from iCloud")
             } catch {
-                #if DEBUG
-                    // Error during load - data will be empty
-                #endif
+                logger.error("Failed to load from iCloud: \(error.localizedDescription)")
             }
         }
 
         if let coordinatorError {
-            #if DEBUG
-                // File coordination error on read
-            #endif
+            logger.error("File coordination error on read: \(coordinatorError.localizedDescription)")
         }
 
         return result
@@ -69,6 +72,7 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
     /// - Parameter days: Array of `RecordedDayData` to persist.
     /// Creates intermediate directories if needed. Logs errors in DEBUG.
     func save(_ days: [RecordedDayData]) {
+        logger.debug("Saving \(days.count) days to iCloud Drive")
         let url = fileURL
         var coordinatorError: NSError?
 
@@ -87,17 +91,14 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
                 let data = try encoder.encode(container)
                 try data.write(to: coordinatedURL, options: .atomic)
+                logger.info("Successfully saved \(days.count) days to iCloud")
             } catch {
-                #if DEBUG
-                    // Error during save
-                #endif
+                logger.error("Failed to save to iCloud: \(error.localizedDescription)")
             }
         }
 
         if let coordinatorError {
-            #if DEBUG
-                // File coordination error on write
-            #endif
+            logger.error("File coordination error on write: \(coordinatorError.localizedDescription)")
         }
     }
 }
