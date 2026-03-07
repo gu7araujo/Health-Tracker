@@ -38,26 +38,26 @@ struct MainView: View {
                     onUpdateMood: { viewModel.updateMood($0) }
                 )
             }
-            .navigationTitle("Monitore sua saúde")
+            .navigationTitle(String(localized: "app_title"))
             .listStyle(.plain)
             .scrollIndicators(.hidden)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Adicionar", systemImage: "plus") {
+                    Button(String(localized: "add_button"), systemImage: "plus") {
                         showAddSelectionAlert = true
                     }
                 }
             }
-            .alert("Adicionar registro", isPresented: $showAddSelectionAlert) {
-                Button("Refeição") {
+            .alert(String(localized: "add_record_title"), isPresented: $showAddSelectionAlert) {
+                Button(String(localized: "meal_option")) {
                     addingSection = .meal
                 }
-                Button("Treino") {
+                Button(String(localized: "workout_option")) {
                     addingSection = .workout
                 }
-                Button("Cancelar", role: .cancel) {}
+                Button(String(localized: "cancel_button"), role: .cancel) {}
             } message: {
-                Text("Qual tipo de registro você deseja adicionar?")
+                Text(String(localized: "add_record_message"))
             }
         }
         .onFirstAppear {
@@ -113,7 +113,7 @@ private struct MealsSectionView: View {
 
     var body: some View {
         Group {
-            Text("Refeições")
+            Text(String(localized: "meals_section"))
                 .font(.title2)
                 .bold()
                 .listRowSeparator(.hidden)
@@ -140,10 +140,10 @@ private struct MealsSectionView: View {
                                 Text(meal.description)
                                     .font(.headline)
                                     .padding(.bottom, 5)
-                                Text("Quantidade: \(meal.quantity.localizedName)")
+                                Text(String(localized: "quantity_label", defaultValue: "Quantity: \(meal.quantity.localizedName)"))
                                     .font(.subheadline)
                                     .foregroundStyle(.gray)
-                                Text("Satisfeito(a): \(meal.satisfaction.localizedName)")
+                                Text(String(localized: "satisfaction_label", defaultValue: "Satisfied: \(meal.satisfaction.localizedName)"))
                                     .font(.subheadline)
                                     .foregroundStyle(.gray)
                             }
@@ -154,12 +154,12 @@ private struct MealsSectionView: View {
                         Button(role: .destructive) {
                             onDelete(meal.id)
                         } label: {
-                            Label("Excluir", systemImage: "trash")
+                            Label(String(localized: "delete_action"), systemImage: "trash")
                         }
                         Button {
                             editingMealId = meal.id
                         } label: {
-                            Label("Editar", systemImage: "pencil")
+                            Label(String(localized: "edit_action"), systemImage: "pencil")
                         }
                         .tint(.blue)
                     }
@@ -183,7 +183,7 @@ private struct WaterSectionView: View {
 
     var body: some View {
         Group {
-            Text("Água")
+            Text(String(localized: "water_section"))
                 .font(.title2)
                 .bold()
                 .listRowSeparator(.hidden)
@@ -241,7 +241,7 @@ private struct WorkoutsSectionView: View {
 
     var body: some View {
         Group {
-            Text("Exercícios")
+            Text(String(localized: "workouts_section"))
                 .font(.title2)
                 .bold()
                 .listRowSeparator(.hidden)
@@ -279,12 +279,12 @@ private struct WorkoutsSectionView: View {
                         Button(role: .destructive) {
                             onDelete(workout.id)
                         } label: {
-                            Label("Excluir", systemImage: "trash")
+                            Label(String(localized: "delete_action"), systemImage: "trash")
                         }
                         Button {
                             editingWorkoutId = workout.id
                         } label: {
-                            Label("Editar", systemImage: "pencil")
+                            Label(String(localized: "edit_action"), systemImage: "pencil")
                         }
                         .tint(.blue)
                     }
@@ -307,7 +307,7 @@ private struct MoodSectionView: View {
 
     var body: some View {
         Group {
-            Text("Humor")
+            Text(String(localized: "mood_section"))
                 .font(.title2)
                 .bold()
                 .listRowSeparator(.hidden)
@@ -328,7 +328,7 @@ private struct MoodSectionView: View {
                 )
             ) {
                 VStack(alignment: .leading) {
-                    Text("Como está o seu humor hoje?")
+                    Text(String(localized: "mood_prompt"))
                         .font(.headline)
                         .padding(.bottom, 15)
 
@@ -373,7 +373,7 @@ private struct EmptyListRow: View {
     var body: some View {
         HStack {
             Spacer()
-            Text("Lista vazia!")
+            Text(String(localized: "empty_list"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Spacer()

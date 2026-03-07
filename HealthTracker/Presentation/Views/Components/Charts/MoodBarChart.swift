@@ -30,8 +30,8 @@ struct MoodBarChart: View {
         Chart {
             ForEach(chartData, id: \.mood) { item in
                 BarMark(
-                    x: .value("Humor", "\(item.mood.emoji) \(item.mood.localizedName)"),
-                    y: .value("Dias", item.count)
+                    x: .value(String(localized: "chart_mood"), "\(item.mood.emoji) \(item.mood.localizedName)"),
+                    y: .value(String(localized: "chart_days"), item.count)
                 )
                 .foregroundStyle(item.color.gradient)
                 .cornerRadius(4)

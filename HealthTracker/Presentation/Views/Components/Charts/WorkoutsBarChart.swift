@@ -21,8 +21,8 @@ struct WorkoutsBarChart: View {
         Chart {
             ForEach(sortedData, id: \.weekStart) { entry in
                 BarMark(
-                    x: .value("Semana", entry.weekStart, unit: .weekOfYear),
-                    y: .value("Minutos", entry.minutes)
+                    x: .value(String(localized: "chart_week"), entry.weekStart, unit: .weekOfYear),
+                    y: .value(String(localized: "chart_minutes"), entry.minutes)
                 )
                 .foregroundStyle(.purple.gradient)
                 .cornerRadius(4)

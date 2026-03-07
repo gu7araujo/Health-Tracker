@@ -15,14 +15,14 @@ struct AnalyticsView: View {
         NavigationStack {
             Group {
                 if viewModel.isLoading {
-                    ProgressView("Carregando...")
+                    ProgressView(String(localized: "loading"))
                 } else if let analytics = viewModel.analyticsData {
                     analyticsContent(analytics)
                 } else {
                     emptyState
                 }
             }
-            .navigationTitle("Gráficos")
+            .navigationTitle(String(localized: "analytics_title"))
             .onAppear {
                 viewModel.loadAnalytics()
             }
@@ -62,10 +62,10 @@ struct AnalyticsView: View {
             Image(systemName: "chart.xyaxis.line")
                 .font(.system(size: 60))
                 .foregroundStyle(.secondary)
-            Text("Sem Dados Suficientes")
+            Text(String(localized: "no_data_title"))
                 .font(.title2)
                 .fontWeight(.semibold)
-            Text("Comece a registrar seus dados diários para ver gráficos e análises.")
+            Text(String(localized: "no_data_message"))
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -79,7 +79,7 @@ struct AnalyticsView: View {
     private func overallHealthSection(_ analytics: OverallAnalytics) -> some View {
         CardView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Saúde Geral")
+                Text(String(localized: "overall_health_section"))
                     .font(.title2)
                     .fontWeight(.bold)
 
@@ -89,15 +89,15 @@ struct AnalyticsView: View {
 
                     // Stats grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        statItem("Dias Rastreados", value: "\(analytics.daysTracked)")
-                        statItem("Dias Ótimos", value: "\(analytics.optimalDays)")
-                        statItem("Pontuação Saúde", value: String(format: "%.0f", analytics.healthScore))
-                        statItem("Sequência Atual", value: "\(analytics.currentOptimalStreak)")
+                        statItem(String(localized: "days_tracked"), value: "\(analytics.daysTracked)")
+                        statItem(String(localized: "optimal_days"), value: "\(analytics.optimalDays)")
+                        statItem(String(localized: "health_score"), value: String(format: "%.0f", analytics.healthScore))
+                        statItem(String(localized: "current_streak"), value: "\(analytics.currentOptimalStreak)")
                     }
                 } else {
                     sectionEmptyState(
                         icon: "heart.text.square",
-                        message: "Nenhum dado de saúde registrado neste período"
+                        message: String(localized: "empty_overall_health")
                     )
                 }
             }
@@ -108,7 +108,7 @@ struct AnalyticsView: View {
     private func mealsSection(_ analytics: MealAnalytics) -> some View {
         CardView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Refeições")
+                Text(String(localized: "meals_section"))
                     .font(.title2)
                     .fontWeight(.bold)
 
@@ -120,15 +120,15 @@ struct AnalyticsView: View {
 
                     // Stats grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        statItem("Total", value: "\(analytics.totalMeals)")
-                        statItem("Satisfação Média", value: String(format: "%.0f%%", analytics.averageSatisfaction))
-                        statItem("Dias Ótimos", value: "\(analytics.optimalDaysCount)")
-                        statItem("Tamanho Comum", value: mostCommonQuantity(analytics.quantityDistribution))
+                        statItem(String(localized: "total"), value: "\(analytics.totalMeals)")
+                        statItem(String(localized: "average_satisfaction"), value: String(format: "%.0f%%", analytics.averageSatisfaction))
+                        statItem(String(localized: "optimal_days"), value: "\(analytics.optimalDaysCount)")
+                        statItem(String(localized: "common_size"), value: mostCommonQuantity(analytics.quantityDistribution))
                     }
                 } else {
                     sectionEmptyState(
                         icon: "fork.knife",
-                        message: "Nenhuma refeição registrada neste período"
+                        message: String(localized: "empty_meals")
                     )
                 }
             }
@@ -139,7 +139,7 @@ struct AnalyticsView: View {
     private func waterSection(_ analytics: WaterAnalytics) -> some View {
         CardView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Água")
+                Text(String(localized: "water_section"))
                     .font(.title2)
                     .fontWeight(.bold)
 
@@ -152,15 +152,15 @@ struct AnalyticsView: View {
 
                     // Stats grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        statItem("Média Diária", value: String(format: "%.1fL", analytics.averageIntake))
-                        statItem("Dias > 1.8L", value: "\(analytics.daysAboveOptimal)")
-                        statItem("Máximo", value: String(format: "%.1fL", analytics.maxIntake))
-                        statItem("Consistência", value: String(format: "%.0f", analytics.consistencyScore))
+                        statItem(String(localized: "daily_average"), value: String(format: "%.1fL", analytics.averageIntake))
+                        statItem(String(localized: "days_above_optimal"), value: "\(analytics.daysAboveOptimal)")
+                        statItem(String(localized: "maximum"), value: String(format: "%.1fL", analytics.maxIntake))
+                        statItem(String(localized: "consistency"), value: String(format: "%.0f", analytics.consistencyScore))
                     }
                 } else {
                     sectionEmptyState(
                         icon: "drop",
-                        message: "Nenhum consumo de água registrado neste período"
+                        message: String(localized: "empty_water")
                     )
                 }
             }
@@ -171,7 +171,7 @@ struct AnalyticsView: View {
     private func workoutsSection(_ analytics: WorkoutAnalytics) -> some View {
         CardView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Treinos")
+                Text(String(localized: "workouts_analytics_section"))
                     .font(.title2)
                     .fontWeight(.bold)
 
@@ -183,15 +183,15 @@ struct AnalyticsView: View {
 
                     // Stats grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        statItem("Total", value: "\(analytics.totalWorkouts)")
-                        statItem("Minutos Totais", value: "\(analytics.totalMinutes)")
-                        statItem("Duração Média", value: "\(analytics.averageDuration)min")
-                        statItem("Sequência Atual", value: "\(analytics.currentStreak)")
+                        statItem(String(localized: "total"), value: "\(analytics.totalWorkouts)")
+                        statItem(String(localized: "total_minutes"), value: "\(analytics.totalMinutes)")
+                        statItem(String(localized: "average_duration"), value: "\(analytics.averageDuration)min")
+                        statItem(String(localized: "current_streak"), value: "\(analytics.currentStreak)")
                     }
                 } else {
                     sectionEmptyState(
                         icon: "figure.run",
-                        message: "Nenhum treino registrado neste período"
+                        message: String(localized: "empty_workouts")
                     )
                 }
             }
@@ -202,7 +202,7 @@ struct AnalyticsView: View {
     private func moodSection(_ analytics: MoodAnalytics) -> some View {
         CardView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Humor")
+                Text(String(localized: "mood_section"))
                     .font(.title2)
                     .fontWeight(.bold)
 
@@ -212,15 +212,15 @@ struct AnalyticsView: View {
 
                     // Stats grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        statItem("Dias Bons", value: String(format: "%.0f%%", analytics.goodDaysPercentage))
-                        statItem("😁 Bom", value: "\(analytics.distribution[.good] ?? 0)")
-                        statItem("😐 Neutro", value: "\(analytics.distribution[.neutral] ?? 0)")
-                        statItem("😔 Triste", value: "\(analytics.distribution[.sad] ?? 0)")
+                        statItem(String(localized: "good_days"), value: String(format: "%.0f%%", analytics.goodDaysPercentage))
+                        statItem(String(localized: "good_mood"), value: "\(analytics.distribution[.good] ?? 0)")
+                        statItem(String(localized: "neutral_mood"), value: "\(analytics.distribution[.neutral] ?? 0)")
+                        statItem(String(localized: "sad_mood"), value: "\(analytics.distribution[.sad] ?? 0)")
                     }
                 } else {
                     sectionEmptyState(
                         icon: "face.smiling",
-                        message: "Nenhum humor registrado neste período"
+                        message: String(localized: "empty_mood")
                     )
                 }
             }

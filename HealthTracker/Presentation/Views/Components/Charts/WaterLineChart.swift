@@ -23,36 +23,36 @@ struct WaterLineChart: View {
             // Water intake line and area
             ForEach(sortedData, id: \.date) { entry in
                 LineMark(
-                    x: .value("Data", entry.date, unit: .day),
-                    y: .value("Litros", entry.intake)
+                    x: .value(String(localized: "chart_date"), entry.date, unit: .day),
+                    y: .value(String(localized: "chart_liters"), entry.intake)
                 )
                 .foregroundStyle(.blue)
                 .interpolationMethod(.catmullRom)
 
                 AreaMark(
-                    x: .value("Data", entry.date, unit: .day),
-                    y: .value("Litros", entry.intake)
+                    x: .value(String(localized: "chart_date"), entry.date, unit: .day),
+                    y: .value(String(localized: "chart_liters"), entry.intake)
                 )
                 .foregroundStyle(.blue.opacity(0.2))
                 .interpolationMethod(.catmullRom)
             }
 
             // Optimal threshold line (1.8L)
-            RuleMark(y: .value("Ótimo", 1.8))
+            RuleMark(y: .value(String(localized: "chart_optimal"), 1.8))
                 .foregroundStyle(.green)
                 .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 3]))
                 .annotation(position: .top, alignment: .trailing) {
-                    Text("Ótimo")
+                    Text(String(localized: "chart_optimal"))
                         .font(.caption2)
                         .foregroundStyle(.green)
                 }
 
             // Moderate threshold line (1.0L)
-            RuleMark(y: .value("Moderado", 1.0))
+            RuleMark(y: .value(String(localized: "chart_moderate"), 1.0))
                 .foregroundStyle(.orange)
                 .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 3]))
                 .annotation(position: .top, alignment: .trailing) {
-                    Text("Moderado")
+                    Text(String(localized: "chart_moderate"))
                         .font(.caption2)
                         .foregroundStyle(.orange)
                 }

@@ -23,8 +23,8 @@ struct MealsBarChart: View {
         Chart {
             ForEach(chartData, id: \.quantity) { item in
                 BarMark(
-                    x: .value("Tamanho", item.quantity.localizedName),
-                    y: .value("Contagem", item.count)
+                    x: .value(String(localized: "chart_size"), item.quantity.localizedName),
+                    y: .value(String(localized: "chart_count"), item.count)
                 )
                 .foregroundStyle(.orange.gradient)
                 .cornerRadius(4)
