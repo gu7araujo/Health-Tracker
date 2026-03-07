@@ -1,0 +1,81 @@
+/* Navigation and Titles */
+"app_title" = "Monitore sua saúde";
+"analytics_title" = "Gráficos";
+"add_button" = "Adicionar";
+
+/* Add Record Dialog */
+"add_record_title" = "Adicionar registro";
+"add_record_message" = "Qual tipo de registro você deseja adicionar?";
+"meal_option" = "Refeição";
+"workout_option" = "Treino";
+"cancel_button" = "Cancelar";
+
+/* Section Headers */
+"meals_section" = "Refeições";
+"water_section" = "Água";
+"workouts_section" = "Exercícios";
+"mood_section" = "Humor";
+"overall_health_section" = "Saúde Geral";
+"health_section" = "Saúde";
+"workouts_analytics_section" = "Treinos";
+
+/* Meal Details */
+"quantity_label" = "Quantidade: %@";
+"satisfaction_label" = "Satisfeito(a): %@";
+
+/* Actions */
+"delete_action" = "Excluir";
+"edit_action" = "Editar";
+
+/* Empty States */
+"empty_list" = "Lista vazia!";
+"no_data_title" = "Sem Dados Suficientes";
+"no_data_message" = "Comece a registrar seus dados diários para ver gráficos e análises.";
+
+/* Loading */
+"loading" = "Carregando...";
+
+/* Mood Prompt */
+"mood_prompt" = "Como está o seu humor hoje?";
+
+/* Chart Axis Labels */
+"chart_date" = "Data";
+"chart_liters" = "Litros";
+"chart_optimal" = "Ótimo";
+"chart_moderate" = "Moderado";
+"chart_size" = "Tamanho";
+"chart_count" = "Contagem";
+"chart_mood" = "Humor";
+"chart_days" = "Dias";
+"chart_week" = "Semana";
+"chart_minutes" = "Minutos";
+
+/* Analytics Stats Labels */
+"days_tracked" = "Dias Rastreados";
+"optimal_days" = "Dias Ótimos";
+"health_score" = "Pontuação Saúde";
+"current_streak" = "Sequência Atual";
+"total" = "Total";
+"average_satisfaction" = "Satisfação Média";
+"common_size" = "Tamanho Comum";
+"daily_average" = "Média Diária";
+"days_above_optimal" = "Dias > 1.8L";
+"maximum" = "Máximo";
+"consistency" = "Consistência";
+"total_minutes" = "Minutos Totais";
+"average_duration" = "Duração Média";
+"good_days" = "Dias Bons";
+"good_mood" = "😁 Bom";
+"neutral_mood" = "😐 Neutro";
+"sad_mood" = "😔 Triste";
+
+/* Empty State Messages by Section */
+"empty_overall_health" = "Nenhum dado de saúde registrado neste período";
+"empty_meals" = "Nenhuma refeição registrada neste período";
+"empty_water" = "Nenhum consumo de água registrado neste período";
+"empty_workouts" = "Nenhum treino registrado neste período";
+"empty_mood" = "Nenhum humor registrado neste período";
+
+/* Notification Messages */
+"notification_lunch" = "Registre o que você comeu hoje";
+"notification_evening" = "Registre suas refeições e atividades";

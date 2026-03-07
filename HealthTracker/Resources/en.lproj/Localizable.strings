@@ -1,0 +1,81 @@
+/* Navigation and Titles */
+"app_title" = "Track your health";
+"analytics_title" = "Charts";
+"add_button" = "Add";
+
+/* Add Record Dialog */
+"add_record_title" = "Add record";
+"add_record_message" = "What type of record would you like to add?";
+"meal_option" = "Meal";
+"workout_option" = "Workout";
+"cancel_button" = "Cancel";
+
+/* Section Headers */
+"meals_section" = "Meals";
+"water_section" = "Water";
+"workouts_section" = "Workouts";
+"mood_section" = "Mood";
+"overall_health_section" = "Overall Health";
+"health_section" = "Health";
+"workouts_analytics_section" = "Workouts";
+
+/* Meal Details */
+"quantity_label" = "Quantity: %@";
+"satisfaction_label" = "Satisfied: %@";
+
+/* Actions */
+"delete_action" = "Delete";
+"edit_action" = "Edit";
+
+/* Empty States */
+"empty_list" = "Empty list!";
+"no_data_title" = "Not Enough Data";
+"no_data_message" = "Start logging your daily data to see charts and analytics.";
+
+/* Loading */
+"loading" = "Loading...";
+
+/* Mood Prompt */
+"mood_prompt" = "How are you feeling today?";
+
+/* Chart Axis Labels */
+"chart_date" = "Date";
+"chart_liters" = "Liters";
+"chart_optimal" = "Optimal";
+"chart_moderate" = "Moderate";
+"chart_size" = "Size";
+"chart_count" = "Count";
+"chart_mood" = "Mood";
+"chart_days" = "Days";
+"chart_week" = "Week";
+"chart_minutes" = "Minutes";
+
+/* Analytics Stats Labels */
+"days_tracked" = "Days Tracked";
+"optimal_days" = "Optimal Days";
+"health_score" = "Health Score";
+"current_streak" = "Current Streak";
+"total" = "Total";
+"average_satisfaction" = "Average Satisfaction";
+"common_size" = "Common Size";
+"daily_average" = "Daily Average";
+"days_above_optimal" = "Days > 1.8L";
+"maximum" = "Maximum";
+"consistency" = "Consistency";
+"total_minutes" = "Total Minutes";
+"average_duration" = "Average Duration";
+"good_days" = "Good Days";
+"good_mood" = "😁 Good";
+"neutral_mood" = "😐 Neutral";
+"sad_mood" = "😔 Sad";
+
+/* Empty State Messages by Section */
+"empty_overall_health" = "No health data recorded for this period";
+"empty_meals" = "No meals recorded for this period";
+"empty_water" = "No water intake recorded for this period";
+"empty_workouts" = "No workouts recorded for this period";
+"empty_mood" = "No mood recorded for this period";
+
+/* Notification Messages */
+"notification_lunch" = "Log what you ate today";
+"notification_evening" = "Log your meals and activities";
