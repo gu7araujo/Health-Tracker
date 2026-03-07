@@ -16,7 +16,7 @@ struct PeriodSelector: View {
     @State private var pickerSelection: PickerOption = .last7Days
 
     var body: some View {
-        Picker("Período", selection: $pickerSelection) {
+        Picker(String(localized: "period_label"), selection: $pickerSelection) {
             ForEach(PickerOption.allCases) { option in
                 Text(option.displayName)
                     .tag(option)
@@ -98,13 +98,13 @@ private enum PickerOption: Hashable, Identifiable, CaseIterable {
     var displayName: String {
         switch self {
         case .thisWeek:
-            "Esta Semana"
+            String(localized: "period_this_week")
         case .last7Days:
-            "Últimos 7 Dias"
+            String(localized: "period_last_7_days")
         case .last30Days:
-            "Últimos 30 Dias"
+            String(localized: "period_last_30_days")
         case .customPlaceholder:
-            "Período Personalizado..."
+            String(localized: "period_custom_placeholder")
         case let .custom(name):
             name
         }
@@ -139,7 +139,11 @@ private struct CustomDateRangePicker: View {
         NavigationStack {
             Form {
                 Section {
-                    DatePicker("Data Inicial", selection: $startDate, displayedComponents: .date)
+                    DatePicker(
+                        String(localized: "period_start_date"),
+                        selection: $startDate,
+                        displayedComponents: .date
+                    )
                         .onChange(of: startDate) { _, newValue in
                             // Ensure start is not after end
                             if newValue > endDate {
@@ -147,7 +151,11 @@ private struct CustomDateRangePicker: View {
                             }
                         }
 
-                    DatePicker("Data Final", selection: $endDate, displayedComponents: .date)
+                    DatePicker(
+                        String(localized: "period_end_date"),
+                        selection: $endDate,
+                        displayedComponents: .date
+                    )
                         .onChange(of: endDate) { _, newValue in
                             // Ensure end is not before start
                             if newValue < startDate {
@@ -155,29 +163,29 @@ private struct CustomDateRangePicker: View {
                             }
                         }
                 } header: {
-                    Text("Selecione o Período")
+                    Text(String(localized: "period_select_prompt"))
                 }
 
                 Section {
                     HStack {
                         Spacer()
-                        Text("Dias selecionados: \(daysBetween)")
+                        Text(String(format: String(localized: "period_days_selected"), daysBetween))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
                     }
                 }
             }
-            .navigationTitle("Período Personalizado")
+            .navigationTitle(String(localized: "period_custom_title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar", systemImage: "xmark") {
+                    Button(String(localized: "cancel_button"), systemImage: "xmark") {
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Aplicar", systemImage: "checkmark") {
+                    Button(String(localized: "period_apply_button"), systemImage: "checkmark") {
                         onApply()
                     }
                     .buttonStyle(.borderedProminent)

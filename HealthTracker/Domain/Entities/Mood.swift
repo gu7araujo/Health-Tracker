@@ -24,9 +24,9 @@ enum Mood: String, Codable, CaseIterable, Equatable {
 
     var localizedName: String {
         switch self {
-        case .good: "Bom"
-        case .neutral: "Neutro"
-        case .sad: "Ruim"
+        case .good: String(localized: "mood_good")
+        case .neutral: String(localized: "mood_neutral")
+        case .sad: String(localized: "mood_sad")
         }
     }
 

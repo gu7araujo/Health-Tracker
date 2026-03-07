@@ -23,12 +23,12 @@ struct HealthTrackerApp: App {
             TabView {
                 MainView()
                     .tabItem {
-                        Label("Hoje", systemImage: "calendar")
+                        Label(String(localized: "tab_today"), systemImage: "calendar")
                     }
 
                 AnalyticsView()
                     .tabItem {
-                        Label("Gráficos", systemImage: "chart.xyaxis.line")
+                        Label(String(localized: "tab_analytics"), systemImage: "chart.xyaxis.line")
                     }
             }
         }

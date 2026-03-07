@@ -79,3 +79,25 @@
 /* Notification Messages */
 "notification_lunch" = "Log what you ate today";
 "notification_evening" = "Log your meals and activities";
+
+/* Tab Bar */
+"tab_today" = "Today";
+"tab_analytics" = "Charts";
+
+/* Mood Options */
+"mood_good" = "Good";
+"mood_neutral" = "Neutral";
+"mood_sad" = "Bad";
+
+/* Period Selector */
+"period_label" = "Period";
+"period_this_week" = "This Week";
+"period_last_7_days" = "Last 7 Days";
+"period_last_30_days" = "Last 30 Days";
+"period_custom_placeholder" = "Custom Period...";
+"period_custom_title" = "Custom Period";
+"period_start_date" = "Start Date";
+"period_end_date" = "End Date";
+"period_select_prompt" = "Select Period";
+"period_days_selected" = "Days selected: %d";
+"period_apply_button" = "Apply";
