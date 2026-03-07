@@ -77,7 +77,7 @@ struct WaterLineChart: View {
         Calendar.current.date(byAdding: .day, value: -3, to: Date())!: 2.5,
         Calendar.current.date(byAdding: .day, value: -2, to: Date())!: 1.8,
         Calendar.current.date(byAdding: .day, value: -1, to: Date())!: 2.2,
-        Date(): 1.9,
+        Date(): 1.9
     ]
 
     let range = Calendar.current.date(byAdding: .day, value: -6, to: Date())! ... Date()

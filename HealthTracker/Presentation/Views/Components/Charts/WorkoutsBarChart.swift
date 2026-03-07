@@ -54,7 +54,7 @@ struct WorkoutsBarChart: View {
         calendar.date(byAdding: .weekOfYear, value: -3, to: today)!: 120,
         calendar.date(byAdding: .weekOfYear, value: -2, to: today)!: 180,
         calendar.date(byAdding: .weekOfYear, value: -1, to: today)!: 90,
-        today: 150,
+        today: 150
     ]
 
     WorkoutsBarChart(weeklyVolume: sampleData)

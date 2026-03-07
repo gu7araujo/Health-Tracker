@@ -45,7 +45,7 @@ struct CancelNotificationsUseCaseTests {
         // Build expected identifiers with today's date
         let expectedIdentifiers = [
             "lunch-reminder-\(todayString)",
-            "evening-reminder-\(todayString)",
+            "evening-reminder-\(todayString)"
         ]
 
         // Verify both cancel and remove operations use today's identifiers (NOTIF-13)

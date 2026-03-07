@@ -60,7 +60,7 @@ struct WorkoutTests {
         let durations = [
             Workout.Duration(minutes: 15),
             Workout.Duration(minutes: 10),
-            Workout.Duration(minutes: 10),
+            Workout.Duration(minutes: 10)
         ]
         let total = durations.reduce(0) { $0 + $1.minutes }
 

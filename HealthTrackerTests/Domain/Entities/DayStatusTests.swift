@@ -19,7 +19,7 @@ struct DayStatusTests {
         (.moderate, .some(.yellow)),
         (.poor, .some(.red)),
         (.incomplete, .some(.primary)),
-        (.noData, nil),
+        (.noData, nil)
     ])
     func color_mappings(status: DayStatus, expectedColor: Color?) {
         #expect(status.color == expectedColor)
