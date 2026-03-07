@@ -144,24 +144,24 @@ private struct CustomDateRangePicker: View {
                         selection: $startDate,
                         displayedComponents: .date
                     )
-                        .onChange(of: startDate) { _, newValue in
-                            // Ensure start is not after end
-                            if newValue > endDate {
-                                endDate = newValue
-                            }
+                    .onChange(of: startDate) { _, newValue in
+                        // Ensure start is not after end
+                        if newValue > endDate {
+                            endDate = newValue
                         }
+                    }
 
                     DatePicker(
                         String(localized: "period_end_date"),
                         selection: $endDate,
                         displayedComponents: .date
                     )
-                        .onChange(of: endDate) { _, newValue in
-                            // Ensure end is not before start
-                            if newValue < startDate {
-                                startDate = newValue
-                            }
+                    .onChange(of: endDate) { _, newValue in
+                        // Ensure end is not before start
+                        if newValue < startDate {
+                            startDate = newValue
                         }
+                    }
                 } header: {
                     Text(String(localized: "period_select_prompt"))
                 }
