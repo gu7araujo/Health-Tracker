@@ -68,7 +68,7 @@ final class ScheduleNotificationsUseCase {
             try await notificationService.scheduleNotification(
                 identifier: "lunch-reminder-\(dateString)",
                 title: Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "HealthTracker",
-                body: "Registre o que você comeu hoje",
+                body: String(localized: "notification_lunch"),
                 dateComponents: lunchComponents,
                 repeats: false
             )
@@ -77,7 +77,7 @@ final class ScheduleNotificationsUseCase {
             try await notificationService.scheduleNotification(
                 identifier: "evening-reminder-\(dateString)",
                 title: Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "HealthTracker",
-                body: "Registre suas refeições e atividades",
+                body: String(localized: "notification_evening"),
                 dateComponents: eveningComponents,
                 repeats: false
             )
