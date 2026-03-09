@@ -39,6 +39,16 @@ final class MainViewModel {
         days.firstIndex { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }
     }
 
+    /// Returns the status explanation for the currently selected day.
+    var currentDayExplanation: String? {
+        currentDayData?.statusExplanation
+    }
+
+    /// Returns the day status for the currently selected day.
+    var currentDayStatus: DayStatus {
+        currentDayData?.status ?? .noData
+    }
+
     // MARK: - Initialization
 
     init(

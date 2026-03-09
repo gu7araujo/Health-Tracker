@@ -87,6 +87,74 @@ struct DayData: Codable, Equatable, Identifiable {
         return .poor
     }
 
+    /// Generates a localized explanation of why the day received its status.
+    /// Returns nil for .noData and .incomplete statuses.
+    var statusExplanation: String? {
+        let currentStatus = status
+
+        // No explanation for incomplete or no data
+        guard currentStatus != .noData && currentStatus != .incomplete else {
+            return nil
+        }
+
+        // Optimal status - all targets met
+        if currentStatus == .optimal {
+            return NSLocalizedString("day_status_explanation.optimal", comment: "")
+        }
+
+        // Collect reasons for moderate or poor status
+        var reasons: [String] = []
+
+        // Check meal issues
+        let mediumMealCount = meals.filter { $0.quantity == .medium }.count
+        let hasLargeMeal = meals.contains { $0.quantity == .large }
+
+        if mediumMealCount >= 2 || hasLargeMeal {
+            reasons.append(NSLocalizedString("day_status_reason.meals_multiple_medium", comment: ""))
+        } else if mediumMealCount == 1 {
+            reasons.append(NSLocalizedString("day_status_reason.meals_one_medium", comment: ""))
+        }
+
+        // Check water issues
+        let waterAmount = water ?? 0
+        if waterAmount < 1.0 {
+            if waterAmount == 0 {
+                reasons.append(NSLocalizedString("day_status_reason.water_none", comment: ""))
+            } else {
+                let localizedFormat = NSLocalizedString("day_status_reason.water_low", comment: "")
+                reasons.append(String(format: localizedFormat, waterAmount))
+            }
+        } else if waterAmount >= 1.0, waterAmount < 1.8 {
+            let localizedFormat = NSLocalizedString("day_status_reason.water_moderate", comment: "")
+            reasons.append(String(format: localizedFormat, waterAmount))
+        }
+
+        // Check workout issues
+        if totalWorkoutDuration == 0 {
+            reasons.append(NSLocalizedString("day_status_reason.workout_none", comment: ""))
+        } else if totalWorkoutDuration < 30 {
+            reasons.append(NSLocalizedString("day_status_reason.workout_insufficient", comment: ""))
+        }
+
+        // Check mood issues
+        if mood == .neutral {
+            reasons.append(NSLocalizedString("day_status_reason.mood_neutral", comment: ""))
+        } else if mood == .sad {
+            reasons.append(NSLocalizedString("day_status_reason.mood_sad", comment: ""))
+        }
+
+        // Build final explanation
+        let header = currentStatus == .moderate
+            ? NSLocalizedString("day_status_explanation.moderate", comment: "")
+            : NSLocalizedString("day_status_explanation.poor", comment: "")
+
+        guard !reasons.isEmpty else {
+            return header
+        }
+
+        return "\(header): \(reasons.joined(separator: ", "))"
+    }
+
     /// Counts how many of the 4 categories (meals, water, workouts, mood) have data.
     private var filledCategoriesCount: Int {
         var count = 0

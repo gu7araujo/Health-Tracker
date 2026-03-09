@@ -37,6 +37,10 @@ struct MainView: View {
                     currentMood: viewModel.currentDayData?.mood,
                     onUpdateMood: { viewModel.updateMood($0) }
                 )
+                DayStatusExplanationView(
+                    explanation: viewModel.currentDayExplanation,
+                    status: viewModel.currentDayStatus
+                )
             }
             .navigationTitle(String(localized: "app_title"))
             .listStyle(.plain)
@@ -362,6 +366,30 @@ private struct MoodSectionView: View {
                         .font(.caption)
                 }
                 Spacer()
+            }
+        }
+    }
+}
+
+// MARK: - Day Status Explanation Section
+
+private struct DayStatusExplanationView: View {
+    let explanation: String?
+    let status: DayStatus
+
+    var body: some View {
+        Group {
+            if let explanation, status != .noData, status != .incomplete {
+                Section {
+                    Text(explanation)
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                }
+                .listRowBackground(Color.secondary.opacity(0.2))
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
             }
         }
     }
