@@ -18,6 +18,10 @@ struct MainView: View {
         NavigationStack {
             List {
                 datePickerSection
+                DayStatusExplanationView(
+                    explanation: viewModel.currentDayExplanation,
+                    status: viewModel.currentDayStatus
+                )
                 MealsSectionView(
                     meals: viewModel.currentDayData?.meals ?? [],
                     editingMealId: $editingMealId,
@@ -36,10 +40,6 @@ struct MainView: View {
                 MoodSectionView(
                     currentMood: viewModel.currentDayData?.mood,
                     onUpdateMood: { viewModel.updateMood($0) }
-                )
-                DayStatusExplanationView(
-                    explanation: viewModel.currentDayExplanation,
-                    status: viewModel.currentDayStatus
                 )
             }
             .navigationTitle(String(localized: "app_title"))
@@ -104,7 +104,7 @@ struct MainView: View {
     private var datePickerSection: some View {
         CalendarStrip(selectedDate: $viewModel.selectedDate, days: viewModel.days)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 30, leading: 0, bottom: 30, trailing: 0))
+            .listRowInsets(EdgeInsets(top: 15, leading: 0, bottom: 15, trailing: 0))
     }
 }
 
@@ -382,14 +382,13 @@ private struct DayStatusExplanationView: View {
             if let explanation, status != .noData, status != .incomplete {
                 Section {
                     Text(explanation)
-                        .font(.subheadline)
+                        .font(.callout)
                         .foregroundColor(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
                 }
-                .listRowBackground(Color.secondary.opacity(0.2))
-                .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
             }
         }
     }
