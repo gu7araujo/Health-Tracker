@@ -104,7 +104,7 @@ struct MainView: View {
     private var datePickerSection: some View {
         CalendarStrip(selectedDate: $viewModel.selectedDate, days: viewModel.days)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 15, leading: 0, bottom: 15, trailing: 0))
+            .listRowInsets(EdgeInsets(top: 15, leading: 0, bottom: 23, trailing: 0))
     }
 }
 

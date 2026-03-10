@@ -103,15 +103,15 @@
 "period_apply_button" = "Aplicar";
 
 /* Day Status Explanation */
-"day_status_explanation.optimal" = "Ótimo dia: Todas as metas atingidas";
+"day_status_explanation.optimal" = "Ótimo dia: Todas as metas atingidas.";
 "day_status_explanation.moderate" = "Dia moderado";
 "day_status_explanation.poor" = "Dia ruim";
 
 /* Day Status Reasons */
 "day_status_reason.meals_one_medium" = "1 refeição média";
 "day_status_reason.meals_multiple_medium" = "múltiplas refeições grandes/médias";
-"day_status_reason.water_low" = "baixa ingestão de água (%.1fL)";
-"day_status_reason.water_moderate" = "ingestão moderada de água (%.1fL)";
+"day_status_reason.water_low" = "baixa ingestão de água";
+"day_status_reason.water_moderate" = "ingestão moderada de água";
 "day_status_reason.water_none" = "água não registrada";
 "day_status_reason.workout_insufficient" = "treino insuficiente (<30min)";
 "day_status_reason.workout_none" = "sem treino";

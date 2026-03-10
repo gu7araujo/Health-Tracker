@@ -121,12 +121,10 @@ struct DayData: Codable, Equatable, Identifiable {
             if waterAmount == 0 {
                 reasons.append(NSLocalizedString("day_status_reason.water_none", comment: ""))
             } else {
-                let localizedFormat = NSLocalizedString("day_status_reason.water_low", comment: "")
-                reasons.append(String(format: localizedFormat, waterAmount))
+                reasons.append(NSLocalizedString("day_status_reason.water_low", comment: ""))
             }
         } else if waterAmount >= 1.0, waterAmount < 1.8 {
-            let localizedFormat = NSLocalizedString("day_status_reason.water_moderate", comment: "")
-            reasons.append(String(format: localizedFormat, waterAmount))
+            reasons.append(NSLocalizedString("day_status_reason.water_moderate", comment: ""))
         }
 
         // Check workout issues
@@ -149,10 +147,10 @@ struct DayData: Codable, Equatable, Identifiable {
             : NSLocalizedString("day_status_explanation.poor", comment: "")
 
         guard !reasons.isEmpty else {
-            return header
+            return header + "."
         }
 
-        return "\(header): \(reasons.joined(separator: ", "))"
+        return "\(header): \(reasons.joined(separator: ", "))."
     }
 
     /// Counts how many of the 4 categories (meals, water, workouts, mood) have data.
