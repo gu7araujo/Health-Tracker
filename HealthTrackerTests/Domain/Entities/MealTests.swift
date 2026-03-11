@@ -24,13 +24,14 @@ struct MealTests {
     }
 
     @Test(arguments: [
-        (Meal.Quantity.verySmall, "Muito pequena"),
-        (.small, "Pequena"),
-        (.medium, "Média"),
-        (.large, "Grande")
+        (Meal.Quantity.verySmall, "meal_quantity_very_small"),
+        (.small, "meal_quantity_small"),
+        (.medium, "meal_quantity_medium"),
+        (.large, "meal_quantity_large")
     ])
-    func quantity_localizedNames(quantity: Meal.Quantity, expectedName: String) {
-        #expect(quantity.localizedName == expectedName)
+    func quantity_localizedNames(quantity: Meal.Quantity, localizationKey: String) {
+        let expected = NSLocalizedString(localizationKey, comment: "")
+        #expect(quantity.localizedName == expected)
     }
 
     @Test(arguments: [

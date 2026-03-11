@@ -31,7 +31,7 @@ struct OverallHealthRingChart: View {
             if !chartData.isEmpty {
                 Chart(chartData, id: \.status) { item in
                     SectorMark(
-                        angle: .value("Contagem", item.count),
+                        angle: .value(String(localized: "chart_count"), item.count),
                         innerRadius: .ratio(0.6),
                         angularInset: 2
                     )
@@ -44,7 +44,7 @@ struct OverallHealthRingChart: View {
                         Text("\(totalDays)")
                             .font(.title)
                             .fontWeight(.bold)
-                        Text("dias")
+                        Text(String(localized: "chart_days"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -67,7 +67,7 @@ struct OverallHealthRingChart: View {
                     }
                 }
             } else {
-                Text("Sem dados suficientes")
+                Text(String(localized: "no_data_title"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(height: 200)
@@ -77,11 +77,11 @@ struct OverallHealthRingChart: View {
 
     private func statusLabel(for status: DayStatus) -> String {
         switch status {
-        case .optimal: "Ótimo"
-        case .moderate: "Moderado"
-        case .poor: "Pobre"
-        case .incomplete: "Incompleto"
-        case .noData: "Sem dados"
+        case .optimal: String(localized: "chart_optimal")
+        case .moderate: String(localized: "chart_moderate")
+        case .poor: String(localized: "chart_poor")
+        case .incomplete: String(localized: "chart_incomplete")
+        case .noData: String(localized: "chart_no_data")
         }
     }
 }

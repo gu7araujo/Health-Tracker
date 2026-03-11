@@ -23,6 +23,12 @@
 "quantity_label" = "Quantity: %@";
 "satisfaction_label" = "Satisfied: %@";
 
+/* Meal Quantity Options */
+"meal_quantity_very_small" = "Very Small";
+"meal_quantity_small" = "Small";
+"meal_quantity_medium" = "Medium";
+"meal_quantity_large" = "Large";
+
 /* Actions */
 "delete_action" = "Delete";
 "edit_action" = "Edit";
@@ -76,6 +82,26 @@
 "empty_workouts" = "No workouts recorded for this period";
 "empty_mood" = "No mood recorded for this period";
 
+/* Add/Edit Modal */
+"add_meal_title" = "New Meal";
+"edit_meal_title" = "Edit Meal";
+"add_workout_title" = "New Workout";
+"edit_workout_title" = "Edit Workout";
+"meal_description_placeholder" = "Meal description";
+"workout_description_placeholder" = "Workout description";
+"close_button" = "Close";
+"save_button" = "Save";
+"quantity_picker_label" = "Quantity";
+"satisfaction_picker_label" = "Satisfied";
+"time_label" = "Time";
+"duration_picker_label" = "Duration";
+"workout_time_label" = "Time: %@";
+
+/* Chart Status Labels */
+"chart_poor" = "Poor";
+"chart_incomplete" = "Incomplete";
+"chart_no_data" = "No data";
+
 /* Notification Messages */
 "notification_lunch" = "Log what you ate today";
 "notification_evening" = "Log your meals and activities";
@@ -106,6 +132,28 @@
 "day_status_explanation.optimal" = "Good day: All targets met.";
 "day_status_explanation.moderate" = "Moderate day";
 "day_status_explanation.poor" = "Poor day";
+
+/* Water Section */
+"water_unit" = " L";
+"water_min_label" = "0 L";
+"water_max_label" = "5 L";
+
+/* Workout Duration Format */
+"duration_format_minutes" = "%dm";
+"duration_format_hours" = "%dh";
+"duration_format_hours_minutes" = "%dh%dm";
+
+/* Workout Duration Range */
+"duration_range_short" = "Short (< 20m)";
+"duration_range_medium" = "Medium (20-45m)";
+"duration_range_long" = "Long (45-75m)";
+"duration_range_very_long" = "Very Long (75m+)";
+
+/* Meal Satisfaction Options */
+"satisfaction_thirty" = "30%";
+"satisfaction_fifty" = "50%";
+"satisfaction_eighty" = "80%";
+"satisfaction_hundred" = "100%";
 
 /* Day Status Reasons */
 "day_status_reason.meals_one_medium" = "1 medium meal";

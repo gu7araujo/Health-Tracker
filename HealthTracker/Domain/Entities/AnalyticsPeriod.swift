@@ -29,22 +29,22 @@ enum AnalyticsPeriod: Equatable, Identifiable, Hashable {
     var displayName: String {
         switch self {
         case .thisWeek:
-            return "Esta Semana"
+            return String(localized: "period_this_week")
         case .last7Days:
-            return "Últimos 7 Dias"
+            return String(localized: "period_last_7_days")
         case .last30Days:
-            return "Últimos 30 Dias"
+            return String(localized: "period_last_30_days")
         case let .custom(start, end):
             let formatter = DateFormatter()
             formatter.dateStyle = .short
-            formatter.locale = Locale(identifier: "pt_BR")
+            formatter.locale = Locale.current
             return "\(formatter.string(from: start)) - \(formatter.string(from: end))"
         }
     }
 
-    /// Calculates the date range for this period using Brazilian calendar
+    /// Calculates the date range for this period
     var dateRange: ClosedRange<Date> {
-        let calendar = brazilianCalendar
+        let calendar = calendar
         let today = calendar.startOfDay(for: Date())
 
         switch self {
@@ -84,11 +84,11 @@ enum AnalyticsPeriod: Equatable, Identifiable, Hashable {
         [.thisWeek, .last7Days, .last30Days]
     }
 
-    /// Brazilian calendar configuration (PT-BR locale, Monday as first weekday)
-    private var brazilianCalendar: Calendar {
+    /// Calendar configuration using system locale and timezone, with Monday as first weekday
+    private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = Locale(identifier: "pt_BR")
-        calendar.timeZone = TimeZone(identifier: "America/Sao_Paulo") ?? .current
+        calendar.locale = Locale.current
+        calendar.timeZone = TimeZone.current
         calendar.firstWeekday = 2 // Monday
         return calendar
     }

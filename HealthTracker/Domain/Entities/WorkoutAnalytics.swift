@@ -27,10 +27,10 @@ enum DurationRange: String, Codable {
     /// Returns localized name for the duration range
     var localizedName: String {
         switch self {
-        case .short: "Curto (< 20m)"
-        case .medium: "Médio (20-45m)"
-        case .long: "Longo (45-75m)"
-        case .veryLong: "Muito longo (75m+)"
+        case .short: String(localized: "duration_range_short")
+        case .medium: String(localized: "duration_range_medium")
+        case .long: String(localized: "duration_range_long")
+        case .veryLong: String(localized: "duration_range_very_long")
         }
     }
 }

@@ -44,10 +44,10 @@ struct AddEditModal: View {
 
     private var navigationTitle: String {
         switch (section, isEditing) {
-        case (.meal, false): "Nova Refeição"
-        case (.meal, true): "Editar Refeição"
-        case (.workout, false): "Novo Treino"
-        case (.workout, true): "Editar Treino"
+        case (.meal, false): String(localized: "add_meal_title")
+        case (.meal, true): String(localized: "edit_meal_title")
+        case (.workout, false): String(localized: "add_workout_title")
+        case (.workout, true): String(localized: "edit_workout_title")
         }
     }
 
@@ -77,7 +77,7 @@ struct AddEditModal: View {
 
                 Section {
                     TextField(
-                        section == .meal ? "Descrição da refeição" : "Descrição do treino",
+                        section == .meal ? String(localized: "meal_description_placeholder") : String(localized: "workout_description_placeholder"),
                         text: $text
                     )
                     .multilineTextAlignment(.center)
@@ -96,12 +96,12 @@ struct AddEditModal: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Fechar", systemImage: "xmark") {
+                    Button(String(localized: "close_button"), systemImage: "xmark") {
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Salvar", systemImage: "checkmark") {
+                    Button(String(localized: "save_button"), systemImage: "checkmark") {
                         saveEntry()
                         dismiss()
                     }
@@ -119,13 +119,13 @@ struct AddEditModal: View {
 
     private var mealFields: some View {
         Group {
-            Picker("Quantidade", selection: $selectedQuantity) {
+            Picker(String(localized: "quantity_picker_label"), selection: $selectedQuantity) {
                 ForEach(Meal.Quantity.allCases, id: \.self) { quantity in
                     Text(quantity.localizedName).tag(quantity)
                 }
             }
 
-            Picker("Satisfeito(a)", selection: $selectedSatisfaction) {
+            Picker(String(localized: "satisfaction_picker_label"), selection: $selectedSatisfaction) {
                 ForEach(Meal.Satisfaction.allCases, id: \.self) { satisfaction in
                     Text(satisfaction.localizedName).tag(satisfaction)
                 }
@@ -137,12 +137,12 @@ struct AddEditModal: View {
 
     private var workoutFields: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Tempo")
+            Text(String(localized: "time_label"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             DatePicker(
-                "Duração",
+                String(localized: "duration_picker_label"),
                 selection: $selectedDuration,
                 displayedComponents: [.hourAndMinute]
             )

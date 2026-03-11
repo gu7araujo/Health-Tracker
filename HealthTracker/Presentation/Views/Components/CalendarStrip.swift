@@ -16,12 +16,11 @@ struct CalendarStrip: View {
     @State private var isLoadingPast = false
     @State private var needsMorePastDates = false
 
-    /// Brazilian calendar configuration with safe timezone initialization.
+    /// Calendar configuration using system locale and timezone, with Monday as first day of week.
     private var brazilianCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = Locale(identifier: "pt_BR")
-        // Safe timezone initialization - falls back to current timezone if invalid
-        calendar.timeZone = TimeZone(identifier: "America/Sao_Paulo") ?? .current
+        calendar.locale = Locale.current
+        calendar.timeZone = TimeZone.current
         calendar.firstWeekday = 2 // Monday as first day of week
         return calendar
     }
@@ -82,9 +81,9 @@ struct CalendarStrip: View {
 
     private func weekdayLetter(from date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "pt_BR")
-        formatter.timeZone = TimeZone(identifier: "America/Sao_Paulo") ?? .current
-        formatter.dateFormat = "EEEEE" // Single letter: D, S, T, Q, Q, S, S
+        formatter.locale = Locale.current
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "EEEEE" // Single letter weekday initial
         return formatter.string(from: date)
     }
 

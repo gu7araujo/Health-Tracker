@@ -23,6 +23,12 @@
 "quantity_label" = "Quantidade: %@";
 "satisfaction_label" = "Satisfeito(a): %@";
 
+/* Meal Quantity Options */
+"meal_quantity_very_small" = "Muito pequena";
+"meal_quantity_small" = "Pequena";
+"meal_quantity_medium" = "Média";
+"meal_quantity_large" = "Grande";
+
 /* Actions */
 "delete_action" = "Excluir";
 "edit_action" = "Editar";
@@ -76,6 +82,26 @@
 "empty_workouts" = "Nenhum treino registrado neste período";
 "empty_mood" = "Nenhum humor registrado neste período";
 
+/* Add/Edit Modal */
+"add_meal_title" = "Nova Refeição";
+"edit_meal_title" = "Editar Refeição";
+"add_workout_title" = "Novo Treino";
+"edit_workout_title" = "Editar Treino";
+"meal_description_placeholder" = "Descrição da refeição";
+"workout_description_placeholder" = "Descrição do treino";
+"close_button" = "Fechar";
+"save_button" = "Salvar";
+"quantity_picker_label" = "Quantidade";
+"satisfaction_picker_label" = "Satisfeito(a)";
+"time_label" = "Tempo";
+"duration_picker_label" = "Duração";
+"workout_time_label" = "Tempo: %@";
+
+/* Chart Status Labels */
+"chart_poor" = "Pobre";
+"chart_incomplete" = "Incompleto";
+"chart_no_data" = "Sem dados";
+
 /* Notification Messages */
 "notification_lunch" = "Registre o que você comeu hoje";
 "notification_evening" = "Registre suas refeições e atividades";
@@ -106,6 +132,28 @@
 "day_status_explanation.optimal" = "Ótimo dia: Todas as metas atingidas.";
 "day_status_explanation.moderate" = "Dia moderado";
 "day_status_explanation.poor" = "Dia ruim";
+
+/* Water Section */
+"water_unit" = " L";
+"water_min_label" = "0 L";
+"water_max_label" = "5 L";
+
+/* Workout Duration Format */
+"duration_format_minutes" = "%dmin";
+"duration_format_hours" = "%dh";
+"duration_format_hours_minutes" = "%dh%dmin";
+
+/* Workout Duration Range */
+"duration_range_short" = "Curto (< 20m)";
+"duration_range_medium" = "Médio (20-45m)";
+"duration_range_long" = "Longo (45-75m)";
+"duration_range_very_long" = "Muito longo (75m+)";
+
+/* Meal Satisfaction Options */
+"satisfaction_thirty" = "30%";
+"satisfaction_fifty" = "50%";
+"satisfaction_eighty" = "80%";
+"satisfaction_hundred" = "100%";
 
 /* Day Status Reasons */
 "day_status_reason.meals_one_medium" = "1 refeição média";

@@ -32,7 +32,7 @@ struct WorkoutsBarChart: View {
             AxisMarks { value in
                 AxisValueLabel {
                     if let minutes = value.as(Int.self) {
-                        Text("\(minutes)min")
+                        Text(String(format: String(localized: "duration_format_minutes"), minutes))
                     }
                 }
             }

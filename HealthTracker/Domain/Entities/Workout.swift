@@ -21,16 +21,16 @@ struct Workout: Identifiable, Codable, Equatable {
         }
 
         /// Returns a localized string representation of the duration
-        /// Examples: "10m", "1h", "1h30m", "2h"
+        /// Examples: "10m" / "10min", "1h", "1h30m" / "1h30min", "2h"
         var localizedName: String {
             if minutes < 60 {
-                return "\(minutes)m"
+                return String(format: String(localized: "duration_format_minutes"), minutes)
             } else if minutes % 60 == 0 {
-                return "\(minutes / 60)h"
+                return String(format: String(localized: "duration_format_hours"), minutes / 60)
             } else {
                 let hours = minutes / 60
                 let mins = minutes % 60
-                return "\(hours)h\(mins)m"
+                return String(format: String(localized: "duration_format_hours_minutes"), hours, mins)
             }
         }
     }

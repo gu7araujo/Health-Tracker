@@ -38,12 +38,13 @@ struct MoodTests {
     // MARK: - Localized Name Tests
 
     @Test(arguments: [
-        (Mood.good, "Bom"),
-        (.neutral, "Neutro"),
-        (.sad, "Ruim")
+        (Mood.good, "mood_good"),
+        (.neutral, "mood_neutral"),
+        (.sad, "mood_sad")
     ])
-    func localizedName_mappings(mood: Mood, expectedName: String) {
-        #expect(mood.localizedName == expectedName)
+    func localizedName_mappings(mood: Mood, localizationKey: String) {
+        let expected = NSLocalizedString(localizationKey, comment: "")
+        #expect(mood.localizedName == expected)
     }
 
     // MARK: - Color Mapping Tests

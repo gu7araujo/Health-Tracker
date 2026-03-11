@@ -259,7 +259,7 @@ struct AnalyticsView: View {
 
     private func mostCommonQuantity(_ distribution: [Meal.Quantity: Int]) -> String {
         guard let mostCommon = distribution.max(by: { $0.value < $1.value })?.key else {
-            return "N/A"
+            return String(localized: "chart_no_data")
         }
         return mostCommon.localizedName
     }

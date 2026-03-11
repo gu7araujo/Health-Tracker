@@ -30,9 +30,9 @@ struct ScheduleNotificationsUseCaseTests {
         // Verify repeats disabled for per-day cancellation (NOTIF-10)
         #expect(mockService.scheduleNotificationRepeats.allSatisfy { $0 == false })
 
-        // Verify Portuguese-BR messages present (NOTIF-07, NOTIF-08)
-        #expect(mockService.scheduleNotificationBodies.contains("Registre o que você comeu hoje"))
-        #expect(mockService.scheduleNotificationBodies.contains("Registre suas refeições e atividades"))
+        // Verify localized messages present (NOTIF-07, NOTIF-08)
+        #expect(mockService.scheduleNotificationBodies.contains(NSLocalizedString("notification_lunch", comment: "")))
+        #expect(mockService.scheduleNotificationBodies.contains(NSLocalizedString("notification_evening", comment: "")))
     }
 
     @Test func execute_cancelsExistingNotificationsBeforeScheduling() async throws {
@@ -90,9 +90,9 @@ struct ScheduleNotificationsUseCaseTests {
         let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
-        // Verify exact Portuguese-BR messages (NOTIF-07, NOTIF-08)
-        #expect(mockService.scheduleNotificationBodies.contains("Registre o que você comeu hoje"))
-        #expect(mockService.scheduleNotificationBodies.contains("Registre suas refeições e atividades"))
+        // Verify exact localized messages (NOTIF-07, NOTIF-08)
+        #expect(mockService.scheduleNotificationBodies.contains(NSLocalizedString("notification_lunch", comment: "")))
+        #expect(mockService.scheduleNotificationBodies.contains(NSLocalizedString("notification_evening", comment: "")))
 
         // Verify 60 messages scheduled (30 days × 2 notification types)
         #expect(mockService.scheduleNotificationBodies.count == 60)
