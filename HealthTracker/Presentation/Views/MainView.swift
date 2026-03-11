@@ -144,10 +144,10 @@ private struct MealsSectionView: View {
                                 Text(meal.description)
                                     .font(.headline)
                                     .padding(.bottom, 5)
-                                Text(String(localized: "quantity_label", defaultValue: "Quantity: \(meal.quantity.localizedName)"))
+                                Text(String(format: String(localized: "quantity_label"), meal.quantity.localizedName))
                                     .font(.subheadline)
                                     .foregroundStyle(.gray)
-                                Text(String(localized: "satisfaction_label", defaultValue: "Satisfied: \(meal.satisfaction.localizedName)"))
+                                Text(String(format: String(localized: "satisfaction_label"), meal.satisfaction.localizedName))
                                     .font(.subheadline)
                                     .foregroundStyle(.gray)
                             }
@@ -209,7 +209,7 @@ private struct WaterSectionView: View {
             ) {
                 VStack {
                     (Text(water, format: .number.precision(.fractionLength(1)))
-                        + Text(" L"))
+                        + Text(String(localized: "water_unit")))
                         .font(.title)
                         .bold()
                     Slider(
@@ -222,10 +222,10 @@ private struct WaterSectionView: View {
                     ) {
                         EmptyView()
                     } minimumValueLabel: {
-                        Text("0 L")
+                        Text(String(localized: "water_min_label"))
                             .font(.caption)
                     } maximumValueLabel: {
-                        Text("5 L")
+                        Text(String(localized: "water_max_label"))
                             .font(.caption)
                     }
                 }
@@ -272,7 +272,7 @@ private struct WorkoutsSectionView: View {
                                 Text(workout.description)
                                     .font(.headline)
                                     .padding(.bottom, 5)
-                                Text("Tempo: \(workout.duration.localizedName)")
+                                Text(String(format: String(localized: "workout_time_label"), workout.duration.localizedName))
                                     .font(.subheadline)
                                     .foregroundStyle(.gray)
                             }
