@@ -187,7 +187,7 @@ struct CalendarStripDay: View {
         VStack {
             Text(weekdayLetter)
                 .font(.title3)
-                .padding(7)
+                .frame(width: 30, height: 30)
                 .background(circleBackground)
                 .foregroundColor(isFuture ? .gray : .primary)
 
