@@ -14,5 +14,9 @@
 	<array>
 		<string>iCloud.com.gustavoaraujo.health-tracker</string>
 	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.gustavoaraujo</string>
+	</array>
 </dict>
 </plist>
