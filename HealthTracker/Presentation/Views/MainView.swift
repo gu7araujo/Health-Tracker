@@ -98,7 +98,7 @@ struct MainView: View {
     // MARK: - Date Picker Section
 
     private var datePickerSection: some View {
-        VStack(spacing: 0) {
+        VStack {
             CalendarStrip(selectedDate: $viewModel.selectedDate, days: viewModel.days)
             if let explanation = viewModel.currentDayExplanation,
                viewModel.currentDayStatus != .noData,
@@ -108,7 +108,7 @@ struct MainView: View {
                     .foregroundColor(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal)
-                    .padding(.top, 12)
+                    .padding(.top, 28)
                     .transition(.opacity)
             }
         }
