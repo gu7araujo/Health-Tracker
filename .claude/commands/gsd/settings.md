@@ -20,11 +20,11 @@ Routes to the settings workflow which handles:
 </objective>
 
 <execution_context>
-@./.claude/get-shit-done/workflows/settings.md
+@/Users/gustavosantos/Documents/Projects/Personal/Real-app-repos/HealthTracker/.claude/get-shit-done/workflows/settings.md
 </execution_context>
 
 <process>
-**Follow the settings workflow** from `@./.claude/get-shit-done/workflows/settings.md`.
+**Follow the settings workflow** from `@/Users/gustavosantos/Documents/Projects/Personal/Real-app-repos/HealthTracker/.claude/get-shit-done/workflows/settings.md`.
 
 The workflow handles all logic including:
 1. Config file creation with defaults if missing

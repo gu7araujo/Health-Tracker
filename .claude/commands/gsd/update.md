@@ -19,11 +19,11 @@ Routes to the update workflow which handles:
 </objective>
 
 <execution_context>
-@./.claude/get-shit-done/workflows/update.md
+@/Users/gustavosantos/Documents/Projects/Personal/Real-app-repos/HealthTracker/.claude/get-shit-done/workflows/update.md
 </execution_context>
 
 <process>
-**Follow the update workflow** from `@./.claude/get-shit-done/workflows/update.md`.
+**Follow the update workflow** from `@/Users/gustavosantos/Documents/Projects/Personal/Real-app-repos/HealthTracker/.claude/get-shit-done/workflows/update.md`.
 
 The workflow handles all logic including:
 1. Installed version detection (local/global)
