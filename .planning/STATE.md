@@ -119,9 +119,10 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 1 | Add internationalization in the project for PT-BR and English language options | 2026-03-07 | 216b86b | [1-add-internationalization-in-the-project-](./.planning/quick/1-add-internationalization-in-the-project-/) |
 | 2 | Fix layout shift when day status explanation text appears in MainView | 2026-03-27 | 67e1744 | [260327-s0j-fix-the-problem-when-the-day-status-expl](./.planning/quick/260327-s0j-fix-the-problem-when-the-day-status-expl/) |
+| 3 | Remove day explanation text when day status is optimal (green) | 2026-03-27 | 4bd32cd | [260327-sgz-remove-the-day-explanation-text-when-the](./.planning/quick/260327-sgz-remove-the-day-explanation-text-when-the/) |
 
 ## Session Continuity
 
 Last session: 2026-03-27 (quick task execution)
-Stopped at: Completed quick task 260327-s0j - Fix day status explanation layout shift
+Stopped at: Completed quick task 260327-sgz - Remove day explanation text for optimal status
 Resume file: None
