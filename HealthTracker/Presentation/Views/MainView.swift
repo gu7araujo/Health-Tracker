@@ -18,10 +18,6 @@ struct MainView: View {
         NavigationStack {
             List {
                 datePickerSection
-                DayStatusExplanationView(
-                    explanation: viewModel.currentDayExplanation,
-                    status: viewModel.currentDayStatus
-                )
                 MealsSectionView(
                     meals: viewModel.currentDayData?.meals ?? [],
                     editingMealId: $editingMealId,
@@ -102,9 +98,23 @@ struct MainView: View {
     // MARK: - Date Picker Section
 
     private var datePickerSection: some View {
-        CalendarStrip(selectedDate: $viewModel.selectedDate, days: viewModel.days)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 15, leading: 0, bottom: 23, trailing: 0))
+        VStack(spacing: 0) {
+            CalendarStrip(selectedDate: $viewModel.selectedDate, days: viewModel.days)
+            if let explanation = viewModel.currentDayExplanation,
+               viewModel.currentDayStatus != .noData,
+               viewModel.currentDayStatus != .incomplete {
+                Text(explanation)
+                    .font(.callout)
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.top, 12)
+                    .transition(.opacity)
+            }
+        }
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets(top: 15, leading: 0, bottom: 23, trailing: 0))
+        .animation(.easeInOut(duration: 0.2), value: viewModel.currentDayStatus)
     }
 }
 
@@ -366,29 +376,6 @@ private struct MoodSectionView: View {
                         .font(.caption)
                 }
                 Spacer()
-            }
-        }
-    }
-}
-
-// MARK: - Day Status Explanation Section
-
-private struct DayStatusExplanationView: View {
-    let explanation: String?
-    let status: DayStatus
-
-    var body: some View {
-        Group {
-            if let explanation, status != .noData, status != .incomplete {
-                Section {
-                    Text(explanation)
-                        .font(.callout)
-                        .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                }
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
             }
         }
     }
