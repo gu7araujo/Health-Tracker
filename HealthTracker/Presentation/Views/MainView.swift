@@ -37,6 +37,7 @@ struct MainView: View {
                     currentMood: viewModel.currentDayData?.mood,
                     onUpdateMood: { viewModel.updateMood($0) }
                 )
+                .padding(.bottom, 8)
             }
             .navigationTitle(String(localized: "app_title"))
             .listStyle(.plain)
