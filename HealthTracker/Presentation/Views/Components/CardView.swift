@@ -30,21 +30,29 @@ struct CardView<Content: View>: View {
         self.content = content()
     }
 
+    @ViewBuilder
     var body: some View {
-        Button(action: action ?? {}, label: {
-            if applyGlassEffect {
-                content
-                    .padding(internalPadding)
-                    .glassEffect(in: .rect(cornerRadius: 16))
-                    .background(backgroundColor)
-            } else {
-                content
-                    .padding(internalPadding)
-                    .background(backgroundColor)
-                    .clipShape(.rect(cornerRadius: 16))
-            }
-        })
-        .contentShape(.rect(cornerRadius: 16))
-        .buttonStyle(.plain)
+        if let action {
+            Button(action: action, label: { card })
+                .contentShape(.rect(cornerRadius: 16))
+                .buttonStyle(.plain)
+        } else {
+            card
+        }
+    }
+
+    @ViewBuilder
+    private var card: some View {
+        if applyGlassEffect {
+            content
+                .padding(internalPadding)
+                .glassEffect(in: .rect(cornerRadius: 16))
+                .background(backgroundColor)
+        } else {
+            content
+                .padding(internalPadding)
+                .background(backgroundColor)
+                .clipShape(.rect(cornerRadius: 16))
+        }
     }
 }
