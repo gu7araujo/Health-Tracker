@@ -380,6 +380,7 @@ private struct MoodSectionView: View {
                 Spacer()
             }
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
