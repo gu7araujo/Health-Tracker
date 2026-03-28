@@ -45,7 +45,7 @@ struct CardView<Content: View>: View {
         if applyGlassEffect {
             content
                 .padding(internalPadding)
-                .glassEffect(in: .rect(cornerRadius: 16))
+                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 16))
                 .background(backgroundColor)
         } else {
             content
