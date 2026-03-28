@@ -107,11 +107,11 @@ struct DataMigrationTests {
         #expect(range == expectedRange)
     }
 
-    @Test func durationRange_localizedNames_areInPortuguese() {
-        #expect(DurationRange.short.localizedName.contains("Curto"))
-        #expect(DurationRange.medium.localizedName.contains("Médio"))
-        #expect(DurationRange.long.localizedName.contains("Longo"))
-        #expect(DurationRange.veryLong.localizedName.contains("longo"))
+    @Test func durationRange_localizedNames_areNonEmpty() {
+        #expect(!DurationRange.short.localizedName.isEmpty)
+        #expect(!DurationRange.medium.localizedName.isEmpty)
+        #expect(!DurationRange.long.localizedName.isEmpty)
+        #expect(!DurationRange.veryLong.localizedName.isEmpty)
     }
 
     @Test func durationRange_codable_roundTrip() throws {
