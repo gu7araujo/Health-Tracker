@@ -19,7 +19,6 @@ struct AddEditModal: View {
     @State private var selectedQuantity: Meal.Quantity = .small
     @State private var selectedSatisfaction: Meal.Satisfaction = .fifty
     @State private var satisfactionWasManuallySet: Bool = false
-    @State private var isAutoUpdatingSatisfaction: Bool = false
     @State private var selectedDuration: Date = {
         let calendar = Calendar.current
         var components = DateComponents()
@@ -128,9 +127,7 @@ struct AddEditModal: View {
             }
             .onChange(of: selectedQuantity) { _, newQuantity in
                 if !satisfactionWasManuallySet {
-                    isAutoUpdatingSatisfaction = true
                     selectedSatisfaction = newQuantity.defaultSatisfaction
-                    isAutoUpdatingSatisfaction = false
                 }
             }
 
@@ -140,9 +137,7 @@ struct AddEditModal: View {
                 }
             }
             .onChange(of: selectedSatisfaction) {
-                if !isAutoUpdatingSatisfaction {
-                    satisfactionWasManuallySet = true
-                }
+                satisfactionWasManuallySet = true
             }
         }
     }
@@ -172,12 +167,11 @@ struct AddEditModal: View {
         if section == .meal, let mealId, let meal = viewModel.meal(withId: mealId) {
             text = meal.description
             selectedQuantity = meal.quantity
-            isAutoUpdatingSatisfaction = true
             selectedSatisfaction = meal.satisfaction
-            isAutoUpdatingSatisfaction = false
             satisfactionWasManuallySet = false
         } else if section == .workout, let workoutId, let workout = viewModel.workout(withId: workoutId) {
             text = workout.description
+            // Convert minutes to Date
             let calendar = Calendar.current
             var components = DateComponents()
             components.hour = workout.duration.minutes / 60
