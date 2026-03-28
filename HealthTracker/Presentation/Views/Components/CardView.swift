@@ -30,7 +30,6 @@ struct CardView<Content: View>: View {
         self.content = content()
     }
 
-    @ViewBuilder
     var body: some View {
         if let action {
             Button(action: action, label: { card })
