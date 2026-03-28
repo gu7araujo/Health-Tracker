@@ -364,8 +364,8 @@ private struct MoodSectionView: View {
         let isSelected = currentMood == mood
 
         return CardView(
-            applyGlassEffect: !isSelected,
-            backgroundColor: .constant(isSelected ? mood.color : nil)
+            applyGlassEffect: true,
+            glassTint: isSelected ? mood.color : nil
         ) {
             onUpdateMood(mood)
         } content: {
