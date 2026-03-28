@@ -25,6 +25,14 @@ struct Meal: Identifiable, Codable, Equatable {
             case .large: String(localized: "meal_quantity_large")
             }
         }
+
+        var defaultSatisfaction: Satisfaction {
+            switch self {
+            case .verySmall, .small: .thirty
+            case .medium: .fifty
+            case .large: .hundred
+            }
+        }
     }
 
     /// How satisfied the user felt after eating

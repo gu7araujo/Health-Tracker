@@ -164,4 +164,16 @@ struct MealTests {
 
         #expect(meal1.id != meal2.id)
     }
+
+    // MARK: - Quantity Default Satisfaction Tests
+
+    @Test(arguments: [
+        (Meal.Quantity.verySmall, Meal.Satisfaction.thirty),
+        (.small, Meal.Satisfaction.thirty),
+        (.medium, Meal.Satisfaction.fifty),
+        (.large, Meal.Satisfaction.hundred)
+    ])
+    func quantity_defaultSatisfaction(quantity: Meal.Quantity, expectedSatisfaction: Meal.Satisfaction) {
+        #expect(quantity.defaultSatisfaction == expectedSatisfaction)
+    }
 }
