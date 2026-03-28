@@ -67,7 +67,9 @@ final class ScheduleNotificationsUseCase {
             // Schedule lunch notification (NOTIF-05, NOTIF-07)
             try await notificationService.scheduleNotification(
                 identifier: "lunch-reminder-\(dateString)",
-                title: Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? String(localized: "app_title"),
+                title: Bundle.main.localizedInfoDictionary?["CFBundleDisplayName"] as? String
+                    ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+                    ?? String(localized: "app_title"),
                 body: String(localized: "notification_lunch"),
                 dateComponents: lunchComponents,
                 repeats: false
@@ -76,7 +78,9 @@ final class ScheduleNotificationsUseCase {
             // Schedule evening notification (NOTIF-06, NOTIF-08)
             try await notificationService.scheduleNotification(
                 identifier: "evening-reminder-\(dateString)",
-                title: Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? String(localized: "app_title"),
+                title: Bundle.main.localizedInfoDictionary?["CFBundleDisplayName"] as? String
+                    ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+                    ?? String(localized: "app_title"),
                 body: String(localized: "notification_evening"),
                 dateComponents: eveningComponents,
                 repeats: false
