@@ -169,8 +169,8 @@ struct MealTests {
 
     @Test(arguments: [
         (Meal.Quantity.verySmall, Meal.Satisfaction.thirty),
-        (.small, Meal.Satisfaction.thirty),
-        (.medium, Meal.Satisfaction.fifty),
+        (.small, Meal.Satisfaction.fifty),
+        (.medium, Meal.Satisfaction.eighty),
         (.large, Meal.Satisfaction.hundred)
     ])
     func quantity_defaultSatisfaction(quantity: Meal.Quantity, expectedSatisfaction: Meal.Satisfaction) {
