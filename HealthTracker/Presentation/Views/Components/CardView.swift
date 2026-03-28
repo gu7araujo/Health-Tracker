@@ -36,25 +36,25 @@ struct CardView<Content: View>: View {
     var body: some View {
         if let action, applyGlassEffect {
             // Glass applied to Button (outside label) — correct Liquid Glass pattern
-            Button(action: action) {
-                content.padding(internalPadding)
+            if let glassTint {
+                Button(action: action) {
+                    content.padding(internalPadding)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.tint(glassTint).interactive(), in: RoundedRectangle(cornerRadius: 16))
+            } else {
+                Button(action: action) {
+                    content.padding(internalPadding)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 16))
             }
-            .buttonStyle(.plain)
-            .glassEffect(activeGlassStyle, in: RoundedRectangle(cornerRadius: 16))
         } else if let action {
             Button(action: action, label: { card })
                 .contentShape(.rect(cornerRadius: 16))
                 .buttonStyle(.plain)
         } else {
             card
-        }
-    }
-
-    private var activeGlassStyle: GlassEffectStyle {
-        if let glassTint {
-            .regular.tint(glassTint).interactive()
-        } else {
-            .regular.interactive()
         }
     }
 
