@@ -118,6 +118,16 @@ struct AddEditModal: View {
 
     // MARK: - Meal Fields
 
+    private var satisfactionBinding: Binding<Meal.Satisfaction> {
+        Binding(
+            get: { selectedSatisfaction },
+            set: { newValue in
+                selectedSatisfaction = newValue
+                satisfactionWasManuallySet = true
+            }
+        )
+    }
+
     private var mealFields: some View {
         Group {
             Picker(String(localized: "quantity_picker_label"), selection: $selectedQuantity) {
@@ -131,13 +141,10 @@ struct AddEditModal: View {
                 }
             }
 
-            Picker(String(localized: "satisfaction_picker_label"), selection: $selectedSatisfaction) {
+            Picker(String(localized: "satisfaction_picker_label"), selection: satisfactionBinding) {
                 ForEach(Meal.Satisfaction.allCases, id: \.self) { satisfaction in
                     Text(satisfaction.localizedName).tag(satisfaction)
                 }
-            }
-            .onChange(of: selectedSatisfaction) {
-                satisfactionWasManuallySet = true
             }
         }
     }
