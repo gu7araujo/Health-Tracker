@@ -35,10 +35,12 @@ struct CardView<Content: View>: View {
             content
                 .padding(internalPadding)
                 .if(applyGlassEffect) { view in
-                    view.glassEffect(in: .rect(cornerRadius: 16))
+                    view.glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
                 }
                 .background(backgroundColor)
-                .clipShape(.rect(cornerRadius: applyGlassEffect ? 0 : 16))
+                .if(!applyGlassEffect) { view in
+                    view.clipShape(.rect(cornerRadius: 16))
+                }
         })
         .buttonStyle(.plain)
     }
