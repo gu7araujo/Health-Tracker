@@ -104,7 +104,8 @@ struct MainView: View {
             if let explanation = viewModel.currentDayExplanation,
                viewModel.currentDayStatus != .noData,
                viewModel.currentDayStatus != .incomplete,
-               viewModel.currentDayStatus != .optimal {
+               viewModel.currentDayStatus != .optimal
+            {
                 Text(explanation)
                     .font(.callout)
                     .foregroundColor(.primary)
