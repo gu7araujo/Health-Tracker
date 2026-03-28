@@ -27,6 +27,7 @@ struct Meal: Identifiable, Codable, Equatable {
         }
 
         var defaultSatisfaction: Satisfaction {
+            // .eighty is intentionally omitted — it is only reachable via manual user selection.
             switch self {
             case .verySmall, .small: .thirty
             case .medium: .fifty
