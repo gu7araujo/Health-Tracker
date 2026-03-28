@@ -29,7 +29,7 @@ struct CalendarStrip: View {
         GeometryReader { outerGeometry in
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack {
+                    LazyHStack(spacing: 0) {
                         ForEach(dates, id: \.self) { date in
                             let isSelected = brazilianCalendar.isDate(date, inSameDayAs: selectedDate)
                             let isFuture = isFutureDate(date)
@@ -43,14 +43,13 @@ struct CalendarStrip: View {
                             ) {
                                 selectedDate = date
                             }
-                            .frame(width: outerGeometry.size.width / 8)
+                            .frame(width: outerGeometry.size.width / 7)
                             .id(date)
                             .onAppear {
                                 checkAndLoadPast(for: date)
                             }
                         }
                     }
-                    .scrollTargetLayout()
                 }
                 .scrollTargetBehavior(.paging)
                 .onAppear {
