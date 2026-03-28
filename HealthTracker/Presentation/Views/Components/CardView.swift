@@ -32,15 +32,17 @@ struct CardView<Content: View>: View {
 
     var body: some View {
         Button(action: action ?? {}, label: {
-            content
-                .padding(internalPadding)
-                .if(applyGlassEffect) { view in
-                    view.glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
-                }
-                .background(backgroundColor)
-                .if(!applyGlassEffect) { view in
-                    view.clipShape(.rect(cornerRadius: 16))
-                }
+            if applyGlassEffect {
+                content
+                    .padding(internalPadding)
+                    .glassEffect(in: .rect(cornerRadius: 16))
+                    .background(backgroundColor)
+            } else {
+                content
+                    .padding(internalPadding)
+                    .background(backgroundColor)
+                    .clipShape(.rect(cornerRadius: 16))
+            }
         })
         .buttonStyle(.plain)
     }
