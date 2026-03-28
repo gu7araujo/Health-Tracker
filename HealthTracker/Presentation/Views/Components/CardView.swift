@@ -44,6 +44,7 @@ struct CardView<Content: View>: View {
                     .clipShape(.rect(cornerRadius: 16))
             }
         })
+        .contentShape(.rect(cornerRadius: 16))
         .buttonStyle(.plain)
     }
 }
