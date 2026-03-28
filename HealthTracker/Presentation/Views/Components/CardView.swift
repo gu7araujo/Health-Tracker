@@ -14,11 +14,13 @@ struct CardView<Content: View>: View {
 
     private let internalPadding: EdgeInsets
     private let applyGlassEffect: Bool
+    private let glassTint: Color?
     private let action: (() -> Void)?
 
     init(
         internalPadding: EdgeInsets? = nil,
         applyGlassEffect: Bool = true,
+        glassTint: Color? = nil,
         backgroundColor: Binding<Color?> = .constant(nil),
         action: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content
@@ -26,6 +28,7 @@ struct CardView<Content: View>: View {
         self.internalPadding = internalPadding ?? EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
         self.action = action
         self.applyGlassEffect = applyGlassEffect
+        self.glassTint = glassTint
         _backgroundColor = backgroundColor
         self.content = content()
     }
@@ -43,10 +46,15 @@ struct CardView<Content: View>: View {
     @ViewBuilder
     private var card: some View {
         if applyGlassEffect {
-            content
-                .padding(internalPadding)
-                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 16))
-                .background(backgroundColor)
+            if let glassTint {
+                content
+                    .padding(internalPadding)
+                    .glassEffect(.regular.tint(glassTint).interactive(), in: RoundedRectangle(cornerRadius: 16))
+            } else {
+                content
+                    .padding(internalPadding)
+                    .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 16))
+            }
         } else {
             content
                 .padding(internalPadding)
