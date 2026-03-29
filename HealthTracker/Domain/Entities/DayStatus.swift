@@ -18,14 +18,14 @@ enum DayStatus: Equatable {
     case optimal
 
     /// Moderate conditions (ANY one of):
-    /// - Meals: Exactly 1 medium meal
+    /// - Meals: Exactly 2 medium meals
     /// - Water: 1.0-1.7L
     /// - Workouts: < 30 minutes total
     /// - Mood: neutral
     case moderate
 
     /// Poor conditions (ANY one of):
-    /// - Meals: 2+ medium meals OR any large meal
+    /// - Meals: 3+ medium meals OR any large meal
     /// - Water: < 1.0L
     /// - Mood: sad
     case poor

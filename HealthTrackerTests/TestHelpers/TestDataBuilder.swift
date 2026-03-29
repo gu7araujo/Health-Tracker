@@ -59,7 +59,7 @@ enum TestDataBuilder {
     }
 
     /// Creates a moderate day (should result in `.moderate` status).
-    /// - Meals: 1 medium (triggers moderate when other optimal criteria not fully met)
+    /// - Meals: 2 medium (triggers moderate)
     /// - Water: 1.5L (moderate range)
     /// - Workout: 15 min (< 30 min, triggers moderate)
     /// - Mood: Neutral
@@ -68,7 +68,8 @@ enum TestDataBuilder {
         makeDayData(
             date: date,
             meals: [
-                Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty)
+                Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty),
+                Meal(description: "Dinner", quantity: .medium, satisfaction: .eighty)
             ],
             workouts: [Workout(description: "Light workout", duration: Workout.Duration(minutes: 15))],
             water: 1.5,
@@ -77,7 +78,7 @@ enum TestDataBuilder {
     }
 
     /// Creates a poor day (should result in `.poor` status).
-    /// - Meals: 2 medium (2+ medium meals triggers poor)
+    /// - Meals: 3 medium (3+ medium meals triggers poor)
     /// - Water: 0.5L (< 1.0L triggers poor)
     /// - Workout: 30 min (workouts don't affect poor status)
     /// - Mood: Sad
@@ -87,7 +88,8 @@ enum TestDataBuilder {
             date: date,
             meals: [
                 Meal(description: "Breakfast", quantity: .medium, satisfaction: .hundred),
-                Meal(description: "Lunch", quantity: .medium, satisfaction: .hundred)
+                Meal(description: "Lunch", quantity: .medium, satisfaction: .hundred),
+                Meal(description: "Dinner", quantity: .medium, satisfaction: .hundred)
             ],
             workouts: [Workout(description: "Walk", duration: Workout.Duration(minutes: 30))],
             water: 0.5,
