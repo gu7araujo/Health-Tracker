@@ -110,10 +110,10 @@ struct DayData: Codable, Equatable, Identifiable {
         let mediumMealCount = meals.filter { $0.quantity == .medium }.count
         let hasLargeMeal = meals.contains { $0.quantity == .large }
 
-        if mediumMealCount >= 2 || hasLargeMeal {
+        if mediumMealCount >= 3 || hasLargeMeal {
             reasons.append(NSLocalizedString("day_status_reason.meals_multiple_medium", comment: ""))
-        } else if mediumMealCount == 1 {
-            reasons.append(NSLocalizedString("day_status_reason.meals_one_medium", comment: ""))
+        } else if mediumMealCount == 2 {
+            reasons.append(NSLocalizedString("day_status_reason.meals_two_medium", comment: ""))
         }
 
         // Check water issues

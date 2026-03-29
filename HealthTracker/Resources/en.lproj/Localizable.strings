@@ -156,7 +156,7 @@
 "satisfaction_hundred" = "100%";
 
 /* Day Status Reasons */
-"day_status_reason.meals_one_medium" = "1 medium meal";
+"day_status_reason.meals_two_medium" = "2 medium meals";
 "day_status_reason.meals_multiple_medium" = "multiple large/medium meals";
 "day_status_reason.water_low" = "low water intake";
 "day_status_reason.water_moderate" = "moderate water intake";
