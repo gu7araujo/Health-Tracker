@@ -22,7 +22,8 @@ extension CalculateAnalyticsUseCase {
             let dayMinutes = day.workouts.reduce(0) { $0 + $1.duration.minutes }
             let existing = weekdayDist[adjusted] ?? (count: 0, avgDuration: 0)
             let newCount = existing.count + 1
-            weekdayDist[adjusted] = (count: newCount, avgDuration: (existing.avgDuration * existing.count + dayMinutes) / newCount)
+            let newAvg = (existing.avgDuration * existing.count + dayMinutes) / newCount
+            weekdayDist[adjusted] = (count: newCount, avgDuration: newAvg)
         }
 
         var weeklyVolume: [Date: Int] = [:]
