@@ -270,7 +270,8 @@ struct DayDataTests {
         dayData.addMeal(Meal(description: "Breakfast", quantity: .medium, satisfaction: .hundred))
         dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .hundred))
         dayData.addMeal(Meal(description: "Dinner", quantity: .medium, satisfaction: .hundred))
-        dayData.addWorkout(Workout(description: "Long run", duration: Workout.Duration(minutes: 120))) // Even with long workout
+        // Even with long workout
+        dayData.addWorkout(Workout(description: "Long run", duration: Workout.Duration(minutes: 120)))
         dayData.water = 2.0
         dayData.mood = .good
 

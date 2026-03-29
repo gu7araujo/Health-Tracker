@@ -106,7 +106,8 @@ struct ScheduleNotificationsUseCaseTests {
         let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: mockLogger)
         try await useCase.execute()
 
-        let expectedTitle = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "HealthTracker"
+        let expectedTitle = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName")
+            as? String ?? "HealthTracker"
 
         // Verify dynamic app name used as title for all 60 notifications
         #expect(mockService.scheduleNotificationTitles.count == 60)

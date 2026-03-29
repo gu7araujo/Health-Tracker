@@ -78,7 +78,9 @@ struct AddEditModal: View {
 
                 Section {
                     TextField(
-                        section == .meal ? String(localized: "meal_description_placeholder") : String(localized: "workout_description_placeholder"),
+                        section == .meal
+                            ? String(localized: "meal_description_placeholder")
+                            : String(localized: "workout_description_placeholder"),
                         text: $text
                     )
                     .multilineTextAlignment(.center)

@@ -157,9 +157,12 @@ private struct MealsSectionView: View {
                                 Text(meal.description)
                                     .font(.headline)
                                     .padding(.bottom, 5)
-                                Text(String(format: String(localized: "quantity_label"), meal.quantity.localizedName))
-                                    .font(.subheadline)
-                                    .foregroundStyle(.gray)
+                                Text(String(
+                                    format: String(localized: "quantity_label"),
+                                    meal.quantity.localizedName
+                                ))
+                                .font(.subheadline)
+                                .foregroundStyle(.gray)
                                 Text(String(format: String(localized: "satisfaction_label"), meal.satisfaction.localizedName))
                                     .font(.subheadline)
                                     .foregroundStyle(.gray)
@@ -285,9 +288,12 @@ private struct WorkoutsSectionView: View {
                                 Text(workout.description)
                                     .font(.headline)
                                     .padding(.bottom, 5)
-                                Text(String(format: String(localized: "workout_time_label"), workout.duration.localizedName))
-                                    .font(.subheadline)
-                                    .foregroundStyle(.gray)
+                                Text(String(
+                                    format: String(localized: "workout_time_label"),
+                                    workout.duration.localizedName
+                                ))
+                                .font(.subheadline)
+                                .foregroundStyle(.gray)
                             }
                             Spacer()
                         }

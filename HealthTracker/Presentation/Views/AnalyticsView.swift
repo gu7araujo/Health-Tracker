@@ -91,7 +91,8 @@ struct AnalyticsView: View {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                         statItem(String(localized: "days_tracked"), value: "\(analytics.daysTracked)")
                         statItem(String(localized: "optimal_days"), value: "\(analytics.optimalDays)")
-                        statItem(String(localized: "health_score"), value: String(format: "%.0f", analytics.healthScore))
+                        statItem(String(localized: "health_score"),
+                                 value: String(format: "%.0f", analytics.healthScore))
                         statItem(String(localized: "current_streak"), value: "\(analytics.currentOptimalStreak)")
                     }
                 } else {
@@ -121,9 +122,11 @@ struct AnalyticsView: View {
                     // Stats grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                         statItem(String(localized: "total"), value: "\(analytics.totalMeals)")
-                        statItem(String(localized: "average_satisfaction"), value: String(format: "%.0f%%", analytics.averageSatisfaction))
+                        statItem(String(localized: "average_satisfaction"),
+                                 value: String(format: "%.0f%%", analytics.averageSatisfaction))
                         statItem(String(localized: "optimal_days"), value: "\(analytics.optimalDaysCount)")
-                        statItem(String(localized: "common_size"), value: mostCommonQuantity(analytics.quantityDistribution))
+                        statItem(String(localized: "common_size"),
+                                 value: mostCommonQuantity(analytics.quantityDistribution))
                     }
                 } else {
                     sectionEmptyState(
@@ -152,10 +155,12 @@ struct AnalyticsView: View {
 
                     // Stats grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        statItem(String(localized: "daily_average"), value: String(format: "%.1fL", analytics.averageIntake))
+                        statItem(String(localized: "daily_average"),
+                                 value: String(format: "%.1fL", analytics.averageIntake))
                         statItem(String(localized: "days_above_optimal"), value: "\(analytics.daysAboveOptimal)")
                         statItem(String(localized: "maximum"), value: String(format: "%.1fL", analytics.maxIntake))
-                        statItem(String(localized: "consistency"), value: String(format: "%.0f", analytics.consistencyScore))
+                        statItem(String(localized: "consistency"),
+                                 value: String(format: "%.0f", analytics.consistencyScore))
                     }
                 } else {
                     sectionEmptyState(
@@ -212,7 +217,8 @@ struct AnalyticsView: View {
 
                     // Stats grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        statItem(String(localized: "good_days"), value: String(format: "%.0f%%", analytics.goodDaysPercentage))
+                        statItem(String(localized: "good_days"),
+                                 value: String(format: "%.0f%%", analytics.goodDaysPercentage))
                         statItem(String(localized: "good_mood"), value: "\(analytics.distribution[.good] ?? 0)")
                         statItem(String(localized: "neutral_mood"), value: "\(analytics.distribution[.neutral] ?? 0)")
                         statItem(String(localized: "sad_mood"), value: "\(analytics.distribution[.sad] ?? 0)")

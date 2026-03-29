@@ -72,12 +72,11 @@ enum DataMigration {
         // Count workouts that were likely converted from old format
         var convertedCount = 0
         for recordedDay in allRecordedDays {
-            for workout in recordedDay.dayData.workouts {
-                // These minute values indicate they were converted from old enum values
-                if [10, 15, 30, 40, 60, 90, 120].contains(workout.duration.minutes) {
-                    logger.debug("Loaded (auto-converted): '\(workout.description)' = \(workout.duration.minutes)min")
-                    convertedCount += 1
-                }
+            for workout in recordedDay.dayData.workouts
+                where [10, 15, 30, 40, 60, 90, 120].contains(workout.duration.minutes)
+            {
+                logger.debug("Loaded (auto-converted): '\(workout.description)' = \(workout.duration.minutes)min")
+                convertedCount += 1
             }
         }
         if convertedCount > 0 {

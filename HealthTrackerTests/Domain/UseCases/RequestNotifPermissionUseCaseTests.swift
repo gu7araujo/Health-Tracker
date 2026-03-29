@@ -1,5 +1,5 @@
 //
-//  RequestNotificationPermissionUseCaseTests.swift
+//  RequestNotifPermissionUseCaseTests.swift
 //  HealthTrackerTests
 //
 //  Created by Gustavo Araujo Santos on 02/28/26.
@@ -10,7 +10,7 @@ import Foundation
 import Testing
 
 @MainActor
-struct RequestNotificationPermissionUseCaseTests {
+struct RequestNotifPermissionUseCaseTests {
     // MARK: - Execute (Permission Request) Tests
 
     @Test func execute_requestsPermissionWithCorrectOptions() async throws {

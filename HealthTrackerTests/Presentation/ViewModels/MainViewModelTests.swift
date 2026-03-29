@@ -13,10 +13,9 @@ import Testing
 struct MainViewModelTests {
     // MARK: - Test Helpers
 
-    private func createViewModel() -> (
-        viewModel: MainViewModel,
-        mockRepository: MockHealthDataRepository
-    ) {
+    private func createViewModel() -> (viewModel: MainViewModel,
+                                       mockRepository: MockHealthDataRepository)
+    {
         let mockRepository = MockHealthDataRepository()
         let mockLogger = MockLogger()
         let loadUseCase = LoadDayDataUseCase(repository: mockRepository, logger: mockLogger)

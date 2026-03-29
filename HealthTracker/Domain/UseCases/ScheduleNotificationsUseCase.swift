@@ -116,7 +116,9 @@ final class ScheduleNotificationsUseCase {
                 let eveningDate = now.addingTimeInterval(180)
 
                 let lunchComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: lunchDate)
-                let eveningComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: eveningDate)
+                let eveningComponents = calendar.dateComponents(
+                    [.year, .month, .day, .hour, .minute], from: eveningDate
+                )
 
                 return (lunchComponents, eveningComponents)
             } else {

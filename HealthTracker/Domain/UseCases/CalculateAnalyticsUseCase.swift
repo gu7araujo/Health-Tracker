@@ -35,7 +35,9 @@ final class CalculateAnalyticsUseCase {
             period: period
         )
 
-        logger.info("Analytics calculated: \(analytics.mealAnalytics.totalMeals) meals, \(analytics.workoutAnalytics.totalWorkouts) workouts")
+        let meals = analytics.mealAnalytics.totalMeals
+        let workouts = analytics.workoutAnalytics.totalWorkouts
+        logger.info("Analytics calculated: \(meals) meals, \(workouts) workouts")
 
         return analytics
     }
