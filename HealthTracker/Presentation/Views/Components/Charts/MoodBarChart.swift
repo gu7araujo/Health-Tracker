@@ -12,7 +12,7 @@ import SwiftUI
 struct MoodBarChart: View {
     let distribution: [Mood: Int]
 
-    private var chartData: [(mood: Mood, count: Int, color: Color)] {
+    private var chartData: [MoodChartItem] {
         distribution
             .filter { $0.value > 0 }
             .map { mood, count in
@@ -21,7 +21,7 @@ struct MoodBarChart: View {
                 case .neutral: .orange
                 case .sad: .red
                 }
-                return (mood: mood, count: count, color: color)
+                return MoodChartItem(mood: mood, count: count, color: color)
             }
             .sorted { $0.mood.rawValue < $1.mood.rawValue }
     }
@@ -48,6 +48,12 @@ struct MoodBarChart: View {
         }
         .frame(height: 200)
     }
+}
+
+private struct MoodChartItem {
+    let mood: Mood
+    let count: Int
+    let color: Color
 }
 
 #Preview {

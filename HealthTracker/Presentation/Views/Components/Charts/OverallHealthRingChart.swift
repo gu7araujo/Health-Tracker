@@ -12,12 +12,12 @@ import SwiftUI
 struct OverallHealthRingChart: View {
     let statusDistribution: [DayStatus: Int]
 
-    private var chartData: [(status: DayStatus, count: Int, color: Color)] {
+    private var chartData: [StatusChartItem] {
         statusDistribution
             .filter { $0.value > 0 }
             .map { status, count in
                 let color: Color = status.color ?? .clear
-                return (status: status, count: count, color: color)
+                return StatusChartItem(status: status, count: count, color: color)
             }
             .sorted { $0.count > $1.count }
     }
@@ -84,6 +84,12 @@ struct OverallHealthRingChart: View {
         case .noData: String(localized: "chart_no_data")
         }
     }
+}
+
+private struct StatusChartItem {
+    let status: DayStatus
+    let count: Int
+    let color: Color
 }
 
 #Preview {
