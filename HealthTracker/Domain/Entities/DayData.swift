@@ -77,11 +77,12 @@ struct DayData: Codable, Equatable, Identifiable {
         guard categoriesCount >= 2 else { return .incomplete }
 
         // 2-4 categories have data: evaluate status
+        // Poor is checked first — any poor signal always wins
+        if meetsPoorCriteria { return .poor }
+
         if meetsOptimalCriteria { return .optimal }
 
         if meetsModerateCriteria { return .moderate }
-
-        if meetsPoorCriteria { return .poor }
 
         // Fallback: has data but doesn't meet any specific criteria
         return .poor
@@ -193,13 +194,13 @@ struct DayData: Codable, Equatable, Identifiable {
 
     /// Checks if any moderate (yellow) criteria are met.
     /// Requirements (ANY one of):
-    /// - Meals: Exactly 1 medium meal (satiety ignored)
+    /// - Meals: Exactly 2 medium meals (satiety ignored)
     /// - Water: >= 1.0L AND < 1.8L
     /// - Workouts: Total duration < 30 min
     /// - Mood: neutral
     private var meetsModerateCriteria: Bool {
         let mediumMealCount = meals.filter { $0.quantity == .medium }.count
-        let hasModerateMeals = mediumMealCount == 1
+        let hasModerateMeals = mediumMealCount == 2
 
         let waterAmount = water ?? 0
         let hasModerateWater = waterAmount >= 1.0 && waterAmount < 1.8
@@ -213,14 +214,14 @@ struct DayData: Codable, Equatable, Identifiable {
 
     /// Checks if any poor (red) criteria are met.
     /// Requirements (ANY one of):
-    /// - Meals: 2+ medium meals OR any large meal (satiety ignored)
+    /// - Meals: 3+ medium meals OR any large meal (satiety ignored)
     /// - Water: < 1.0L (or nil)
     /// - Mood: sad
     /// Note: Workouts don't affect poor status
     private var meetsPoorCriteria: Bool {
         let mediumMealCount = meals.filter { $0.quantity == .medium }.count
         let hasLargeMeal = meals.contains { $0.quantity == .large }
-        let poorMeals = mediumMealCount >= 2 || hasLargeMeal
+        let poorMeals = mediumMealCount >= 3 || hasLargeMeal
 
         let lowWater = (water ?? 0) < 1.0
         let badMood = mood == .sad

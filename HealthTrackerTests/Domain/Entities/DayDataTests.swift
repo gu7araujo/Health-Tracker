@@ -106,6 +106,44 @@ struct DayDataTests {
         #expect(dayData.status != .optimal)
     }
 
+    @Test("Two medium meals trigger moderate status")
+    func status_isModerate_withTwoMediumMeals() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Breakfast", quantity: .medium, satisfaction: .fifty))
+        dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .fifty))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .moderate)
+    }
+
+    @Test("Three or more medium meals trigger poor status")
+    func status_isPoor_withThreeOrMoreMediumMeals() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Breakfast", quantity: .medium, satisfaction: .fifty))
+        dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .fifty))
+        dayData.addMeal(Meal(description: "Dinner", quantity: .medium, satisfaction: .fifty))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .poor)
+    }
+
+    @Test("Poor status takes priority over moderate when both signals are present")
+    func status_isPoor_prioritizedOverModerate() {
+        // 2 medium meals (moderate meal signal) + low water (poor signal)
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "Breakfast", quantity: .medium, satisfaction: .fifty))
+        dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .fifty))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
+        dayData.water = 0.5
+        dayData.mood = .good
+
+        #expect(dayData.status == .poor)
+    }
+
     @Test("Water below 1.8L prevents optimal status")
     func status_isNotOptimal_whenWaterBelowThreshold() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
@@ -231,11 +269,12 @@ struct DayDataTests {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(Meal(description: "Breakfast", quantity: .medium, satisfaction: .hundred))
         dayData.addMeal(Meal(description: "Lunch", quantity: .medium, satisfaction: .hundred))
+        dayData.addMeal(Meal(description: "Dinner", quantity: .medium, satisfaction: .hundred))
         dayData.addWorkout(Workout(description: "Long run", duration: Workout.Duration(minutes: 120))) // Even with long workout
         dayData.water = 2.0
         dayData.mood = .good
 
-        #expect(dayData.status == .poor) // Poor due to 2+ medium meals
+        #expect(dayData.status == .poor) // Poor due to 3+ medium meals
     }
 
     @Test("One medium meal with optimal workout is optimal")
