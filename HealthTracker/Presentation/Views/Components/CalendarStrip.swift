@@ -15,6 +15,7 @@ struct CalendarStrip: View {
     @State private var dates: [Date] = []
     @State private var isLoadingPast = false
     @State private var needsMorePastDates = false
+    @State private var needsInitialScroll = true
 
     /// Calendar configuration using system locale and timezone, with Monday as first day of week.
     private var brazilianCalendar: Calendar {
@@ -55,7 +56,15 @@ struct CalendarStrip: View {
                 .onAppear {
                     if dates.isEmpty {
                         loadInitialDates()
-                        scrollToCurrentWeek(using: proxy)
+                    }
+                }
+                .onChange(of: dates) { _, newDates in
+                    guard needsInitialScroll, !newDates.isEmpty else { return }
+                    needsInitialScroll = false
+                    if let startOfCurrentWeek = brazilianCalendar.dateInterval(of: .weekOfYear, for: Date())?.start {
+                        Task { @MainActor in
+                            proxy.scrollTo(startOfCurrentWeek, anchor: .leading)
+                        }
                     }
                 }
             }
@@ -117,14 +126,6 @@ struct CalendarStrip: View {
         }
 
         dates = tempDates
-    }
-
-    private func scrollToCurrentWeek(using proxy: ScrollViewProxy) {
-        if let startOfCurrentWeek = brazilianCalendar.dateInterval(of: .weekOfYear, for: Date())?.start {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                proxy.scrollTo(startOfCurrentWeek, anchor: .leading)
-            }
-        }
     }
 
     private func checkAndLoadPast(for date: Date) {
