@@ -1,26 +1,5 @@
 {
   "mcpServers": {
-    "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "CONTEXT7_API_KEY": "ctx7sk-a86ef177-6fa0-480e-a177-12be98124002"
-      }
-    },
-    "serena": {
-      "command": "uvx",
-      "args": [
-        "--from",
-        "git+https://github.com/oraios/serena",
-        "serena",
-        "start-mcp-server",
-        "--context",
-        "claude-code",
-        "--project-from-cwd",
-        "--open-web-dashboard",
-        "false"
-      ]
-    },
     "xcode-tools": {
       "command": "xcrun",
       "args": [
