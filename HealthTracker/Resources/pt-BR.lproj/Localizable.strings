@@ -1,6 +1,5 @@
 /* Navigation and Titles */
 "app_title" = "Monitore sua saúde";
-"analytics_title" = "Gráficos";
 "add_button" = "Adicionar";
 
 /* Add Record Dialog */
@@ -15,9 +14,7 @@
 "water_section" = "Água";
 "workouts_section" = "Exercícios";
 "mood_section" = "Humor";
-"overall_health_section" = "Saúde Geral";
 "health_section" = "Saúde";
-"workouts_analytics_section" = "Treinos";
 
 /* Meal Details */
 "quantity_label" = "Quantidade: %@";
@@ -35,52 +32,12 @@
 
 /* Empty States */
 "empty_list" = "Lista vazia!";
-"no_data_title" = "Sem Dados Suficientes";
-"no_data_message" = "Comece a registrar seus dados diários para ver gráficos e análises.";
 
 /* Loading */
 "loading" = "Carregando...";
 
 /* Mood Prompt */
 "mood_prompt" = "Como está o seu humor hoje?";
-
-/* Chart Axis Labels */
-"chart_date" = "Data";
-"chart_liters" = "Litros";
-"chart_optimal" = "Ótimo";
-"chart_moderate" = "Moderado";
-"chart_size" = "Tamanho";
-"chart_count" = "Contagem";
-"chart_mood" = "Humor";
-"chart_days" = "Dias";
-"chart_week" = "Semana";
-"chart_minutes" = "Minutos";
-
-/* Analytics Stats Labels */
-"days_tracked" = "Dias Rastreados";
-"optimal_days" = "Dias Ótimos";
-"health_score" = "Pontuação Saúde";
-"current_streak" = "Sequência Atual";
-"total" = "Total";
-"average_satisfaction" = "Satisfação Média";
-"common_size" = "Tamanho Comum";
-"daily_average" = "Média Diária";
-"days_above_optimal" = "Dias > 1.8L";
-"maximum" = "Máximo";
-"consistency" = "Consistência";
-"total_minutes" = "Minutos Totais";
-"average_duration" = "Duração Média";
-"good_days" = "Dias Bons";
-"good_mood" = "😁 Bom";
-"neutral_mood" = "😐 Neutro";
-"sad_mood" = "😔 Triste";
-
-/* Empty State Messages by Section */
-"empty_overall_health" = "Nenhum dado de saúde registrado neste período";
-"empty_meals" = "Nenhuma refeição registrada neste período";
-"empty_water" = "Nenhum consumo de água registrado neste período";
-"empty_workouts" = "Nenhum treino registrado neste período";
-"empty_mood" = "Nenhum humor registrado neste período";
 
 /* Add/Edit Modal */
 "add_meal_title" = "Nova Refeição";
@@ -97,36 +54,14 @@
 "duration_picker_label" = "Duração";
 "workout_time_label" = "Tempo: %@";
 
-/* Chart Status Labels */
-"chart_poor" = "Pobre";
-"chart_incomplete" = "Incompleto";
-"chart_no_data" = "Sem dados";
-
 /* Notification Messages */
 "notification_lunch" = "Registre o que você comeu hoje";
 "notification_evening" = "Registre suas refeições e atividades";
-
-/* Tab Bar */
-"tab_today" = "Hoje";
-"tab_analytics" = "Gráficos";
 
 /* Mood Options */
 "mood_good" = "Bom";
 "mood_neutral" = "Neutro";
 "mood_sad" = "Ruim";
-
-/* Period Selector */
-"period_label" = "Período";
-"period_this_week" = "Esta Semana";
-"period_last_7_days" = "Últimos 7 Dias";
-"period_last_30_days" = "Últimos 30 Dias";
-"period_custom_placeholder" = "Período Personalizado...";
-"period_custom_title" = "Período Personalizado";
-"period_start_date" = "Data Inicial";
-"period_end_date" = "Data Final";
-"period_select_prompt" = "Selecione o Período";
-"period_days_selected" = "Dias selecionados: %d";
-"period_apply_button" = "Aplicar";
 
 /* Day Status Explanation */
 "day_status_explanation.optimal" = "Ótimo dia: Todas as metas atingidas.";
@@ -142,12 +77,6 @@
 "duration_format_minutes" = "%dmin";
 "duration_format_hours" = "%dh";
 "duration_format_hours_minutes" = "%dh%dmin";
-
-/* Workout Duration Range */
-"duration_range_short" = "Curto (< 20m)";
-"duration_range_medium" = "Médio (20-45m)";
-"duration_range_long" = "Longo (45-75m)";
-"duration_range_very_long" = "Muito longo (75m+)";
 
 /* Meal Satisfaction Options */
 "satisfaction_thirty" = "30%";

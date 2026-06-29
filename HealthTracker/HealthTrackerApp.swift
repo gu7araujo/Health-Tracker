@@ -20,17 +20,7 @@ struct HealthTrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TabView {
-                MainView()
-                    .tabItem {
-                        Label(String(localized: "tab_today"), systemImage: "calendar")
-                    }
-
-                AnalyticsView()
-                    .tabItem {
-                        Label(String(localized: "tab_analytics"), systemImage: "chart.xyaxis.line")
-                    }
-            }
+            MainView()
         }
     }
 }

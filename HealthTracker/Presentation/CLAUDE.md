@@ -5,19 +5,11 @@
 | Path | File | Purpose |
 |---|---|---|
 | `ViewModels/` | `MainViewModel.swift` | Manages state and logic for the main health tracking screen |
-| `ViewModels/` | `AnalyticsViewModel.swift` | Drives analytics tab by invoking `CalculateAnalyticsUseCase` |
-| `Views/` | `MainView.swift` | Root view with tabs; owns `MainViewModel` via `@State` |
-| `Views/` | `AnalyticsView.swift` | Analytics tab; renders charts from `AnalyticsViewModel` |
+| `Views/` | `MainView.swift` | Root view; owns `MainViewModel` via `@State` |
 | `Views/` | `AddEditModal.swift` | Sheet for adding or editing a health entry |
 | `Views/Components/` | `CardView.swift` | Reusable card with iOS 26 Liquid Glass `.glassEffect()` styling |
 | `Views/Components/` | `CardListView.swift` | List wrapper styled with `CardView` |
 | `Views/Components/` | `CalendarStrip.swift` | Horizontal date-picker strip for day navigation |
-| `Views/Components/` | `PeriodSelector.swift` | Segmented control for selecting analytics time period |
-| `Views/Components/Charts/` | `MealsBarChart.swift` | Bar chart visualising meal data |
-| `Views/Components/Charts/` | `WorkoutsBarChart.swift` | Bar chart visualising workout data |
-| `Views/Components/Charts/` | `MoodBarChart.swift` | Bar chart visualising mood data |
-| `Views/Components/Charts/` | `WaterLineChart.swift` | Line chart visualising water intake |
-| `Views/Components/Charts/` | `OverallHealthRingChart.swift` | Ring chart showing overall health score |
 
 ## Data Flow
 
@@ -27,10 +19,6 @@
 4. Use case coordinates with repository
 5. Repository delegates to data source for persistence
 6. SwiftUI observes ViewModel changes and re-renders
-7. Analytics tab loads → `AnalyticsViewModel` calls `CalculateAnalyticsUseCase`
-8. Use case retrieves filtered days from repository (`loadDaysInRange`)
-9. Use case calculates all analytics metrics and returns `AnalyticsData`
-10. View renders charts using Swift Charts framework with computed data
 
 ## Key Patterns
 
@@ -134,8 +122,6 @@ Group keys by feature area using snake_case prefixes:
 | `meal_quantity_*` | `Meal.Quantity` enum cases |
 | `satisfaction_*` | `Meal.Satisfaction` enum cases |
 | `mood_*` | `Mood` enum cases |
-| `period_*` | `AnalyticsPeriod` display names and period selector UI |
-| `chart_*` | Chart axis labels and status labels |
 | `day_status_explanation.*` | `DayData.statusExplanation` strings |
 | `day_status_reason.*` | Status reason fragments |
 | `empty_*` | Empty state messages |

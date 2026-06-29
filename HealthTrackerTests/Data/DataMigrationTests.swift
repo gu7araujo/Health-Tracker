@@ -88,38 +88,4 @@ struct DataMigrationTests {
             #expect(expectedMinutes >= 10)
         }
     }
-
-    // MARK: - DurationRange Tests
-
-    @Test(arguments: [
-        (5, DurationRange.short),
-        (15, DurationRange.short),
-        (25, DurationRange.medium),
-        (40, DurationRange.medium),
-        (50, DurationRange.long),
-        (70, DurationRange.long),
-        (80, DurationRange.veryLong),
-        (120, DurationRange.veryLong)
-    ])
-    func durationRange_initialization_categoriesCorrectly(minutes: Int, expectedRange: DurationRange) {
-        let range = DurationRange(minutes: minutes)
-
-        #expect(range == expectedRange)
-    }
-
-    @Test func durationRange_localizedNames_areNonEmpty() {
-        #expect(!DurationRange.short.localizedName.isEmpty)
-        #expect(!DurationRange.medium.localizedName.isEmpty)
-        #expect(!DurationRange.long.localizedName.isEmpty)
-        #expect(!DurationRange.veryLong.localizedName.isEmpty)
-    }
-
-    @Test func durationRange_codable_roundTrip() throws {
-        let original = DurationRange.medium
-
-        let encoded = try JSONEncoder().encode(original)
-        let decoded = try JSONDecoder().decode(DurationRange.self, from: encoded)
-
-        #expect(decoded == original)
-    }
 }

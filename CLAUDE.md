@@ -1,34 +1,36 @@
 # Project: Health Tracker iOS Mobile App
 
-HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Swift 6. The app helps users monitor and analyze daily habits including meals, water intake, workouts, and mood with comprehensive charts, insights, and trend visualizations. It uses a Clean Architecture approach with clear separation between Domain, Data, and Presentation layers.
+HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Swift 6. The app helps users monitor and analyze daily habits including meals, water intake, workouts, and mood. It uses a Clean Architecture approach with clear separation between Domain, Data, and Presentation layers.
 
 ## Technology Stack
 
 - **Language**: Swift 6
 - **UI Framework**: SwiftUI with iOS 26+ Liquid Glass effects
-- **Charts**: Swift Charts (native iOS 16+)
 - **Target**: iOS 26.0+
 - **Architecture**: Clean Architecture (Domain/Data/Presentation)
 - **Persistence**: iCloud Drive (JSON file) with local Documents fallback; migrated from UserDefaults
 - **State Management**: @Observable macro
+
+## Build System Notes
+
+- The project uses `PBXFileSystemSynchronizedRootGroup`, so deleting files auto-removes them from the build — no `project.pbxproj` edits needed.
 
 ## Repo Map
 
 | Path | Purpose |
 |------|---------|
 | `HealthTracker/HealthTrackerApp.swift` | App entry point; wires dependencies and bootstraps the app |
-| `HealthTracker/Domain/Entities/` | Core business models: `DayData`, `Meal`, `Workout`, `Mood`, analytics types |
+| `HealthTracker/Domain/Entities/` | Core business models: `DayData`, `Meal`, `Workout`, `Mood` |
 | `HealthTracker/Domain/Protocols/` | Abstract interfaces for repository, notifications, and logging |
-| `HealthTracker/Domain/UseCases/` | Business operations: load/save data, calculate analytics, manage notifications |
+| `HealthTracker/Domain/UseCases/` | Business operations: load/save data, manage notifications |
 | `HealthTracker/Data/DataSources/` | Storage drivers: `ICloudDriveDataSource` (default), `UserDefaultsDataSource` (legacy) |
 | `HealthTracker/Data/Repositories/` | `HealthDataRepository` — orchestrates data sources behind the domain protocol |
 | `HealthTracker/Data/Models/` | DTOs: `DayDataContainer` (Codable JSON wrapper) |
 | `HealthTracker/Data/Migration/` | One-time migrations: UserDefaults → iCloud, workout duration format |
 | `HealthTracker/Data/Services/` | Platform services: notifications (`NotificationService`), logging (`OSLogLogger`) |
-| `HealthTracker/Presentation/ViewModels/` | `MainViewModel`, `AnalyticsViewModel` — state management via `@Observable` |
-| `HealthTracker/Presentation/Views/` | `MainView` (daily tracking), `AnalyticsView` (charts & insights), `AddEditModal` |
-| `HealthTracker/Presentation/Views/Components/` | Reusable UI: `CardView`, `CardListView`, `CalendarStrip`, `PeriodSelector` |
-| `HealthTracker/Presentation/Views/Components/Charts/` | Swift Charts views: water, workouts, mood, meals, overall health ring |
+| `HealthTracker/Presentation/ViewModels/` | `MainViewModel` — state management via `@Observable` |
+| `HealthTracker/Presentation/Views/` | `MainView` (daily tracking), `AddEditModal` |
+| `HealthTracker/Presentation/Views/Components/` | Reusable UI: `CardView`, `CardListView`, `CalendarStrip` |
 | `HealthTracker/Extensions/` | SwiftUI `View` helpers |
 | `HealthTracker/Resources/` | Localizable strings for `en` and `pt-BR` |
 | `HealthTrackerTests/Domain/` | Unit tests for entities and use cases |
@@ -110,9 +112,15 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## Worktrees
+
+- Create git worktrees at the root directory inside `.worktrees/` (e.g. `.worktrees/<branch-name>`)
+- Only create a worktree when the user explicitly requests one
+
 ## Do Not
 
 - Commit without running code quality and tests
+- Commit on the `main` branch without the user asking for it or confirming first
 
 ## Code Quality
 

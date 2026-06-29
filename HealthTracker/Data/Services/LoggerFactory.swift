@@ -34,7 +34,7 @@ enum LoggerFactory {
 
     /// Create a logger for the Presentation layer (ViewModels, UI coordination).
     ///
-    /// - Parameter category: Feature identifier (e.g., "MainView", "AnalyticsView")
+    /// - Parameter category: Feature identifier (e.g., "MainView")
     /// - Returns: Logger instance configured for presentation layer
     static func presentationLogger(category: String) -> LoggerProtocol {
         OSLogLogger(subsystem: "com.healthtracker.presentation", category: category)
