@@ -25,10 +25,10 @@
 		B7F1A0012F4C000000000001 /* Exceptions for "HealthTracker" folder in "HealthTracker" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Data/AGENTS.md,
-				Domain/AGENTS.md,
+				Data/CLAUDE.md,
+				Domain/CLAUDE.md,
 				Info.plist,
-				Presentation/AGENTS.md,
+				Presentation/CLAUDE.md,
 			);
 			target = B756C6112EA3F8900057DE0C /* HealthTracker */;
 		};

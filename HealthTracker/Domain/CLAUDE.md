@@ -1,6 +1,6 @@
 # Domain Layer Architecture
 
-## Directory Structure
+## Directory Map
 
 | Path | Contents |
 |------|----------|
@@ -43,6 +43,7 @@
 </rule_1>
 
 ### Entity Modifications
+
 - Entities are `Codable`, so changes may require migration logic
 - `DayData` computes health status based on business rules (see `status`, `meetsOptimalCriteria`, `meetsModerateCriteria`, `meetsPoorCriteria`)
   - **Status thresholds**: 0 categories → `.noData`, 1 category → `.incomplete`, 2+ categories → evaluated for `.optimal`/`.moderate`/`.poor`
@@ -54,14 +55,3 @@
     - **Note**: Meal satiety is **completely ignored** - only meal size (verySmall/small/medium/large) affects status
     - **Workout duration**: `Workout.Duration` is a struct storing minutes as Int (1-300 range). Sums all workouts in a day (e.g., 2x 15min = 30min total). Supports free-form time input via DatePicker in AddEditModal with `Duration(minutes:)` constructor.
 - Nested enums have localized names (e.g., `Meal.Quantity.localizedName`)
-
-## Available Skills
-
-Use the following skills when writing or reviewing domain layer code. See the **Available Skills** section in the root `AGENTS.md` for the full skill list and descriptions.
-
-| Skill | When to use |
-|-------|-------------|
-| `swift-concurrency` | Designing async use case interfaces, handling actor isolation on domain protocols, or working with `async`/`await` in business logic |
-| `swift-api-design-guidelines` | Naming entities, protocols, use cases, or enum cases to align with Swift API conventions |
-
-Invoke skills via the `Skill` tool **before** responding to any task they cover.

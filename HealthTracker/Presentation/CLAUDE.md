@@ -20,6 +20,7 @@
 | `Views/Components/Charts/` | `OverallHealthRingChart.swift` | Ring chart showing overall health score |
 
 ## Data Flow
+
 1. `MainView` holds `@State private var viewModel = MainViewModel()`
 2. User interactions trigger ViewModel methods
 3. ViewModel updates internal state and calls appropriate use case
@@ -34,11 +35,13 @@
 ## Key Patterns
 
 ### State Management
+
 - Uses Swift's native `@Observable` macro (not `ObservableObject`)
 - View models coordinate between UI and use cases
 - State flows unidirectionally: View → ViewModel → Use Case → Repository → DataSource
 
 ### Dependency Injection
+
 ```swift
 // MainViewModel provides both explicit and convenience initializers
 init(loadUseCase: LoadDayDataUseCase, saveUseCase: SaveDayDataUseCase) // Testable
@@ -46,6 +49,7 @@ convenience init(repository: HealthDataRepositoryProtocol = HealthDataRepository
 ```
 
 ### Modifying Views
+
 - Follow existing section-based composition pattern in `MainView`
 - Extract complex sections into private structs (see `MealsSectionView`, `WorkoutsSectionView`)
 - Use `CardView` for consistent glass effect styling

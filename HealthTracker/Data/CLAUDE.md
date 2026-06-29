@@ -1,6 +1,6 @@
 # Data Layer Architecture
 
-## Directory Structure
+## Directory Map
 
 | Directory / File | Type | Responsibility |
 |---|---|---|
@@ -21,6 +21,7 @@
 
 
 ## Storage
+
 - All persistence goes through `LocalDataSourceProtocol`
 - Default data source is `ICloudDriveDataSource` (iCloud Drive JSON file at `<ubiquityContainer>/Documents/HealthTrackerData.json`)
 - Falls back to local `Documents/HealthTrackerData.json` when iCloud is unavailable
@@ -67,14 +68,3 @@ Type-Driven Design Methodology (Use type system to encode business rules and gua
 - Use **in-memory or fake implementations** of `LocalDataSourceProtocol` (never real `UserDefaults`/files) so tests are fast and parallel-safe
 - Async persistence methods must be `await`-ed in `async` test functions; never use `XCTestExpectation` for new tests
 </rule_4>
-
-## Available Skills
-
-Use the following skills when writing or reviewing data layer code. See the **Available Skills** section in the root `AGENTS.md` for the full skill list and descriptions.
-
-| Skill | When to use |
-|-------|-------------|
-| `swift-concurrency` | Implementing async data sources or repositories, handling actor isolation, `NSFileCoordinator` concurrency, or any `async`/`await` and `@MainActor` patterns |
-| `swift-api-design-guidelines` | Naming data source protocols, repository methods, model types, or migration APIs to align with Swift API conventions |
-
-Invoke skills via the `Skill` tool **before** responding to any task they cover.

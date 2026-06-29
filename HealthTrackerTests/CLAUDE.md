@@ -16,6 +16,7 @@ The project uses **Swift Testing framework** (not XCTest) with comprehensive tes
 | `HealthTrackerTests/TestHelpers/` | Test data builders and utilities |
 
 ## Coverage Areas
+
 - **Domain Layer:** 95%+ (core business logic)
 - **Data Layer:** 80%+ (persistence and data transformation)
 - **Presentation Layer:** 70%+ (ViewModels and state management)
@@ -77,25 +78,3 @@ func localizedName_mappings(mood: Mood, expectedName: String) {
     #expect(mood.localizedName == expectedName)
 }
 ```
-
-## Running Tests
-
-### Using Xcode MCP (preferred)
-
-Use `RunAllTests` or `RunSomeTests` via the Xcode MCP server when Xcode is open. Always call `XcodeListWindows` first to get the `tabIdentifier`. See the **Xcode Bridge** section in the root `AGENTS.md` for the full tool reference.
-
-### Using CLI
-
-Use CLI commands if Xcode MCP doesn't work. See the **Using CLI Commands** section in the root `AGENTS.md` for the full reference.
-
-## Available Skills
-
-Use the following skills when writing or reviewing test code. See the **Available Skills** section in the root `AGENTS.md` for the full skill list and descriptions.
-
-| Skill | When to use |
-|-------|-------------|
-| `swift-testing-expert` | Writing new tests, structuring test suites, using `#expect`/`#require` macros, parameterized tests, async waiting patterns, or debugging flaky tests |
-| `swift-concurrency` | Writing async tests, handling `@MainActor` isolation, or dealing with actor-isolated types in tests |
-| `swift-api-design-guidelines` | Naming test types, helper methods, or mock types to align with Swift API conventions |
-
-Invoke skills via the `Skill` tool **before** responding to any task they cover.
