@@ -49,6 +49,10 @@ struct DayData: Codable, Equatable, Identifiable {
         meals.removeAll { $0.id == id }
     }
 
+    mutating func moveMeal(fromOffsets source: IndexSet, toOffset destination: Int) {
+        meals = Self.moving(meals, fromOffsets: source, toOffset: destination)
+    }
+
     // MARK: - Workout Operations
 
     mutating func addWorkout(_ workout: Workout) {
@@ -62,6 +66,29 @@ struct DayData: Codable, Equatable, Identifiable {
 
     mutating func removeWorkout(id: UUID) {
         workouts.removeAll { $0.id == id }
+    }
+
+    mutating func moveWorkout(fromOffsets source: IndexSet, toOffset destination: Int) {
+        workouts = Self.moving(workouts, fromOffsets: source, toOffset: destination)
+    }
+
+    // MARK: - Reordering Helper
+
+    /// Reorders `array` by removing the elements at `source` and reinserting them at `destination`,
+    /// matching SwiftUI's `onMove` offset semantics without depending on SwiftUI.
+    private static func moving<Element>(
+        _ array: [Element],
+        fromOffsets source: IndexSet,
+        toOffset destination: Int
+    ) -> [Element] {
+        let moved = source.map { array[$0] }
+        var result = array
+        for index in source.sorted(by: >) {
+            result.remove(at: index)
+        }
+        let insertionIndex = destination - source.filter { $0 < destination }.count
+        result.insert(contentsOf: moved, at: insertionIndex)
+        return result
     }
 
     // MARK: - Status Computation

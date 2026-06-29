@@ -21,7 +21,8 @@ struct MainView: View {
                 MealsSectionView(
                     meals: viewModel.currentDayData?.meals ?? [],
                     editingMealId: $editingMealId,
-                    onDelete: { viewModel.deleteMeal(withId: $0) }
+                    onDelete: { viewModel.deleteMeal(withId: $0) },
+                    onMove: { viewModel.moveMeal(fromOffsets: $0, toOffset: $1) }
                 )
                 WaterSectionView(
                     water: viewModel.currentDayData?.water ?? 0,
@@ -31,7 +32,8 @@ struct MainView: View {
                 WorkoutsSectionView(
                     workouts: viewModel.currentDayData?.workouts ?? [],
                     editingWorkoutId: $editingWorkoutId,
-                    onDelete: { viewModel.deleteWorkout(withId: $0) }
+                    onDelete: { viewModel.deleteWorkout(withId: $0) },
+                    onMove: { viewModel.moveWorkout(fromOffsets: $0, toOffset: $1) }
                 )
                 MoodSectionView(
                     currentMood: viewModel.currentDayData?.mood,

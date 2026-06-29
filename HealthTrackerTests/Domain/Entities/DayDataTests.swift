@@ -387,6 +387,20 @@ struct DayDataTests {
         #expect(dayData.meals.count == 1)
     }
 
+    @Test func moveMeal_reordersMeals() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        let meal1 = Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)
+        let meal2 = Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty)
+        let meal3 = Meal(description: "Dinner", quantity: .small, satisfaction: .fifty)
+        dayData.addMeal(meal1)
+        dayData.addMeal(meal2)
+        dayData.addMeal(meal3)
+
+        dayData.moveMeal(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+
+        #expect(dayData.meals.map(\.id) == [meal3.id, meal1.id, meal2.id])
+    }
+
     // MARK: - Workout CRUD Operations
 
     @Test func addWorkout_increasesWorkoutCount() {
@@ -472,6 +486,20 @@ struct DayDataTests {
         dayData.removeWorkout(id: nonExistentId)
 
         #expect(dayData.workouts.count == 1)
+    }
+
+    @Test func moveWorkout_reordersWorkouts() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        let workout1 = Workout(description: "Run", duration: Workout.Duration(minutes: 30))
+        let workout2 = Workout(description: "Gym", duration: Workout.Duration(minutes: 60))
+        let workout3 = Workout(description: "Swim", duration: Workout.Duration(minutes: 45))
+        dayData.addWorkout(workout1)
+        dayData.addWorkout(workout2)
+        dayData.addWorkout(workout3)
+
+        dayData.moveWorkout(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+
+        #expect(dayData.workouts.map(\.id) == [workout3.id, workout1.id, workout2.id])
     }
 
     // MARK: - Helper Methods Tests

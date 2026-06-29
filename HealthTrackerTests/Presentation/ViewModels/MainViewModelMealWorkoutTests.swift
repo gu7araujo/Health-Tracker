@@ -83,6 +83,25 @@ struct MainViewModelMealWorkoutTests {
         #expect(viewModel.currentDayData?.meals.isEmpty == true)
     }
 
+    @Test func moveMeal_reordersItems() {
+        let (viewModel, mockRepository) = createViewModel()
+        mockRepository.loadAllDaysResult = []
+        viewModel.loadData()
+        viewModel.selectedDate = TestDataBuilder.fixedDate
+        let meal1 = Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty)
+        let meal2 = Meal(description: "Lunch", quantity: .medium, satisfaction: .eighty)
+        let meal3 = Meal(description: "Dinner", quantity: .small, satisfaction: .fifty)
+        viewModel.addMeal(meal1)
+        viewModel.addMeal(meal2)
+        viewModel.addMeal(meal3)
+        mockRepository.saveCalledWithDays = nil
+
+        viewModel.moveMeal(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+
+        #expect(viewModel.currentDayData?.meals.map(\.id) == [meal3.id, meal1.id, meal2.id])
+        #expect(mockRepository.saveCalledWithDays != nil)
+    }
+
     @Test func addWorkout_addsToCurrentDay() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []
@@ -137,6 +156,25 @@ struct MainViewModelMealWorkoutTests {
         viewModel.addWorkout(workout)
         viewModel.deleteWorkout(withId: workout.id)
         #expect(viewModel.currentDayData?.workouts.isEmpty == true)
+    }
+
+    @Test func moveWorkout_reordersItems() {
+        let (viewModel, mockRepository) = createViewModel()
+        mockRepository.loadAllDaysResult = []
+        viewModel.loadData()
+        viewModel.selectedDate = TestDataBuilder.fixedDate
+        let workout1 = Workout(description: "Run", duration: Workout.Duration(minutes: 30))
+        let workout2 = Workout(description: "Gym", duration: Workout.Duration(minutes: 60))
+        let workout3 = Workout(description: "Swim", duration: Workout.Duration(minutes: 45))
+        viewModel.addWorkout(workout1)
+        viewModel.addWorkout(workout2)
+        viewModel.addWorkout(workout3)
+        mockRepository.saveCalledWithDays = nil
+
+        viewModel.moveWorkout(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+
+        #expect(viewModel.currentDayData?.workouts.map(\.id) == [workout3.id, workout1.id, workout2.id])
+        #expect(mockRepository.saveCalledWithDays != nil)
     }
 
     @Test func multipleOperations_maintainConsistentState() {

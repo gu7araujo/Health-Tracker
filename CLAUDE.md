@@ -14,6 +14,7 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 ## Build System Notes
 
 - The project uses `PBXFileSystemSynchronizedRootGroup`, so deleting files auto-removes them from the build — no `project.pbxproj` edits needed.
+- If an Xcode MCP tool fails because Xcode is not open, open the project first with `open HealthTracker.xcodeproj`, then retry the tool.
 
 ## Repo Map
 
@@ -115,7 +116,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ## Worktrees
 
 - Create git worktrees at the root directory inside `.worktrees/` (e.g. `.worktrees/<branch-name>`)
-- Only create a worktree when the user explicitly requests one
+- Only create a worktree when the task clearly requires it or the user explicitly requests it
 
 ## Do Not
 

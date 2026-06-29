@@ -180,6 +180,20 @@ final class MainViewModel {
         logger.info("Meal deleted successfully")
     }
 
+    /// Reorders meals within the current day.
+    /// - Parameters:
+    ///   - source: The offsets of the meals being moved.
+    ///   - destination: The offset to move the meals to.
+    func moveMeal(fromOffsets source: IndexSet, toOffset destination: Int) {
+        guard let index = currentDayIndex else {
+            logger.error("Failed to move meal: no current day data")
+            return
+        }
+        days[index].moveMeal(fromOffsets: source, toOffset: destination)
+        persistChanges()
+        logger.info("Meal moved successfully")
+    }
+
     // MARK: - Workout Management
 
     /// Adds a new workout to the current day.
@@ -226,6 +240,20 @@ final class MainViewModel {
         days[index].removeWorkout(id: id)
         persistChanges()
         logger.info("Workout deleted successfully")
+    }
+
+    /// Reorders workouts within the current day.
+    /// - Parameters:
+    ///   - source: The offsets of the workouts being moved.
+    ///   - destination: The offset to move the workouts to.
+    func moveWorkout(fromOffsets source: IndexSet, toOffset destination: Int) {
+        guard let index = currentDayIndex else {
+            logger.error("Failed to move workout: no current day data")
+            return
+        }
+        days[index].moveWorkout(fromOffsets: source, toOffset: destination)
+        persistChanges()
+        logger.info("Workout moved successfully")
     }
 
     // MARK: - Private Methods

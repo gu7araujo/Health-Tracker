@@ -9,6 +9,7 @@ struct MealsSectionView: View {
     let meals: [Meal]
     @Binding var editingMealId: UUID?
     let onDelete: (UUID) -> Void
+    let onMove: (IndexSet, Int) -> Void
 
     var body: some View {
         Group {
@@ -61,8 +62,9 @@ struct MealsSectionView: View {
                     }
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 10, trailing: 20))
+                    .listRowInsets(EdgeInsets(top: 5, leading: 20, bottom: 5, trailing: 20))
                 }
+                .onMove(perform: onMove)
             } else {
                 EmptyListRow()
             }
