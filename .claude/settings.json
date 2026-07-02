@@ -2,8 +2,9 @@
   "permissions": {
     "allow": [
       "mcp__xcode",
-      "swiftlint *",
-      "swiftformat *"
+      "Bash(rocketsim *)",
+      "Bash(swiftlint *)",
+      "Bash(swiftformat *)"
     ]
   },
   "enabledPlugins": {
