@@ -28,6 +28,7 @@ struct WaterSectionView: View {
                         + Text(String(localized: "water_unit")))
                         .font(.title)
                         .bold()
+                        .accessibilityIdentifier(AccessibilityID.waterValueLabel)
                     Slider(
                         value: Binding(get: { waterIntake }, set: { onUpdateWater($0) }),
                         in: 0 ... 5,
@@ -39,6 +40,7 @@ struct WaterSectionView: View {
                     } maximumValueLabel: {
                         Text(String(localized: "water_max_label")).font(.caption)
                     }
+                    .accessibilityIdentifier(AccessibilityID.waterSlider)
                 }
             }
             .listRowSeparator(.hidden)

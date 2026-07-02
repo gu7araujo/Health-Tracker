@@ -44,6 +44,9 @@ struct CalendarStrip: View {
                             ) {
                                 selectedDate = date
                             }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityIdentifier(AccessibilityID.calendarDay(offset: dayOffset(for: date)))
+                            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
                             .frame(width: outerGeometry.size.width / 7)
                             .id(date)
                             .onAppear {
@@ -97,6 +100,16 @@ struct CalendarStrip: View {
 
     private func dayNumber(from date: Date) -> Int {
         brazilianCalendar.component(.day, from: date)
+    }
+
+    /// Offset in days from today (-1 yesterday, 0 today, 1 tomorrow), used for accessibility identifiers.
+    private func dayOffset(for date: Date) -> Int {
+        let calendar = brazilianCalendar
+        return calendar.dateComponents(
+            [.day],
+            from: calendar.startOfDay(for: Date()),
+            to: calendar.startOfDay(for: date)
+        ).day ?? 0
     }
 
     // MARK: - Date Loading

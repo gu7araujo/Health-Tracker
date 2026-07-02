@@ -88,6 +88,7 @@ struct AddEditModal: View {
                             text: $text
                         )
                         .multilineTextAlignment(.center)
+                        .accessibilityIdentifier(AccessibilityID.workoutDescriptionField)
                     }
                 }
 
@@ -100,6 +101,7 @@ struct AddEditModal: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .accessibilityIdentifier(AccessibilityID.modalList)
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -107,6 +109,7 @@ struct AddEditModal: View {
                     Button(String(localized: "close_button"), systemImage: "xmark") {
                         dismiss()
                     }
+                    .accessibilityIdentifier(AccessibilityID.modalCancelButton)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(String(localized: "save_button"), systemImage: "checkmark") {
@@ -115,6 +118,7 @@ struct AddEditModal: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(Color(.systemBlue))
+                    .accessibilityIdentifier(AccessibilityID.modalSaveButton)
                 }
             }
             .onAppear {
@@ -146,6 +150,7 @@ struct AddEditModal: View {
                     )
                 )
                 .multilineTextAlignment(.center)
+                .accessibilityIdentifier(AccessibilityID.mealItemField(index))
                 .overlay(alignment: .trailing) {
                     if index > 0 {
                         Button {
@@ -156,6 +161,7 @@ struct AddEditModal: View {
                         }
                         .buttonStyle(.borderless)
                         .accessibilityLabel(String(localized: "delete_action"))
+                        .accessibilityIdentifier(AccessibilityID.mealItemDeleteButton(index))
                     }
                 }
             }
@@ -167,6 +173,7 @@ struct AddEditModal: View {
                     Label(String(localized: "add_meal_item_button"), systemImage: "plus.circle.fill")
                 }
                 .buttonStyle(.borderless)
+                .accessibilityIdentifier(AccessibilityID.addMealItemButton)
             }
         }
     }
@@ -178,6 +185,7 @@ struct AddEditModal: View {
                     Text(quantity.localizedName).tag(quantity)
                 }
             }
+            .accessibilityIdentifier(AccessibilityID.quantityPicker)
             .onChange(of: selectedQuantity) { _, newQuantity in
                 if !satisfactionWasManuallySet {
                     selectedSatisfaction = newQuantity.defaultSatisfaction
@@ -189,6 +197,7 @@ struct AddEditModal: View {
                     Text(satisfaction.localizedName).tag(satisfaction)
                 }
             }
+            .accessibilityIdentifier(AccessibilityID.satisfactionPicker)
         }
     }
 
@@ -208,6 +217,7 @@ struct AddEditModal: View {
             .datePickerStyle(.wheel)
             .labelsHidden()
             .frame(maxWidth: .infinity)
+            .accessibilityIdentifier(AccessibilityID.durationPicker)
         }
     }
 

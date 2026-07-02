@@ -16,11 +16,61 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 - The project uses `PBXFileSystemSynchronizedRootGroup`, so deleting files auto-removes them from the build — no `project.pbxproj` edits needed.
 - If an Xcode MCP tool fails because Xcode is not open, open the project first with `open HealthTracker.xcodeproj`, then retry the tool.
 
+### Using CLI Commands (if Xcode MCP doesn't work)
+
+#### Building
+
+Build the project
+```bash
+xcodebuild -project HealthTracker.xcodeproj -scheme HealthTracker -configuration Debug build | xcbeautify
+```
+
+Build for testing only (compiles tests without running them):
+```bash
+xcodebuild build-for-testing -project HealthTracker.xcodeproj -scheme HealthTracker | xcbeautify
+```
+
+#### Running Tests
+
+Identify possible simulator ids
+```bash
+xcrun simctl list devices
+```
+
+Run all tests
+```bash
+xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' | xcbeautify
+```
+
+Run specific test file or test
+```bash
+xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerTests/DayDataTests | xcbeautify
+xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerUITests/CalendarUITests/testTodaySelectedOnLaunchAndEmptyStates | xcbeautify
+```
+
+Run all Unit tests (fast)
+```bash
+xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerTests | xcbeautify
+```
+
+Run all UI tests (slow — each test launches the app on a simulator)
+```bash
+xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerUITests | xcbeautify
+```
+
+Run with coverage report
+```bash
+xcodebuild test -scheme HealthTracker -enableCodeCoverage YES -derivedDataPath ./DerivedData
+```
+View coverage report (after running with coverage)
+Open: ./DerivedData/Logs/Test/*.xcresult in Xcode
+
 ## Repo Map
 
 | Path | Purpose |
 |------|---------|
 | `HealthTracker/HealthTrackerApp.swift` | App entry point; wires dependencies and bootstraps the app |
+| `HealthTracker/UITestingSupport.swift` | `-uiTesting` launch-argument hook: temp-dir repository, skips migration and permission prompts |
 | `HealthTracker/Domain/Entities/` | Core business models: `DayData`, `Meal`, `Workout`, `Mood` |
 | `HealthTracker/Domain/Protocols/` | Abstract interfaces for repository, notifications, and logging |
 | `HealthTracker/Domain/UseCases/` | Business operations: load/save data, manage notifications |
@@ -30,6 +80,7 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 | `HealthTracker/Data/Migration/` | One-time migrations: UserDefaults → iCloud, workout duration format |
 | `HealthTracker/Data/Services/` | Platform services: notifications (`NotificationService`), logging (`OSLogLogger`) |
 | `HealthTracker/Presentation/ViewModels/` | `MainViewModel` — state management via `@Observable` |
+| `HealthTracker/Presentation/AccessibilityID.swift` | Accessibility identifiers for UI testing (source of truth; mirrored in the UITests target) |
 | `HealthTracker/Presentation/Views/` | `MainView` (daily tracking), `AddEditModal` |
 | `HealthTracker/Presentation/Views/Components/` | Reusable UI: `CardView`, `CardListView`, `CalendarStrip` |
 | `HealthTracker/Extensions/` | SwiftUI `View` helpers |
@@ -39,6 +90,8 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 | `HealthTrackerTests/Presentation/ViewModels/` | ViewModel unit tests |
 | `HealthTrackerTests/Mocks/` | Protocol-backed test doubles |
 | `HealthTrackerTests/TestHelpers/` | `TestDataBuilder` — factory for test fixtures |
+| `HealthTrackerUITests/` | XCUITest suites: `MealFlowUITests`, `WorkoutFlowUITests`, `WaterMoodUITests`, `CalendarUITests` |
+| `HealthTrackerUITests/Support/` | `HealthTrackerUITestCase` (base class + flow helpers), `AccessibilityID` mirror, `EnglishLabel` |
 | `HealthTracker.xcodeproj/` | Xcode project configuration |
 | `docs/` | Project documentation |
 
@@ -51,8 +104,8 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 ## Task Workflow Rules (You MUST follow **always**)
 
 Before writing any code:
-1. State how you will verify this change works (test, bash command, etc.)
-2. Write the test on verification step first
+1. State how you will verify this change works (tests, bash command, etc.)
+2. Write the test on verification step first (unit tests and/or ui tests)
 3. Then implement the code
 4. Run verification and iterate until it passes
 
@@ -62,6 +115,7 @@ Before writing any code:
 - Run the full test suite before considering any task complete
 - All tests must pass clean. Do not commit code that breaks tests or the build
 - If we have a plan, follow it accordingly
+- For every bug fix, create a regression test to ensure the same error doesn't reappear
 
 ### 1. Think Before Coding
 

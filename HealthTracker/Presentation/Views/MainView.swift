@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MainView: View {
-    @State private var viewModel = MainViewModel()
+    @State private var viewModel = MainViewModel(repository: UITestingSupport.makeRepository())
     @State private var addingSection: HealthSection?
     @State private var editingMealId: UUID?
     @State private var editingWorkoutId: UUID?
@@ -49,6 +49,7 @@ struct MainView: View {
                     Button(String(localized: "add_button"), systemImage: "plus") {
                         showAddSelectionAlert = true
                     }
+                    .accessibilityIdentifier(AccessibilityID.addRecordButton)
                 }
             }
             .alert(String(localized: "add_record_title"), isPresented: $showAddSelectionAlert) {

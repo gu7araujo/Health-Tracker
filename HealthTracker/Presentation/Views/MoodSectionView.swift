@@ -56,5 +56,8 @@ struct MoodSectionView: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(AccessibilityID.moodButton(mood))
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }

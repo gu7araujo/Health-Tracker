@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "mcp__xcode"
+      "mcp__xcode",
+      "swiftlint *",
+      "swiftformat *"
     ]
   },
   "enabledPlugins": {

@@ -20,7 +20,7 @@ struct MealsSectionView: View {
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
 
             if !meals.isEmpty {
-                ForEach(meals) { meal in
+                ForEach(Array(meals.enumerated()), id: \.element.id) { index, meal in
                     CardView(
                         internalPadding: .init(top: 15, leading: 15, bottom: 15, trailing: 15),
                         applyGlassEffect: false,
@@ -47,18 +47,22 @@ struct MealsSectionView: View {
                             Spacer()
                         }
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier(AccessibilityID.mealCard(index))
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             onDelete(meal.id)
                         } label: {
                             Label(String(localized: "delete_action"), systemImage: "trash")
                         }
+                        .accessibilityIdentifier(AccessibilityID.mealDeleteButton(index))
                         Button {
                             editingMealId = meal.id
                         } label: {
                             Label(String(localized: "edit_action"), systemImage: "pencil")
                         }
                         .tint(.blue)
+                        .accessibilityIdentifier(AccessibilityID.mealEditButton(index))
                     }
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -67,6 +71,8 @@ struct MealsSectionView: View {
                 .onMove(perform: onMove)
             } else {
                 EmptyListRow()
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier(AccessibilityID.mealsEmptyState)
             }
         }
     }

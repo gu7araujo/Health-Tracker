@@ -20,7 +20,7 @@ struct WorkoutsSectionView: View {
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
 
             if !workouts.isEmpty {
-                ForEach(workouts) { workout in
+                ForEach(Array(workouts.enumerated()), id: \.element.id) { index, workout in
                     CardView(
                         internalPadding: .init(top: 15, leading: 15, bottom: 15, trailing: 15),
                         applyGlassEffect: false,
@@ -41,18 +41,22 @@ struct WorkoutsSectionView: View {
                             Spacer()
                         }
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier(AccessibilityID.workoutCard(index))
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             onDelete(workout.id)
                         } label: {
                             Label(String(localized: "delete_action"), systemImage: "trash")
                         }
+                        .accessibilityIdentifier(AccessibilityID.workoutDeleteButton(index))
                         Button {
                             editingWorkoutId = workout.id
                         } label: {
                             Label(String(localized: "edit_action"), systemImage: "pencil")
                         }
                         .tint(.blue)
+                        .accessibilityIdentifier(AccessibilityID.workoutEditButton(index))
                     }
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -61,6 +65,8 @@ struct WorkoutsSectionView: View {
                 .onMove(perform: onMove)
             } else {
                 EmptyListRow()
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier(AccessibilityID.workoutsEmptyState)
             }
         }
     }
