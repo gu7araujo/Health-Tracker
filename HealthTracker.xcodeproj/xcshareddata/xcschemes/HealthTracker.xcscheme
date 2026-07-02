@@ -41,6 +41,17 @@
                ReferencedContainer = "container:HealthTracker.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "ECEB15C62FF6B999004F0A48"
+               BuildableName = "HealthTrackerUITests.xctest"
+               BlueprintName = "HealthTrackerUITests"
+               ReferencedContainer = "container:HealthTracker.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
