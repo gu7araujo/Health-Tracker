@@ -45,6 +45,7 @@
 "add_workout_title" = "Novo Treino";
 "edit_workout_title" = "Editar Treino";
 "meal_description_placeholder" = "Descrição da refeição";
+"add_meal_item_button" = "Adicionar item";
 "workout_description_placeholder" = "Descrição do treino";
 "close_button" = "Fechar";
 "save_button" = "Salvar";

@@ -13,12 +13,30 @@ enum DataMigration {
     private static let logger = LoggerFactory.dataLogger(category: "Data.Migration")
     private static let iCloudMigrationKey = "iCloudMigrationCompleted"
     private static let durationMigrationKey = "workoutDurationMigrationCompleted"
+    private static let mealItemsMigrationKey = "mealItemsMigrationCompleted"
 
     /// Runs all necessary migrations in sequence.
     /// Safe to call multiple times; each migration checks its own completion flag.
+    /// Before any pending file-rewriting migration, takes a raw-bytes backup of the
+    /// data file so the pre-migration state is always recoverable; if the backup
+    /// fails, file migrations are skipped and retried on the next launch.
     static func migrateIfNeeded() {
         migrateToICloudDrive()
+
+        // Future migrations that rewrite the data file must OR their flag in here
+        let userDefaults = UserDefaults.standard
+        let fileMigrationsPending = !userDefaults.bool(forKey: durationMigrationKey)
+            || !userDefaults.bool(forKey: mealItemsMigrationKey)
+
+        if fileMigrationsPending {
+            guard ICloudDriveDataSource().backUpDataFile() else {
+                logger.error("Skipping data migrations: pre-migration backup failed; will retry next launch")
+                return
+            }
+        }
+
         migrateWorkoutDurations()
+        migrateMealItems()
     }
 
     /// Migrates existing data from UserDefaults to iCloud Drive if not already done.
@@ -93,6 +111,36 @@ enum DataMigration {
         }
 
         userDefaults.set(true, forKey: durationMigrationKey)
+    }
+
+    /// Migrates meals from legacy single `description` string to `items` array on disk.
+    /// - Old format stored `"description": "..."`
+    /// - New format stores `"items": ["..."]`
+    /// - The Codable implementation automatically converts on load, this migration re-saves in new format
+    /// - Safe to call multiple times; only runs once (controlled by flag)
+    private static func migrateMealItems() {
+        let userDefaults = UserDefaults.standard
+
+        guard !userDefaults.bool(forKey: mealItemsMigrationKey) else {
+            logger.debug("Meal items migration already completed, skipping")
+            return
+        }
+
+        logger.debug("Starting meal items migration...")
+
+        let dataSource = ICloudDriveDataSource()
+        let allRecordedDays = dataSource.load() // Codable automatically converts old format on load
+
+        // Re-save all data to persist the new format to disk
+        // This ensures the JSON file is updated from old format ("description") to new format ("items")
+        if !allRecordedDays.isEmpty {
+            dataSource.save(allRecordedDays)
+            logger.info("Re-saved \(allRecordedDays.count) day(s) with new meal items format")
+        } else {
+            logger.debug("No data to migrate")
+        }
+
+        userDefaults.set(true, forKey: mealItemsMigrationKey)
     }
 
     #if DEBUG

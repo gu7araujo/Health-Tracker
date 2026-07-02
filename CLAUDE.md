@@ -42,6 +42,12 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 | `HealthTracker.xcodeproj/` | Xcode project configuration |
 | `docs/` | Project documentation |
 
+## Data Migrations
+
+- Any change that alters the persisted JSON structure (renaming/removing/retyping a field, changing an encoding format, restructuring `DayData`/`Meal`/`Workout`/`Mood` or `DayDataContainer`) must consider adding a migration in `HealthTracker/Data/Migration/DataMigration.swift`.
+- Follow the existing pattern: a private migration function guarded by its own `UserDefaults` completion flag, called from `migrateIfNeeded()`.
+- The goal is that existing users' JSON files on disk/iCloud upgrade cleanly without data loss or breaking the app on launch.
+
 ## Task Workflow Rules (You MUST follow **always**)
 
 Before writing any code:

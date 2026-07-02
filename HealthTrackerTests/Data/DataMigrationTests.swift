@@ -68,6 +68,32 @@ struct DataMigrationTests {
         #expect(aboveMax.minutes == 300) // Clamped to max
     }
 
+    // MARK: - Meal Items Migration Tests
+
+    @Test func migrateMealItems_convertsLegacyDescription() throws {
+        // Legacy JSON with `description` only (no `items`) decodes into `items: [description]`,
+        // which is the conversion migrateMealItems() persists back to disk on re-save.
+        let legacyJSON = """
+        {
+            "id": "\(UUID().uuidString)",
+            "description": "Lunch",
+            "quantity": 2,
+            "satisfaction": 2
+        }
+        """
+        let data = try #require(legacyJSON.data(using: .utf8))
+
+        let decoded = try JSONDecoder().decode(Meal.self, from: data)
+
+        #expect(decoded.items == ["Lunch"])
+
+        // Re-encoding (what the migration's re-save does) persists the new `items` shape
+        let reEncoded = try JSONEncoder().encode(decoded)
+        let json = try #require(try JSONSerialization.jsonObject(with: reEncoded) as? [String: Any])
+        #expect(json["items"] as? [String] == ["Lunch"])
+        #expect(json["description"] == nil)
+    }
+
     @Test func duration_legacyValueMapping() {
         // Test that we understand the legacy enum mapping correctly
         let legacyMappings: [(rawValue: Int, expectedMinutes: Int)] = [

@@ -38,6 +38,18 @@ struct MainViewModelMealWorkoutTests {
         #expect(mockRepository.saveCalledWithDays != nil)
     }
 
+    @Test func addMeal_withMultipleItems_preservesItems() {
+        let (viewModel, mockRepository) = createViewModel()
+        mockRepository.loadAllDaysResult = []
+        viewModel.loadData()
+        viewModel.selectedDate = TestDataBuilder.fixedDate
+        let meal = Meal(items: ["Rice", "Beans", "Chicken"], quantity: .medium, satisfaction: .eighty)
+        viewModel.addMeal(meal)
+        let result = viewModel.meal(withId: meal.id)
+        #expect(result?.items == ["Rice", "Beans", "Chicken"])
+        #expect(result?.description == "Rice, Beans, Chicken")
+    }
+
     @Test func updateMeal_modifiesExistingMeal() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []

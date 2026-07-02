@@ -16,6 +16,7 @@ struct AddEditModal: View {
     private let workoutId: UUID?
 
     @State private var text: String = ""
+    @State private var mealItems: [String] = [""]
     @State private var selectedQuantity: Meal.Quantity = .small
     @State private var selectedSatisfaction: Meal.Satisfaction = .fifty
     @State private var satisfactionWasManuallySet: Bool = false
@@ -26,6 +27,8 @@ struct AddEditModal: View {
         components.minute = 30
         return calendar.date(from: components) ?? Date()
     }()
+
+    private let maxMealItems = 5
 
     private var isEditing: Bool {
         mealId != nil || workoutId != nil
@@ -77,13 +80,15 @@ struct AddEditModal: View {
                 }
 
                 Section {
-                    TextField(
-                        section == .meal
-                            ? String(localized: "meal_description_placeholder")
-                            : String(localized: "workout_description_placeholder"),
-                        text: $text
-                    )
-                    .multilineTextAlignment(.center)
+                    if section == .meal {
+                        mealDescriptionFields
+                    } else {
+                        TextField(
+                            String(localized: "workout_description_placeholder"),
+                            text: $text
+                        )
+                        .multilineTextAlignment(.center)
+                    }
                 }
 
                 Section {
@@ -130,6 +135,42 @@ struct AddEditModal: View {
         )
     }
 
+    private var mealDescriptionFields: some View {
+        Group {
+            ForEach(mealItems.indices, id: \.self) { index in
+                TextField(
+                    String(localized: "meal_description_placeholder"),
+                    text: Binding(
+                        get: { mealItems[index] },
+                        set: { mealItems[index] = $0 }
+                    )
+                )
+                .multilineTextAlignment(.center)
+                .overlay(alignment: .trailing) {
+                    if index > 0 {
+                        Button {
+                            mealItems.remove(at: index)
+                        } label: {
+                            Image(systemName: "minus.circle.fill")
+                                .foregroundStyle(.red)
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel(String(localized: "delete_action"))
+                    }
+                }
+            }
+
+            if mealItems.count < maxMealItems {
+                Button {
+                    mealItems.append("")
+                } label: {
+                    Label(String(localized: "add_meal_item_button"), systemImage: "plus.circle.fill")
+                }
+                .buttonStyle(.borderless)
+            }
+        }
+    }
+
     private var mealFields: some View {
         Group {
             Picker(String(localized: "quantity_picker_label"), selection: $selectedQuantity) {
@@ -174,7 +215,7 @@ struct AddEditModal: View {
 
     private func loadExistingData() {
         if section == .meal, let mealId, let meal = viewModel.meal(withId: mealId) {
-            text = meal.description
+            mealItems = meal.items
             selectedQuantity = meal.quantity
             selectedSatisfaction = meal.satisfaction
             satisfactionWasManuallySet = false
@@ -199,16 +240,22 @@ struct AddEditModal: View {
     }
 
     private func saveMeal() {
+        // Drop blank added fields; the first field is always kept, matching the
+        // previous single-field behavior of not requiring non-empty text
+        let itemsToSave = mealItems.enumerated()
+            .filter { index, item in index == 0 || !item.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .map(\.element)
+
         if let mealId, var existingMeal = viewModel.meal(withId: mealId) {
             // Update existing meal
-            existingMeal.description = text
+            existingMeal.items = itemsToSave
             existingMeal.quantity = selectedQuantity
             existingMeal.satisfaction = selectedSatisfaction
             viewModel.updateMeal(existingMeal)
         } else {
             // Add new meal
             let meal = Meal(
-                description: text,
+                items: itemsToSave,
                 quantity: selectedQuantity,
                 satisfaction: selectedSatisfaction
             )

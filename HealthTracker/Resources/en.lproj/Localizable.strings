@@ -45,6 +45,7 @@
 "add_workout_title" = "New Workout";
 "edit_workout_title" = "Edit Workout";
 "meal_description_placeholder" = "Meal description";
+"add_meal_item_button" = "Add item";
 "workout_description_placeholder" = "Workout description";
 "close_button" = "Close";
 "save_button" = "Save";

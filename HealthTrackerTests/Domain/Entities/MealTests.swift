@@ -101,6 +101,15 @@ struct MealTests {
         #expect(meal.satisfaction == .hundred)
     }
 
+    @Test func initialization_withItems() {
+        let meal = Meal(items: ["Rice", "Beans"])
+
+        #expect(meal.items == ["Rice", "Beans"])
+        #expect(meal.description == "Rice, Beans")
+        #expect(meal.quantity == .small)
+        #expect(meal.satisfaction == .fifty)
+    }
+
     // MARK: - Codable Tests
 
     @Test func codable_roundTrip_preservesAllData() throws {
@@ -129,6 +138,52 @@ struct MealTests {
         #expect(decoded.description == original.description)
         #expect(decoded.quantity == .small)
         #expect(decoded.satisfaction == .fifty)
+    }
+
+    @Test func codable_roundTrip_withMultipleItems() throws {
+        let original = Meal(
+            items: ["Rice", "Beans", "Chicken"],
+            quantity: .medium,
+            satisfaction: .eighty
+        )
+
+        let encoded = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(Meal.self, from: encoded)
+
+        #expect(decoded.id == original.id)
+        #expect(decoded.items == ["Rice", "Beans", "Chicken"])
+        #expect(decoded.description == "Rice, Beans, Chicken")
+        #expect(decoded.quantity == original.quantity)
+        #expect(decoded.satisfaction == original.satisfaction)
+    }
+
+    @Test func decode_legacyDescriptionOnly_fallsBackToSingleItemArray() throws {
+        let legacyJSON = """
+        {
+            "id": "\(UUID().uuidString)",
+            "description": "Breakfast",
+            "quantity": 1,
+            "satisfaction": 1
+        }
+        """
+        let data = try #require(legacyJSON.data(using: .utf8))
+
+        let decoded = try JSONDecoder().decode(Meal.self, from: data)
+
+        #expect(decoded.items == ["Breakfast"])
+        #expect(decoded.description == "Breakfast")
+        #expect(decoded.quantity == .small)
+        #expect(decoded.satisfaction == .fifty)
+    }
+
+    @Test func encode_writesItemsKey_notDescription() throws {
+        let meal = Meal(items: ["Rice", "Beans"])
+
+        let encoded = try JSONEncoder().encode(meal)
+        let json = try #require(try JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+
+        #expect(json["items"] as? [String] == ["Rice", "Beans"])
+        #expect(json["description"] == nil)
     }
 
     // MARK: - Equatable Tests

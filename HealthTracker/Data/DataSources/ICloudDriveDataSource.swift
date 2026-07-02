@@ -15,17 +15,27 @@ import Foundation
 /// because it targets the local ubiquity container copy (small payload).
 final class ICloudDriveDataSource: LocalDataSourceProtocol {
     private let fileName = "HealthTrackerData.json"
+    private let backupFileName = "HealthTrackerData.backup.json"
     private let fileCoordinator = NSFileCoordinator()
     private let logger: LoggerProtocol
+    private let directoryOverride: URL?
 
-    init(logger: LoggerProtocol = LoggerFactory.dataLogger(category: "Storage.iCloud")) {
+    init(
+        logger: LoggerProtocol = LoggerFactory.dataLogger(category: "Storage.iCloud"),
+        directoryOverride: URL? = nil
+    ) {
         self.logger = logger
+        self.directoryOverride = directoryOverride
     }
 
     /// Resolves the file URL: iCloud Documents if available, local Documents otherwise.
     /// Uses `FileManager.url(forUbiquityContainerIdentifier: nil)` for the first container.
     /// Never force-unwraps — returns local fallback URL if iCloud is unavailable.
     private var fileURL: URL {
+        if let directoryOverride {
+            return directoryOverride.appendingPathComponent(fileName)
+        }
+
         if let containerURL = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
             let documentsURL = containerURL.appendingPathComponent("Documents")
             return documentsURL.appendingPathComponent(fileName)
@@ -100,5 +110,48 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
         if let coordinatorError {
             logger.error("File coordination error on write: \(coordinatorError.localizedDescription)")
         }
+    }
+
+    /// Copies the current data file to a rolling backup (`HealthTrackerData.backup.json`)
+    /// in the same directory, overwriting any previous backup. Raw byte copy — never
+    /// decodes/re-encodes, so it preserves data even when decoding is broken.
+    /// The backup is user-visible in the Files app alongside the data file.
+    /// - Returns: `true` when it is safe to proceed (backup written, or no data file
+    ///   to back up); `false` when the data file exists but the copy failed.
+    @discardableResult
+    func backUpDataFile() -> Bool {
+        logger.debug("Backing up data file")
+        let sourceURL = fileURL
+        let backupURL = sourceURL.deletingLastPathComponent().appendingPathComponent(backupFileName)
+        var coordinatorError: NSError?
+        var result = true
+
+        fileCoordinator.coordinate(
+            readingItemAt: sourceURL, options: [],
+            writingItemAt: backupURL, options: .forReplacing,
+            error: &coordinatorError
+        ) { readURL, writeURL in
+            guard FileManager.default.fileExists(atPath: readURL.path) else {
+                return
+            }
+
+            do {
+                if FileManager.default.fileExists(atPath: writeURL.path) {
+                    try FileManager.default.removeItem(at: writeURL)
+                }
+                try FileManager.default.copyItem(at: readURL, to: writeURL)
+                logger.info("Backed up data file to \(backupURL.lastPathComponent)")
+            } catch {
+                logger.error("Failed to back up data file: \(error.localizedDescription)")
+                result = false
+            }
+        }
+
+        if let coordinatorError {
+            logger.error("File coordination error on backup: \(coordinatorError.localizedDescription)")
+            result = false
+        }
+
+        return result
     }
 }
