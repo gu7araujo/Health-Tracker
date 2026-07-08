@@ -67,6 +67,32 @@ struct WorkoutTests {
         #expect(total == 35) // 15 + 10 + 10 = 35
     }
 
+    // MARK: - Intensity Tests
+
+    @Test func intensity_allCases_areOrdered() {
+        #expect(Workout.Intensity.allCases == [.low, .medium, .high])
+    }
+
+    @Test(arguments: [
+        (Workout.Intensity.low, "workout_intensity_low"),
+        (.medium, "workout_intensity_medium"),
+        (.high, "workout_intensity_high")
+    ])
+    func intensity_localizedName_usesLocalizationKey(intensity: Workout.Intensity, key: String) {
+        let expected = NSLocalizedString(key, comment: "")
+
+        #expect(intensity.localizedName == expected)
+    }
+
+    @Test func intensity_codable_roundTrip() throws {
+        for intensity in Workout.Intensity.allCases {
+            let encoded = try JSONEncoder().encode(intensity)
+            let decoded = try JSONDecoder().decode(Workout.Intensity.self, from: encoded)
+
+            #expect(decoded == intensity)
+        }
+    }
+
     // MARK: - Workout Initialization Tests
 
     @Test func initialization_withDefaults() {
@@ -74,6 +100,7 @@ struct WorkoutTests {
 
         #expect(workout.description == "Morning run")
         #expect(workout.duration == Workout.Duration(minutes: 30))
+        #expect(workout.intensity == .medium)
     }
 
     @Test func initialization_withAllParameters() {
@@ -81,12 +108,14 @@ struct WorkoutTests {
         let workout = Workout(
             id: id,
             description: "Gym session",
-            duration: Workout.Duration(minutes: 60)
+            duration: Workout.Duration(minutes: 60),
+            intensity: .high
         )
 
         #expect(workout.id == id)
         #expect(workout.description == "Gym session")
         #expect(workout.duration == Workout.Duration(minutes: 60))
+        #expect(workout.intensity == .high)
     }
 
     // MARK: - Codable Tests
@@ -94,7 +123,8 @@ struct WorkoutTests {
     @Test func codable_roundTrip_preservesAllData() throws {
         let original = Workout(
             description: "Cycling",
-            duration: Workout.Duration(minutes: 90)
+            duration: Workout.Duration(minutes: 90),
+            intensity: .high
         )
 
         let encoded = try JSONEncoder().encode(original)
@@ -103,6 +133,7 @@ struct WorkoutTests {
         #expect(decoded.id == original.id)
         #expect(decoded.description == original.description)
         #expect(decoded.duration == original.duration)
+        #expect(decoded.intensity == .high)
     }
 
     @Test func codable_roundTrip_withDefaults() throws {
@@ -114,6 +145,25 @@ struct WorkoutTests {
         #expect(decoded.id == original.id)
         #expect(decoded.description == original.description)
         #expect(decoded.duration == Workout.Duration(minutes: 30))
+        #expect(decoded.intensity == .medium)
+    }
+
+    @Test func codable_decodesLegacyWorkout_missingIntensity_defaultsToMedium() throws {
+        // Legacy JSON predates `intensity`; decoding must not fail and must default to `.medium`
+        let legacyJSON = """
+        {
+            "id": "\(UUID().uuidString)",
+            "description": "Old run",
+            "duration": {"minutes": 45}
+        }
+        """
+        let data = try #require(legacyJSON.data(using: .utf8))
+
+        let decoded = try JSONDecoder().decode(Workout.self, from: data)
+
+        #expect(decoded.description == "Old run")
+        #expect(decoded.duration == Workout.Duration(minutes: 45))
+        #expect(decoded.intensity == .medium)
     }
 
     // MARK: - Equatable Tests

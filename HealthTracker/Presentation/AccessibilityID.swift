@@ -60,6 +60,7 @@ enum AccessibilityID {
     static let satisfactionPicker = "satisfactionPicker"
     static let workoutDescriptionField = "workoutDescriptionField"
     static let durationPicker = "durationPicker"
+    static let intensityPicker = "intensityPicker"
 
     static func mealItemField(_ index: Int) -> String {
         "mealItemField_\(index)"

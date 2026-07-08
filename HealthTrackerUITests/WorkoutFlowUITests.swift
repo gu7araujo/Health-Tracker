@@ -11,6 +11,8 @@ final class WorkoutFlowUITests: HealthTrackerUITestCase {
         let card = assertExists(element(AccessibilityID.workoutCard(0)))
         XCTAssertTrue(card.label.contains("Run"))
         XCTAssertTrue(card.label.contains("Time: 30m"))
+        // Intensity defaults to Medium and is shown on the card
+        XCTAssertTrue(card.label.contains("Intensity: Medium"))
     }
 
     func testAddWorkoutWithWheelDuration() {
@@ -18,6 +20,13 @@ final class WorkoutFlowUITests: HealthTrackerUITestCase {
         let card = assertExists(element(AccessibilityID.workoutCard(0)))
         XCTAssertTrue(card.label.contains("Bike"))
         XCTAssertTrue(card.label.contains("Time: 1h15m"))
+    }
+
+    func testAddWorkoutWithIntensity() {
+        addWorkout(description: "HIIT", intensity: EnglishLabel.intensityHigh)
+        let card = assertExists(element(AccessibilityID.workoutCard(0)))
+        XCTAssertTrue(card.label.contains("HIIT"))
+        XCTAssertTrue(card.label.contains("Intensity: High"))
     }
 
     func testEditWorkout() {

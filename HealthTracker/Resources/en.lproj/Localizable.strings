@@ -53,7 +53,14 @@
 "satisfaction_picker_label" = "Satisfied";
 "time_label" = "Time";
 "duration_picker_label" = "Duration";
+"intensity_picker_label" = "Intensity";
 "workout_time_label" = "Time: %@";
+"workout_intensity_label" = "Intensity: %@";
+
+/* Workout Intensity Options */
+"workout_intensity_low" = "Low";
+"workout_intensity_medium" = "Medium";
+"workout_intensity_high" = "High";
 
 /* Notification Messages */
 "notification_lunch" = "Log what you ate today";

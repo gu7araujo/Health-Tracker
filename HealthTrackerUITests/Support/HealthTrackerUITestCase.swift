@@ -123,13 +123,16 @@ class HealthTrackerUITestCase: XCTestCase {
         saveModal()
     }
 
-    /// Adds a workout through the UI, optionally adjusting the duration wheels.
-    func addWorkout(description: String, hours: Int? = nil, minutes: Int? = nil) {
+    /// Adds a workout through the UI, optionally adjusting the duration wheels and intensity.
+    func addWorkout(description: String, hours: Int? = nil, minutes: Int? = nil, intensity: String? = nil) {
         openAddModal(choosing: EnglishLabel.workoutOption)
         let field = assertExists(app.textFields[AccessibilityID.workoutDescriptionField])
         field.tap()
         field.typeText(description)
         setDurationWheels(hours: hours, minutes: minutes)
+        if let intensity {
+            selectMenuOption(picker: AccessibilityID.intensityPicker, option: intensity)
+        }
         saveModal()
     }
 
@@ -146,8 +149,12 @@ class HealthTrackerUITestCase: XCTestCase {
     }
 
     /// Taps a menu-style picker row and selects the given option from its menu.
+    /// Scrolls the picker into view first so pickers below the fold (e.g. the workout
+    /// intensity picker under the tall duration wheel in the medium detent) stay reliable.
     func selectMenuOption(picker identifier: String, option: String) {
-        assertExists(element(identifier)).tap()
+        let picker = element(identifier)
+        scrollTo(picker)
+        assertExists(picker).tap()
         assertExists(app.buttons[option]).tap()
     }
 

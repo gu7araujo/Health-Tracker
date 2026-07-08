@@ -94,6 +94,39 @@ struct DataMigrationTests {
         #expect(json["description"] == nil)
     }
 
+    // MARK: - Workout Intensity Migration Tests
+
+    @Test func migrateWorkoutIntensities_defaultsLegacyWorkoutToMedium() throws {
+        // Legacy JSON without `intensity` decodes with `.medium`, which is the value
+        // migrateWorkoutIntensities() persists back to disk on re-save.
+        let legacyJSON = """
+        {
+            "id": "\(UUID().uuidString)",
+            "description": "Run",
+            "duration": {"minutes": 30}
+        }
+        """
+        let data = try #require(legacyJSON.data(using: .utf8))
+
+        let decoded = try JSONDecoder().decode(Workout.self, from: data)
+
+        #expect(decoded.intensity == .medium)
+
+        // Re-encoding (what the migration's re-save does) persists the new `intensity` field
+        let reEncoded = try JSONEncoder().encode(decoded)
+        let json = try #require(try JSONSerialization.jsonObject(with: reEncoded) as? [String: Any])
+        #expect(json["intensity"] as? Int == Workout.Intensity.medium.rawValue)
+    }
+
+    @Test func migrateWorkoutIntensities_preservesExistingIntensity() throws {
+        let workout = Workout(description: "Sprint", duration: Workout.Duration(minutes: 20), intensity: .high)
+
+        let encoded = try JSONEncoder().encode(workout)
+        let decoded = try JSONDecoder().decode(Workout.self, from: encoded)
+
+        #expect(decoded.intensity == .high)
+    }
+
     @Test func duration_legacyValueMapping() {
         // Test that we understand the legacy enum mapping correctly
         let legacyMappings: [(rawValue: Int, expectedMinutes: Int)] = [

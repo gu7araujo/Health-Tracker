@@ -53,7 +53,14 @@
 "satisfaction_picker_label" = "Satisfeito(a)";
 "time_label" = "Tempo";
 "duration_picker_label" = "Duração";
+"intensity_picker_label" = "Intensidade";
 "workout_time_label" = "Tempo: %@";
+"workout_intensity_label" = "Intensidade: %@";
+
+/* Workout Intensity Options */
+"workout_intensity_low" = "Baixa";
+"workout_intensity_medium" = "Média";
+"workout_intensity_high" = "Alta";
 
 /* Notification Messages */
 "notification_lunch" = "Registre o que você comeu hoje";

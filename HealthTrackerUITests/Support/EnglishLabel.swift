@@ -25,6 +25,11 @@ enum EnglishLabel {
     static let satisfactionEighty = "80%"
     static let satisfactionHundred = "100%"
 
+    // Intensity picker options
+    static let intensityLow = "Low"
+    static let intensityMedium = "Medium"
+    static let intensityHigh = "High"
+
     // Swipe actions
     static let deleteAction = "Delete"
     static let editAction = "Edit"

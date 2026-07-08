@@ -4,7 +4,9 @@
       "mcp__xcode",
       "Bash(rocketsim *)",
       "Bash(swiftlint *)",
-      "Bash(swiftformat *)"
+      "Bash(swiftformat *)",
+      "Bash(xcodebuild *)",
+      "Bash(xcbeautify *)"
     ]
   },
   "enabledPlugins": {

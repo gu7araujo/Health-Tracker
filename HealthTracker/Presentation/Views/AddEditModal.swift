@@ -28,6 +28,8 @@ struct AddEditModal: View {
         return calendar.date(from: components) ?? Date()
     }()
 
+    @State private var selectedIntensity: Workout.Intensity = .medium
+
     private let maxMealItems = 5
 
     private var isEditing: Bool {
@@ -204,26 +206,37 @@ struct AddEditModal: View {
     // MARK: - Workout Fields
 
     private var workoutFields: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(String(localized: "time_label"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        Group {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(String(localized: "time_label"))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
 
-            DatePicker(
-                String(localized: "duration_picker_label"),
-                selection: $selectedDuration,
-                displayedComponents: [.hourAndMinute]
-            )
-            .datePickerStyle(.wheel)
-            .labelsHidden()
-            .frame(maxWidth: .infinity)
-            .accessibilityIdentifier(AccessibilityID.durationPicker)
+                DatePicker(
+                    String(localized: "duration_picker_label"),
+                    selection: $selectedDuration,
+                    displayedComponents: [.hourAndMinute]
+                )
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .frame(maxWidth: .infinity)
+                .accessibilityIdentifier(AccessibilityID.durationPicker)
+            }
+
+            Picker(String(localized: "intensity_picker_label"), selection: $selectedIntensity) {
+                ForEach(Workout.Intensity.allCases, id: \.self) { intensity in
+                    Text(intensity.localizedName).tag(intensity)
+                }
+            }
+            .accessibilityIdentifier(AccessibilityID.intensityPicker)
         }
     }
+}
 
-    // MARK: - Data Operations
+// MARK: - Data Operations
 
-    private func loadExistingData() {
+private extension AddEditModal {
+    func loadExistingData() {
         if section == .meal, let mealId, let meal = viewModel.meal(withId: mealId) {
             mealItems = meal.items
             selectedQuantity = meal.quantity
@@ -237,10 +250,11 @@ struct AddEditModal: View {
             components.hour = workout.duration.minutes / 60
             components.minute = workout.duration.minutes % 60
             selectedDuration = calendar.date(from: components) ?? Date()
+            selectedIntensity = workout.intensity
         }
     }
 
-    private func saveEntry() {
+    func saveEntry() {
         switch section {
         case .meal:
             saveMeal()
@@ -249,7 +263,7 @@ struct AddEditModal: View {
         }
     }
 
-    private func saveMeal() {
+    func saveMeal() {
         // Drop blank added fields; the first field is always kept, matching the
         // previous single-field behavior of not requiring non-empty text
         let itemsToSave = mealItems.enumerated()
@@ -273,7 +287,7 @@ struct AddEditModal: View {
         }
     }
 
-    private func saveWorkout() {
+    func saveWorkout() {
         // Extract minutes from DatePicker
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour, .minute], from: selectedDuration)
@@ -284,12 +298,14 @@ struct AddEditModal: View {
             // Update existing workout
             existingWorkout.description = text
             existingWorkout.duration = duration
+            existingWorkout.intensity = selectedIntensity
             viewModel.updateWorkout(existingWorkout)
         } else {
             // Add new workout
             let workout = Workout(
                 description: text,
-                duration: duration
+                duration: duration,
+                intensity: selectedIntensity
             )
             viewModel.addWorkout(workout)
         }

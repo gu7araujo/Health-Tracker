@@ -14,6 +14,7 @@ enum DataMigration {
     private static let iCloudMigrationKey = "iCloudMigrationCompleted"
     private static let durationMigrationKey = "workoutDurationMigrationCompleted"
     private static let mealItemsMigrationKey = "mealItemsMigrationCompleted"
+    private static let workoutIntensityMigrationKey = "workoutIntensityMigrationCompleted"
 
     /// Runs all necessary migrations in sequence.
     /// Safe to call multiple times; each migration checks its own completion flag.
@@ -27,6 +28,7 @@ enum DataMigration {
         let userDefaults = UserDefaults.standard
         let fileMigrationsPending = !userDefaults.bool(forKey: durationMigrationKey)
             || !userDefaults.bool(forKey: mealItemsMigrationKey)
+            || !userDefaults.bool(forKey: workoutIntensityMigrationKey)
 
         if fileMigrationsPending {
             guard ICloudDriveDataSource().backUpDataFile() else {
@@ -37,6 +39,7 @@ enum DataMigration {
 
         migrateWorkoutDurations()
         migrateMealItems()
+        migrateWorkoutIntensities()
     }
 
     /// Migrates existing data from UserDefaults to iCloud Drive if not already done.
@@ -141,6 +144,36 @@ enum DataMigration {
         }
 
         userDefaults.set(true, forKey: mealItemsMigrationKey)
+    }
+
+    /// Migrates workouts to persist the newly added `intensity` field on disk.
+    /// - Old format had no `intensity` key
+    /// - The Codable implementation defaults missing `intensity` to `.medium` on load; this
+    ///   migration re-saves so the field is written to disk in the new format
+    /// - Safe to call multiple times; only runs once (controlled by flag)
+    private static func migrateWorkoutIntensities() {
+        let userDefaults = UserDefaults.standard
+
+        guard !userDefaults.bool(forKey: workoutIntensityMigrationKey) else {
+            logger.debug("Workout intensity migration already completed, skipping")
+            return
+        }
+
+        logger.debug("Starting workout intensity migration...")
+
+        let dataSource = ICloudDriveDataSource()
+        let allRecordedDays = dataSource.load() // Codable defaults missing intensity to .medium on load
+
+        // Re-save all data to persist the new format to disk
+        // This ensures the JSON file gains the `intensity` field for existing workouts
+        if !allRecordedDays.isEmpty {
+            dataSource.save(allRecordedDays)
+            logger.info("Re-saved \(allRecordedDays.count) day(s) with workout intensity field")
+        } else {
+            logger.debug("No data to migrate")
+        }
+
+        userDefaults.set(true, forKey: workoutIntensityMigrationKey)
     }
 
     #if DEBUG

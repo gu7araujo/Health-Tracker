@@ -37,6 +37,12 @@ struct WorkoutsSectionView: View {
                                 ))
                                 .font(.subheadline)
                                 .foregroundStyle(.gray)
+                                Text(String(
+                                    format: String(localized: "workout_intensity_label"),
+                                    workout.intensity.localizedName
+                                ))
+                                .font(.subheadline)
+                                .foregroundStyle(.gray)
                             }
                             Spacer()
                         }

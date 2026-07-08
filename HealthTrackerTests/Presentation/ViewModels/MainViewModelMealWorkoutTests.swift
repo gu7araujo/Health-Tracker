@@ -139,6 +139,29 @@ struct MainViewModelMealWorkoutTests {
         #expect(viewModel.currentDayData?.workouts.first?.duration == Workout.Duration(minutes: 60))
     }
 
+    @Test func addWorkout_preservesIntensity() {
+        let (viewModel, mockRepository) = createViewModel()
+        mockRepository.loadAllDaysResult = []
+        viewModel.loadData()
+        viewModel.selectedDate = TestDataBuilder.fixedDate
+        let workout = Workout(description: "Sprint", duration: Workout.Duration(minutes: 20), intensity: .high)
+        viewModel.addWorkout(workout)
+        #expect(viewModel.currentDayData?.workouts.first?.intensity == .high)
+    }
+
+    @Test func updateWorkout_modifiesIntensity() {
+        let (viewModel, mockRepository) = createViewModel()
+        mockRepository.loadAllDaysResult = []
+        viewModel.loadData()
+        viewModel.selectedDate = TestDataBuilder.fixedDate
+        let original = Workout(description: "Yoga", duration: Workout.Duration(minutes: 30), intensity: .low)
+        viewModel.addWorkout(original)
+        var updated = original
+        updated.intensity = .high
+        viewModel.updateWorkout(updated)
+        #expect(viewModel.currentDayData?.workouts.first?.intensity == .high)
+    }
+
     @Test func workout_withId_returnsCorrectWorkout() {
         let (viewModel, mockRepository) = createViewModel()
         mockRepository.loadAllDaysResult = []

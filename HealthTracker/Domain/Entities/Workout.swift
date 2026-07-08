@@ -35,18 +35,65 @@ struct Workout: Identifiable, Codable, Equatable {
         }
     }
 
+    /// Physical intensity level of the workout
+    enum Intensity: Int, Codable, CaseIterable {
+        case low = 0
+        case medium = 1
+        case high = 2
+
+        var localizedName: String {
+            switch self {
+            case .low: String(localized: "workout_intensity_low")
+            case .medium: String(localized: "workout_intensity_medium")
+            case .high: String(localized: "workout_intensity_high")
+            }
+        }
+    }
+
     let id: UUID
     var description: String
     var duration: Duration
+    var intensity: Intensity
 
     init(
         id: UUID = UUID(),
         description: String,
-        duration: Duration = Duration(minutes: 30)
+        duration: Duration = Duration(minutes: 30),
+        intensity: Intensity = .medium
     ) {
         self.id = id
         self.description = description
         self.duration = duration
+        self.intensity = intensity
+    }
+}
+
+// MARK: - Workout Codable Extension
+
+extension Workout {
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case description
+        case duration
+        case intensity
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let id = try container.decode(UUID.self, forKey: .id)
+        let description = try container.decode(String.self, forKey: .description)
+        let duration = try container.decode(Duration.self, forKey: .duration)
+        // Legacy data predates `intensity`; default to `.medium` when absent
+        let intensity = try container.decodeIfPresent(Intensity.self, forKey: .intensity) ?? .medium
+        self.init(id: id, description: description, duration: duration, intensity: intensity)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(description, forKey: .description)
+        try container.encode(duration, forKey: .duration)
+        try container.encode(intensity, forKey: .intensity)
     }
 }
 
