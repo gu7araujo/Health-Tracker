@@ -45,78 +45,24 @@ For current, version-accurate Apple API docs (especially fast-moving iOS 26 APIs
 - **Persistence**: iCloud Drive (JSON file) with local Documents fallback; migrated from UserDefaults
 - **State Management**: @Observable macro
 
-## Workflow (You MUST follow **always**)
+## Workflow
 
-Before writing any code:
-1. State how you will verify this change works (tests, bash command, etc.)
-2. Write the test on verification step first (unit tests and/or ui tests)
-3. Then implement the code
-4. Run verification and iterate until it passes
+The core loop is **red → green**: write a failing test, then make it pass. Follow it always.
 
-- Whenever possible, use the tools in Xcode MCP
-- Always finish a task in a way that the system is not broken and able to commit
-- Write tests to achieve near-total test coverage
-- Every public function, code file, edge case should have a corresponding test
-- Run the full test suite before considering any task complete
-- All tests must pass clean. Do not commit code that breaks tests or the build
-- If we have a plan, follow it accordingly
-- For every bug fix, create a regression test to ensure the same error doesn't reappear
+1. Before coding, state how you'll verify the change — which unit/UI test, or which bash command.
+2. Write that test first and watch it fail (**red**).
+3. Implement the minimum code to pass it (**green**).
+4. Run the full suite and iterate until it passes clean — that's the bar for a task being done.
 
-### 1. Think Before Coding
+Every bug fix starts with a regression test that reproduces the bug. Aim for near-total coverage: every public function, file, and edge case earns a test. Prefer Xcode MCP tools when they fit, and follow the plan when we have one.
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+Keep every change **tight**:
 
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+- **Think first.** State assumptions explicitly. When multiple interpretations or a simpler approach exist, surface them and ask — don't pick silently.
+- **Simplest thing that works.** Minimum code, nothing speculative: skip unrequested abstractions, configurability, and error handling for impossible cases. If 200 lines could be 50, rewrite.
+- **Surgical.** Every changed line traces to the request. Match surrounding style, leave adjacent code alone, and remove only the orphans your own change creates. Flag unrelated dead code rather than deleting it.
 
-### 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
-
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-### 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-### 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+Leave the system committable — build green, tests passing.
 
 ## Building Systems
 
@@ -200,7 +146,17 @@ swiftformat . --swift-version 6
 - Follow the existing pattern: a private migration function guarded by its own `UserDefaults` completion flag, called from `migrateIfNeeded()`.
 - The goal is that existing users' JSON files on disk/iCloud upgrade cleanly without data loss or breaking the app on launch.
 
-## Do Not
+## RocketSim Automation Notes
 
-- Commit without running code quality and tests
-- Commit on the `main` branch without the user asking for it or confirming first
+Findings from driving the app via the `rocketsim` CLI/skill in the Simulator. These are quirks of this app's UI + RocketSim's accessibility-tree walking, not fixable by adding `.accessibilityLabel`/`.accessibilityIdentifier` — confirmed by testing with and without explicit labels.
+
+- **`CalendarStrip` day cells don't respond to `interact tap`.** `CalendarStripDay` uses a plain `.onTapGesture` (not a `Button`); RocketSim's synthetic tap event isn't recognized by it. Use `interact long-press --duration 0.1` (or similar short duration) on the day cell instead — it reliably selects the day where `tap` silently does nothing (`screen_changed: false`, no error).
+- **Calendar day frames are only accurate for the currently-visible page.** The strip is a paged, horizontally-scrolling `LazyHStack`. Days still present in `elements` output but scrolled off-screen (e.g. last week's dates while this week is showing) report bogus/negative-x frames — tapping/long-pressing by id or label on those will miss and silently hit whatever's underneath (observed: landed on the "Monitore sua saúde" heading). Always scroll the target day into the visible viewport first, re-run `elements`, and confirm its frame looks sane (increasing x, positive) before interacting with it.
+- **`screen_changed` in interact results is not reliable for this app.** It frequently reports `false` even when the UI visibly changed (day selection, scroll position). Don't gate follow-up logic on it — verify state via a fresh `elements --agent --agent-mode act` read (check for `,selected` on the target) or a screenshot instead.
+- **Meal/Workout card swipe-actions (Editar/Excluir) could not be revealed via synthetic `interact swipe`** on the card, across several distances/durations tried. If you need to edit or delete an existing meal/workout entry through RocketSim, this path is currently blocked — no workaround found yet.
+- **RocketSim does not expose `accessibilityIdentifier` at all** — its element schema is only `{frame, traits, state, label, value, id, role, stableKey}`, and `--label`/`--type`/`--value` selectors match against the accessibility *label* (usually inferred from visible text via `.accessibilityElement(children: .combine)`), never the identifier. This mostly works fine here since visible text doubles as a usable label, but icon-only controls with an identifier and no visible text/explicit `.accessibilityLabel` will show up with a blank label — target those by `--id` (re-resolved per snapshot) or raw coordinates instead.
+
+## Committing
+
+- Run code quality (`swiftlint`, `swiftformat`) and the full test suite before every commit; never commit a broken build or failing tests.
+- On `main`, branch first — commit there only when the user asks or confirms.
