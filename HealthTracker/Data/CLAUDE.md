@@ -1,4 +1,6 @@
-# Data Layer Architecture
+# Data Layer
+
+Adapts persistence and platform services to the domain: raw I/O, orchestration, DTOs, one-time migrations, and cross-cutting infrastructure.
 
 ## Directory Map
 
@@ -19,52 +21,41 @@
 | `Services/LoggerFactory.swift` | `enum LoggerFactory` | Creates pre-configured `Logger` instances scoped to a subsystem/category |
 | `Services/OSLogLogger.swift` | `class OSLogLogger` | Bridges the domain `LoggerProtocol` to `os.Logger` |
 
-
 ## Storage
 
-- All persistence goes through `LocalDataSourceProtocol`
-- Default data source is `ICloudDriveDataSource` (iCloud Drive JSON file at `<ubiquityContainer>/Documents/HealthTrackerData.json`)
-- Falls back to local `Documents/HealthTrackerData.json` when iCloud is unavailable
-- Data is wrapped in `DayDataContainer` for encoding/decoding (shared model in `Data/Models/`)
-- Uses `NSFileCoordinator` for safe concurrent file access
-- Graceful error handling: returns empty arrays on decode failures
-- Migration from UserDefaults runs once at app startup via `DataMigration.migrateIfNeeded()`
+- All persistence goes through `LocalDataSourceProtocol`; the default implementation is `ICloudDriveDataSource`.
+- The file lives at `<ubiquityContainer>/Documents/HealthTrackerData.json`, falling back to local `Documents/HealthTrackerData.json` when iCloud is unavailable.
+- `NSFileCoordinator` guards concurrent file access.
+- Decode failures degrade to empty arrays rather than crashing.
 
 ## Rules
 
-Type-Driven Design Methodology (Use type system to encode business rules and guarantees):
+Type-Driven Design — encode business rules and guarantees in the type system.
 
 <rule_1>
-**DOMAIN BOUNDARIES & TYPE PLACEMENT**: Keep strongly-typed domain types in the domain, weakly-typed primitives at boundaries
-- Domain logic lives with domain types (e.g., `Email`, `Password` in login domain)
-- UI domain works with strings (for display purposes)
-- Network/Data layer works with strings/JSON (for serialization)
-- Parse at boundaries: convert strings → domain types when entering domain, domain types → strings when leaving
-- Pushing weakly-typed types outside the domain achieves clean, robust domain code
-- Domain code becomes unbreakable: even if boundary checks are commented out, domain invariants remain enforced by types
+**DOMAIN BOUNDARIES & TYPE PLACEMENT** — strong domain types inside, weak primitives at the edges.
+- The domain owns strongly-typed values (`DayData`, `Meal`, `Workout`, `Mood`); this layer speaks JSON strings/numbers for serialisation.
+- Parse at the boundary: JSON → domain types on the way in, domain types → JSON on the way out.
+- Domain invariants then hold by construction — they survive even if a boundary check is later removed.
 </rule_1>
 
 <rule_2>
-**COMPREHENSIVE ERROR HANDLING**: Make impossible states unrepresentable
-- Use exhaustive enums with associated values
-- Provide actionable recovery paths
-- NEVER force unwrap in production
+**MAKE IMPOSSIBLE STATES UNREPRESENTABLE**
+- Model outcomes with exhaustive enums carrying associated values; give each error an actionable recovery path.
+- Never force-unwrap in production.
 </rule_2>
 
 <rule_3>
-**PARSE, DON'T VALIDATE**: Use types to carry proof of validation
-- Create validation-carrying types (e.g., `Email`, `Password`) instead of validating raw strings
-- Types serve as vessels for validated data, carrying validation invariants within them
-- Prefer parsing (transformation with retention) over validation (check with discard)
-- Validation checks can be displaced; parsed types cannot be created without validation
-- Eliminates systemic vulnerabilities from scattered validation logic
+**PARSE, DON'T VALIDATE** — types carry proof of validation.
+- Build validation-carrying types instead of re-checking raw values at each use.
+- A parsed value cannot be constructed without satisfying its invariant, so validation can never be skipped or displaced.
 </rule_3>
 
 <rule_4>
-**UNIT TEST COVERAGE ≥ 80% FOR PERSISTENCE & DATA TRANSFORMATION**: Every non-trivial data-layer behaviour must be covered by a focused unit test
-- Each `DataSource` must have tests for: happy-path load, happy-path save, missing-file/empty-store defaults, and at least one error path (corrupt data, permission denied, etc.)
-- Each `Repository` must have tests for: `loadAllDays`, `save`, `dayData(for:)`, `saveDayData`, `loadDaysInRange`, and any edge cases (empty store, unknown date, overlapping ranges)
-- Each `Migration` path (`migrateToICloudDrive`, `migrateWorkoutDurations`) must have tests covering: already-migrated guard (no-op), successful migration, and source-data-absent case
-- Use **in-memory or fake implementations** of `LocalDataSourceProtocol` (never real `UserDefaults`/files) so tests are fast and parallel-safe
-- Async persistence methods must be `await`-ed in `async` test functions; never use `XCTestExpectation` for new tests
+**PERSISTENCE & TRANSFORMATION TESTS ≥ 80%** — every non-trivial data-layer behaviour earns a focused unit test.
+- Each `DataSource`: happy-path load, happy-path save, missing-file/empty-store default, and ≥1 error path (corrupt data, permission denied).
+- `HealthDataRepository`: `loadAllDays`, `save`, `dayData(for:)`, `saveDayData`, `loadDaysInRange`, plus edges (empty store, unknown date, overlapping ranges).
+- Each migration (`migrateToICloudDrive`, `migrateWorkoutDurations`): already-migrated no-op, successful migration, source-absent.
+- Back tests with in-memory fakes of `LocalDataSourceProtocol` — never real `UserDefaults`/files — so they stay fast and parallel-safe.
+- `await` async persistence in `async` tests; no `XCTestExpectation`.
 </rule_4>

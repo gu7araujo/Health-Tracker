@@ -1,137 +1,86 @@
-# UI Layer Architecture
+# Presentation Layer
 
-## Directory Structure
+The SwiftUI UI: an `@Observable` ViewModel that owns the screen's mutable state, stateless section views that render it, and reusable Liquid Glass components. The only layer that touches SwiftUI. It reaches the domain solely through use cases — never a repository or data source directly.
 
-| Path | File | Purpose |
+## Directory Map
+
+| Directory / File | Type | Responsibility |
 |---|---|---|
-| `ViewModels/` | `MainViewModel.swift` | Manages state and logic for the main health tracking screen |
-| `Views/` | `MainView.swift` | Root view; owns `MainViewModel` via `@State` |
-| `Views/` | `AddEditModal.swift` | Sheet for adding or editing a health entry |
-| `Views/Components/` | `CardView.swift` | Reusable card with iOS 26 Liquid Glass `.glassEffect()` styling |
-| `Views/Components/` | `CardListView.swift` | List wrapper styled with `CardView` |
-| `Views/Components/` | `CalendarStrip.swift` | Horizontal date-picker strip for day navigation |
+| `ViewModels/MainViewModel.swift` | `@Observable final class MainViewModel` | Sole owner of the in-memory `[DayData]`; CRUD for meals/workouts/water/mood on the selected day; loads via `LoadDayDataUseCase`, persists via `SaveDayDataUseCase`, cancels reminders after each save; exposes `currentDayData`/`currentDayStatus`/`currentDayExplanation` |
+| `Views/MainView.swift` | `struct MainView` | Root screen; owns `MainViewModel` via `@State`, composes the section views in a `List`, drives the add-record alert and add/edit sheets |
+| `Views/AddEditModal.swift` | `struct AddEditModal` | Add/edit sheet for a meal or workout; holds local form `@State`, reads/writes through the injected `MainViewModel` |
+| `Views/MealsSectionView.swift`, `Views/WorkoutsSectionView.swift` | `struct` | Stateless section: renders cards (or `EmptyListRow`), wires swipe edit/delete + drag reorder through closures |
+| `Views/WaterSectionView.swift` | `struct WaterSectionView` | Stateless section: water total + slider |
+| `Views/MoodSectionView.swift` | `struct MoodSectionView` | Stateless section: the three mood buttons, selection tinted via glass |
+| `Views/Components/CardView.swift` | `struct CardView` | Reusable card; optional Liquid Glass `.glassEffect()` (tint/interactive) or plain background, optional tap action |
+| `Views/Components/CardListView.swift` | `struct CardListView` | Horizontal-scroll card variant with dynamic width |
+| `Views/Components/CalendarStrip.swift` | `CalendarStrip`, `CalendarStripDay`, `RightSemicircle` | Paged weekly date strip; lazy past-week loading, per-day status ring (semicircle for `.incomplete`), future days disabled |
+| `Views/Components/EmptyListRow.swift` | `struct EmptyListRow` | Shared empty-state row |
+| `AccessibilityID.swift` | `enum AccessibilityID` | Identifiers the UI tests locate elements by; source of truth, mirrored in the UITests target |
 
-## Data Flow
+## State & Data Flow
 
-1. `MainView` holds `@State private var viewModel = MainViewModel()`
-2. User interactions trigger ViewModel methods
-3. ViewModel updates internal state and calls appropriate use case
-4. Use case coordinates with repository
-5. Repository delegates to data source for persistence
-6. SwiftUI observes ViewModel changes and re-renders
+`MainViewModel` is the **single source of truth** for on-screen day data. State flows one way and mutations flow back through closures:
 
-## Key Patterns
-
-### State Management
-
-- Uses Swift's native `@Observable` macro (not `ObservableObject`)
-- View models coordinate between UI and use cases
-- State flows unidirectionally: View → ViewModel → Use Case → Repository → DataSource
-
-### Dependency Injection
-
-```swift
-// MainViewModel provides both explicit and convenience initializers
-init(loadUseCase: LoadDayDataUseCase, saveUseCase: SaveDayDataUseCase) // Testable
-convenience init(repository: HealthDataRepositoryProtocol = HealthDataRepository()) // Production
+```
+View → ViewModel → Use Case → Repository → DataSource
 ```
 
-### Modifying Views
+SwiftUI re-renders on `@Observable` changes; views never mutate day data themselves.
 
-- Follow existing section-based composition pattern in `MainView`
-- Extract complex sections into private structs (see `MealsSectionView`, `WorkoutsSectionView`)
-- Use `CardView` for consistent glass effect styling
-- Leverage iOS 26+ Liquid Glass with `.glassEffect()` modifier
+- `selectedDate` drives `currentDayData` (the matching day, or an empty one). Setting it calls `ensureDayDataExists`, which fabricates an empty `DayData` **in memory only** — `persistChanges` parses each day to `RecordedDayData`, so empty days are never written (mirrors the Domain parse-don't-validate rule).
+- Every CRUD method delegates to `DayData`'s own ops, then `persistChanges`; saving also fire-and-forgets `CancelNotificationsUseCase`.
 
-## Rules
-
-<rule_1>
-```swift
-// 1. DO NOT abstract on the first or second usage.
-// 2. DUPLICATE code until the pattern is proven three times.
-// 3. REFRACTOR only when the commonality is structural, not accidental.
-
-// Initial usage: Keep it local
-struct UserAvatar: View { ... }
-
-// Second usage: Copy-paste if domains differ
-struct EmployeeAvatar: View { ... }
-
-// Third usage: Extract reusable component
-struct CircleImage(url: URL): View { ... }
-</rule_1>
-
-## Language and Localization
-
-The app supports multiple languages. Portuguese (Brazil) is the primary locale. All user-facing strings must go through the localization system — never hardcode display text.
-
-### Localization Files
-
-Both files must always be kept in sync when adding new keys:
-- `HealthTracker/Resources/en.lproj/Localizable.strings` — English
-- `HealthTracker/Resources/pt-BR.lproj/Localizable.strings` — Portuguese (Brazil)
-
-### Adding Localized Strings
-
-Always use `String(localized:)` for user-facing text in Swift code — never hardcode display strings:
+Two initializers keep the VM testable and convenient:
 
 ```swift
-// ✅ Correct
-var localizedName: String {
-    switch self {
-    case .verySmall: String(localized: "meal_quantity_very_small")
-    case .small:     String(localized: "meal_quantity_small")
-    }
-}
-
-// ❌ Wrong — bypasses localization
-var localizedName: String {
-    switch self {
-    case .verySmall: "Muito pequena"
-    case .small:     "Pequena"
-    }
-}
+init(loadUseCase:saveUseCase:cancelNotificationsUseCase:logger:)   // explicit deps — unit tests
+convenience init(repository: HealthDataRepositoryProtocol = HealthDataRepository(),
+                 notificationService: NotificationServiceProtocol = NotificationService())  // production
 ```
 
-Use the `Mood.localizedName` and `Meal.Quantity.localizedName` implementations as canonical references.
+## Localization
 
-### Locale and Timezone Rules
+The app ships `en` and `pt-BR` (Brazil is the primary locale). Every user-facing string is localized; display text is never hardcoded. The two `.strings` files stay in sync — a key added to one is added to both:
 
-**Never hardcode locale identifiers or timezones.** Always use the system values so the app respects the user's device settings:
+- `HealthTracker/Resources/en.lproj/Localizable.strings`
+- `HealthTracker/Resources/pt-BR.lproj/Localizable.strings`
+
+Route user-facing text through `String(localized:)`; resolve locale- and timezone-sensitive APIs from the device:
 
 ```swift
-// ✅ Correct
-formatter.locale = Locale.current
-formatter.timeZone = TimeZone.current
-calendar.locale = Locale.current
-calendar.timeZone = TimeZone.current
-
-// ❌ Wrong — forces Portuguese regardless of device language
-formatter.locale = Locale(identifier: "pt_BR")
-formatter.timeZone = TimeZone(identifier: "America/Sao_Paulo") ?? .current
+Text(String(localized: "meals_section"))          // ✅ localized
+formatter.locale   = Locale.current               // ✅ respects device settings
+formatter.timeZone = TimeZone.current             // (never Locale(identifier: "pt_BR"))
 ```
 
-This applies to `DateFormatter`, `Calendar`, and any other locale/timezone-sensitive APIs.
+This covers `DateFormatter`, `Calendar`, and any other locale/timezone-sensitive API (see `CalendarStrip`). Canonical references: `Mood.localizedName`, `Meal.Quantity.localizedName`.
 
-### Key Naming Conventions
-
-Group keys by feature area using snake_case prefixes:
+Group keys by feature area with snake_case prefixes:
 
 | Prefix | Usage |
 |---|---|
-| `meal_quantity_*` | `Meal.Quantity` enum cases |
-| `satisfaction_*` | `Meal.Satisfaction` enum cases |
-| `mood_*` | `Mood` enum cases |
-| `day_status_explanation.*` | `DayData.statusExplanation` strings |
-| `day_status_reason.*` | Status reason fragments |
-| `empty_*` | Empty state messages |
+| `meal_quantity_*` / `satisfaction_*` | `Meal.Quantity` / `Meal.Satisfaction` cases |
+| `mood_*` | `Mood` cases |
+| `day_status_explanation.*` / `day_status_reason.*` | `DayData.statusExplanation` strings |
+| `*_section` / `empty_*` | Section headings / empty-state messages |
 | `add_*` / `edit_*` | Modal titles and actions |
 
-### Anti-Patterns
+## Rules
 
-<avoid>
-❌ Hardcoding display strings in Swift source (e.g., `"Esta Semana"`, `"Grande"`)
-❌ Using `Locale(identifier: "pt_BR")` anywhere in the codebase
-❌ Using `TimeZone(identifier: "America/Sao_Paulo")` anywhere in the codebase
-❌ Adding a key to only one `.strings` file — always update both
-</avoid>
+Unidirectional flow — the ViewModel owns state, views render it and report intent through closures.
+
+<rule_1>
+**STATELESS SECTION VIEWS** — `MealsSectionView`, `WorkoutsSectionView`, `WaterSectionView`, and `MoodSectionView` take plain values in and closures out; they never hold the `MainViewModel`. Only `MainView` and `AddEditModal` reference the VM. New sections follow suit: data in, intent out.
+</rule_1>
+
+<rule_2>
+**RULE OF THREE** — don't abstract on the first or second use. Duplicate until a pattern proves itself three times, then extract only when the commonality is structural, not accidental (how `CardView` earned its place).
+</rule_2>
+
+<rule_3>
+**PRESENTATION TESTS ≥ 80%** — cover the ViewModel and the user-facing flows.
+- `MainViewModel`: each CRUD op (add/update/delete/move meal & workout, water, mood) against use-case fakes; `selectedDate` → `currentDayData`/`currentDayStatus`/`currentDayExplanation`; `ensureDayDataExists` creates but does not persist an empty day.
+- UI flows: drive through `AccessibilityID` in `HealthTrackerUITests` — meal/workout add-edit-delete, water/mood, calendar navigation and empty states.
+- Any new identifier lands in both `AccessibilityID.swift` and its UITests mirror.
+</rule_3>

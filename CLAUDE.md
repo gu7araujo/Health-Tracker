@@ -8,29 +8,14 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 |------|---------|
 | `HealthTracker/HealthTrackerApp.swift` | App entry point; wires dependencies and bootstraps the app |
 | `HealthTracker/UITestingSupport.swift` | `-uiTesting` launch-argument hook: temp-dir repository, skips migration and permission prompts |
-| `HealthTracker/Domain/Entities/` | Core business models: `DayData`, `Meal`, `Workout`, `Mood` |
-| `HealthTracker/Domain/Protocols/` | Abstract interfaces for repository, notifications, and logging |
-| `HealthTracker/Domain/UseCases/` | Business operations: load/save data, manage notifications |
-| `HealthTracker/Data/DataSources/` | Storage drivers: `ICloudDriveDataSource` (default), `UserDefaultsDataSource` (legacy) |
-| `HealthTracker/Data/Repositories/` | `HealthDataRepository` — orchestrates data sources behind the domain protocol |
-| `HealthTracker/Data/Models/` | DTOs: `DayDataContainer` (Codable JSON wrapper) |
-| `HealthTracker/Data/Migration/` | One-time migrations: UserDefaults → iCloud, workout duration format |
-| `HealthTracker/Data/Services/` | Platform services: notifications (`NotificationService`), logging (`OSLogLogger`) |
-| `HealthTracker/Presentation/ViewModels/` | `MainViewModel` — state management via `@Observable` |
-| `HealthTracker/Presentation/AccessibilityID.swift` | Accessibility identifiers for UI testing (source of truth; mirrored in the UITests target) |
-| `HealthTracker/Presentation/Views/` | `MainView` (daily tracking), `AddEditModal` |
-| `HealthTracker/Presentation/Views/Components/` | Reusable UI: `CardView`, `CardListView`, `CalendarStrip` |
+| `HealthTracker/Domain/` | Business core: entities, repository/notification/logging protocols, use cases. Owns the health-status rules. **Deep map + rules: `HealthTracker/Domain/CLAUDE.md`** |
+| `HealthTracker/Data/` | Persistence + platform services: data sources, repository, DTOs, migrations, notifications, logging. **Deep map + rules: `HealthTracker/Data/CLAUDE.md`** |
+| `HealthTracker/Presentation/` | SwiftUI UI: `MainViewModel` (`@Observable` state owner), `MainView` + stateless section views, `AddEditModal`, reusable Liquid Glass components, accessibility IDs. Owns UI localization. **Deep map + rules: `HealthTracker/Presentation/CLAUDE.md`** |
 | `HealthTracker/Extensions/` | SwiftUI `View` helpers |
 | `HealthTracker/Resources/` | Localizable strings for `en` and `pt-BR` |
-| `HealthTrackerTests/Domain/` | Unit tests for entities and use cases |
-| `HealthTrackerTests/Data/` | Tests for repository, data sources, migration, and models |
-| `HealthTrackerTests/Presentation/ViewModels/` | ViewModel unit tests |
-| `HealthTrackerTests/Mocks/` | Protocol-backed test doubles |
-| `HealthTrackerTests/TestHelpers/` | `TestDataBuilder` — factory for test fixtures |
-| `HealthTrackerUITests/` | XCUITest suites: `MealFlowUITests`, `WorkoutFlowUITests`, `WaterMoodUITests`, `CalendarUITests` |
-| `HealthTrackerUITests/Support/` | `HealthTrackerUITestCase` (base class + flow helpers), `AccessibilityID` mirror, `EnglishLabel` |
+| `HealthTrackerTests/` | Swift Testing unit suite mirroring the three layers, plus shared `Mocks/` and `TestDataBuilder`. **Deep map + rules: `HealthTrackerTests/CLAUDE.md`** |
+| `HealthTrackerUITests/` | XCUITest end-to-end suites driving the app on a simulator, plus the `Support/` base class, flow helpers, and mirrored identifiers. **Deep map + rules: `HealthTrackerUITests/CLAUDE.md`** |
 | `HealthTracker.xcodeproj/` | Xcode project configuration |
-| `docs/` | Project documentation |
 
 ## Apple Documentation
 

@@ -1,80 +1,60 @@
-# Testing Architecture
+# Test Suite
 
-The project uses **Swift Testing framework** (not XCTest) with comprehensive test coverage across all layers.
+The unit-test target. Built on **Swift Testing** (not XCTest), it mirrors the production tree one-to-one: one test struct per type, grouped under `Domain/`, `Data/`, and `Presentation/`. Every test runs against protocol fakes and deterministic fixtures — no real services, files, or wall clock. UI flows live in the separate `HealthTrackerUITests` target.
 
-## Directory Structure
+## Directory Map
 
-| Path | Purpose |
-|------|---------|
-| `HealthTrackerTests/Domain/Entities/` | Entity tests (`DayData`, `RecordedDayData`, `Meal`, `Workout`, `Mood`, `DayStatus`, `AnalyticsPeriod`, analytics entities) |
-| `HealthTrackerTests/Domain/UseCases/` | Use case tests with mocked repositories (`LoadDayDataUseCase`, `SaveDayDataUseCase`, `CalculateAnalyticsUseCase`) |
-| `HealthTrackerTests/Data/Repositories/` | Repository tests with mocked data sources |
-| `HealthTrackerTests/Data/DataSources/` | Data source tests (`UserDefaultsDataSource`) |
-| `HealthTrackerTests/Data/Models/` | Model tests (`DayDataContainer`) |
-| `HealthTrackerTests/Presentation/ViewModels/` | ViewModel tests with mocked use cases (`MainViewModel`, `AnalyticsViewModel`) |
-| `HealthTrackerTests/Mocks/` | Mock implementations of protocols |
-| `HealthTrackerTests/TestHelpers/` | Test data builders and utilities |
+| Directory / File | Type | Responsibility |
+|---|---|---|
+| `Domain/Entities/` | — | One struct per entity (`DayDataTests`, `MealTests`, `WorkoutTests`, `MoodTests`, `DayStatusTests`, `RecordedDayDataTests`); status tiers, boundaries, and `Codable` legacy-decode paths |
+| `Domain/UseCases/` | — | Use cases driven against protocol fakes (`Load`/`Save`/`Schedule`/`Cancel`/`RequestNotifPermission`), asserting delegated calls |
+| `Data/DataSources/` | — | `ICloudDriveDataSourceTests`, `UserDefaultsDataSourceTests`: load/save happy paths, empty-store default, error paths |
+| `Data/Repositories/` | — | `HealthDataRepositoryTests`: CRUD + range queries against a fake data source |
+| `Data/Models/` | — | `DayDataContainerTests`: JSON envelope round-trips |
+| `Data/DataMigrationTests.swift` | — | Each migration: already-migrated no-op, success, source-absent |
+| `Presentation/ViewModels/` | — | `MainViewModel` split by concern (`Load`, `Date`, `MealWorkout`, `WaterMood`); CRUD + selection against use-case fakes |
+| `Mocks/MockHealthDataRepository.swift` | `HealthDataRepositoryProtocol` | Stubbed `...Result` returns + `...Called`/`...CalledWith` interaction flags |
+| `Mocks/MockLocalDataSource.swift` | `LocalDataSourceProtocol` | In-memory `load`/`save` with call tracking |
+| `Mocks/MockNotificationService.swift` | `NotificationServiceProtocol` | Stubbed auth results + per-method call flags |
+| `Mocks/MockLogger.swift` | `LoggerProtocol` | Records logs; `didLog(level:containing:)` / `messages(for:)` queries |
+| `TestHelpers/TestDataBuilder.swift` | `enum TestDataBuilder` | Fixed dates + status-tier day factories (`makeOptimalDay`…) and `RecordedDayData` variants |
 
-## Coverage Areas
+## Fixtures & Mocks
 
-- **Domain Layer:** 95%+ (core business logic)
-- **Data Layer:** 80%+ (persistence and data transformation)
-- **Presentation Layer:** 70%+ (ViewModels and state management)
-- **Overall:** 80%+
-- **Total Tests:** 246 tests across all layers
+The two pieces of shared machinery every test leans on:
 
-## Writing Tests
+- **`TestDataBuilder`** — `fixedDate`/`fixedDatePlusOne` anchor time, and `makeOptimalDay`/`makeModerateDay`/`makePoorDay`/`makeIncompleteDay`/`makeEmptyDay` build a `DayData` that lands in each status tier, with `makeRecorded…` wrappers for the `RecordedDayData` the repository speaks. Only the factory methods are `@MainActor` (see rule_2).
+- **`Mocks/`** — each mock backs a domain protocol and exposes two knobs: `...Result` properties to stub return values, and `...Called` / `...CalledWith` properties to verify interactions. Stub before acting, assert the flags after.
 
-**⚠️ CRITICAL: Always run tests after implementation!** Every code change MUST be followed by running the full test suite to ensure:
-- All existing tests still pass (no regressions)
-- New/modified behavior has corresponding tests
-- Test failures are fixed immediately, never left broken
+## Rules
 
-**Test Writing Guidelines:**
-- All tests use Swift Testing framework (`import Testing`, `@Test` macro, and `#expect()` assertions)
-- Use `@testable import HealthTracker` to access internal types
-- Mark all test functions with `@Test @MainActor` due to `@Observable` macro isolation
-- Leverage existing mocks in `HealthTrackerTests/Mocks/`
-- Use `TestDataBuilder` for creating test fixtures
-- Follow existing test organization by layer (Domain/Data/Presentation)
-- Ensure new features have corresponding tests (maintain 80%+ coverage)
-- When changing behavior: update affected tests to reflect new expectations
-- When fixing bugs: add regression tests to prevent reoccurrence
+Deterministic and isolated — every test is fast, repeatable, and free of real I/O.
 
-**Key Principles:**
-- Use fixed dates (`TestDataBuilder.fixedDate`) for deterministic tests
-- Test one behavior per test function
-- Use descriptive test names: `statusIsOptimal_whenMeetsOptimalCriteria`
-- Follow Arrange-Act-Assert pattern
-- Keep tests fast (< 1 second each) with proper mocking
-- All test functions are marked `@MainActor` due to `@Observable` macro isolation
+<rule_1>
+**SWIFT TESTING, NOT XCTEST** — `import Testing`; `@Test` functions with `#expect` / `#require` assertions, and `@Test(arguments:)` for table-driven cases (see `MoodTests`). `@testable import HealthTracker` for internal access. `await` async code directly — there is no `XCTestExpectation`.
+</rule_1>
 
-**Mocking Strategy:**
-- Protocol-based mocks for `HealthDataRepositoryProtocol` and `LocalDataSourceProtocol`
-- In-memory UserDefaults for data source tests
-- Test data builders for creating fixtures with sensible defaults
+<rule_2>
+**@MainActor ISOLATION** — mark each test struct `@MainActor`; the `@Observable` types it exercises require it. In helpers, isolate only the factory methods that build `@Observable`/`@MainActor` types — never the whole `enum`/`struct` — so non-isolated constants like `TestDataBuilder.fixedDate` stay reachable from any context.
+</rule_2>
 
-**Actor Isolation in Test Helpers:**
-- ⚠️ **Don't** mark entire test helper enums/structs with `@MainActor`
-- ✅ **Do** mark only specific factory methods that create `@Observable` types with `@MainActor`
-- ✅ **Keep** date constants and other non-isolated properties accessible from any context
-- Example: In `TestDataBuilder`, only `makeDayData()`, `makeOptimalDay()`, etc. are `@MainActor`, not the enum itself
+<rule_3>
+**FAKES & FIXTURES, NEVER REAL SERVICES** — drive code under test through the `Mocks/` protocol doubles and build inputs with `TestDataBuilder`; never touch real `UserDefaults`, files, or notification APIs. Fixed dates keep results deterministic; one behaviour per test, named `subject_expectation` (e.g. `loadData_createsEmptyDayForSelectedDate`); keep each under ~1s.
+</rule_3>
 
-**Localization in Tests:**
-- Always verify localization keys are used (not specific translated strings) to keep tests locale-independent
-- Use `NSLocalizedString(key, comment: "")` as the expected value, never hardcoded translated strings
+<rule_4>
+**ASSERT ON KEYS, NOT TRANSLATIONS** — compare localized output against the localization key, so tests hold under any locale.
 
 ```swift
-// ✅ Correct — locale-independent
-@Test(arguments: [(Mood.good, "mood_good"), (.neutral, "mood_neutral")])
-func localizedName_mappings(mood: Mood, localizationKey: String) {
-    let expected = NSLocalizedString(localizationKey, comment: "")
-    #expect(mood.localizedName == expected)
-}
+// ✅ locale-independent
+let expected = NSLocalizedString("mood_good", comment: "")
+#expect(mood.localizedName == expected)
 
-// ❌ Wrong — breaks under non-PT-BR locale
-@Test(arguments: [(Mood.good, "Bom"), (.neutral, "Neutro")])
-func localizedName_mappings(mood: Mood, expectedName: String) {
-    #expect(mood.localizedName == expectedName)
-}
+// ❌ breaks outside pt-BR
+#expect(mood.localizedName == "Bom")
 ```
+</rule_4>
+
+<rule_5>
+**WHAT-TO-COVER LIVES WITH THE LAYER** — this suite is the *how*; the per-layer *what* and the `≥ 80%` bar are owned by each layer's `CLAUDE.md` (`Domain`, `Data`, `Presentation`). Adding a feature or fixing a bug ends green — see the root **Workflow** for the red → green loop and the test commands.
+</rule_5>
