@@ -79,7 +79,7 @@ Unidirectional flow — the ViewModel owns state, views render it and report int
 </rule_2>
 
 <rule_3>
-**PRESENTATION TESTS ≥ 80%** — cover the ViewModel and the user-facing flows.
+**PRESENTATION TESTS** — cover the ViewModel and the user-facing flows.
 - `MainViewModel`: each CRUD op (add/update/delete/move meal & workout, water, mood) against use-case fakes; `selectedDate` → `currentDayData`/`currentDayStatus`/`currentDayExplanation`; `ensureDayDataExists` creates but does not persist an empty day.
 - UI flows: drive through `AccessibilityID` in `HealthTrackerUITests` — meal/workout add-edit-delete, water/mood, calendar navigation and empty states.
 - Any new identifier lands in both `AccessibilityID.swift` and its UITests mirror.

@@ -52,7 +52,7 @@ Type-Driven Design — encode business rules and guarantees in the type system.
 </rule_3>
 
 <rule_4>
-**PERSISTENCE & TRANSFORMATION TESTS ≥ 80%** — every non-trivial data-layer behaviour earns a focused unit test.
+**PERSISTENCE & TRANSFORMATION TESTS** — every non-trivial data-layer behaviour earns a focused unit test.
 - Each `DataSource`: happy-path load, happy-path save, missing-file/empty-store default, and ≥1 error path (corrupt data, permission denied).
 - `HealthDataRepository`: `loadAllDays`, `save`, `dayData(for:)`, `saveDayData`, `loadDaysInRange`, plus edges (empty store, unknown date, overlapping ranges).
 - Each migration (`migrateToICloudDrive`, `migrateWorkoutDurations`): already-migrated no-op, successful migration, source-absent.

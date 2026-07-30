@@ -58,7 +58,7 @@ Type-Driven Design — encode invariants in types so they hold by construction (
 </rule_3>
 
 <rule_4>
-**DOMAIN TESTS ≥ 80%** — every entity computation and use case earns a focused unit test.
+**DOMAIN TESTS** — every entity computation and use case earns a focused unit test.
 - `DayData`: each status tier and its boundaries (the thresholds above), plus the CRUD/move ops.
 - Entities: round-trip `Codable` including each legacy-decode path in rule 2.
 - Use cases: drive them against protocol fakes (never real services), asserting the delegated calls; `await` async use cases directly — no `XCTestExpectation`.

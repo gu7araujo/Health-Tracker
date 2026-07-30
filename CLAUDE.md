@@ -98,10 +98,18 @@ xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<s
 
 Run with coverage report
 ```bash
-xcodebuild test -scheme HealthTracker -enableCodeCoverage YES -derivedDataPath ./DerivedData
+xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -enableCodeCoverage YES -resultBundlePath build/Test.xcresult | xcbeautify
 ```
-View coverage report (after running with coverage)
-Open: ./DerivedData/Logs/Test/*.xcresult in Xcode
+
+View the coverage report from the command line (after running with `-resultBundlePath`):
+```bash
+# Per-file line-coverage table (human-readable)
+xcrun xccov view --report build/Test.xcresult
+
+# Machine-readable JSON (per-target/per-file, for scripting)
+xcrun xccov view --report --json build/Test.xcresult
+```
+The JSON exposes each target's `lineCoverage`, `coveredLines`, and `executableLines`, plus a per-file `files` array — sort by `lineCoverage` to find the least-covered files.
 
 ## Worktrees
 

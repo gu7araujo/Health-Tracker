@@ -69,3 +69,6 @@ fastlane/test_output
 
 # Superpowers brainstorm sessions
 .superpowers/
+
+# Test Coverage report
+build/
