@@ -34,7 +34,7 @@ For current, version-accurate Apple API docs (especially fast-moving iOS 26 APIs
 
 The core loop is **red → green**: write a failing test, then make it pass. Follow it always.
 
-1. Before coding, state how you'll verify the change — which unit/UI test, or which bash command.
+1. Before coding, state how you'll verify the change — which unit/UI test, which bash command, or screenshot, etc.
 2. Write that test first and watch it fail (**red**).
 3. Implement the minimum code to pass it (**green**).
 4. Run the full suite and iterate until it passes clean — that's the bar for a task being done.
