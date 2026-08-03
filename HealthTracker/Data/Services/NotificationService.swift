@@ -14,20 +14,21 @@ import UserNotifications
 /// to iOS UserNotifications framework types. It follows Clean Architecture principles
 /// by implementing a protocol defined in the Domain layer.
 ///
-/// This is the ONLY file in the project that should import UserNotifications framework.
+/// This file and its `UserNotificationCentering` seam (`UserNotificationCentering.swift`)
+/// are the only files in the project that should import the UserNotifications framework.
 final class NotificationService: NotificationServiceProtocol {
-    private let notificationCenter: UNUserNotificationCenter
+    private let notificationCenter: UserNotificationCentering
     private let logger: LoggerProtocol
 
     /// Initializes the notification service with a notification center and logger.
     ///
     /// - Parameters:
-    ///   - notificationCenter: The UNUserNotificationCenter instance to use.
-    ///     Defaults to the current notification center. The default parameter allows
-    ///     dependency injection for testing.
+    ///   - notificationCenter: The notification center to use, behind the
+    ///     `UserNotificationCentering` seam. Defaults to the current
+    ///     `UNUserNotificationCenter`; a fake can be injected for testing.
     ///   - logger: Logger instance for tracking notification operations.
     init(
-        notificationCenter: UNUserNotificationCenter = .current(),
+        notificationCenter: UserNotificationCentering = UNUserNotificationCenter.current(),
         logger: LoggerProtocol = LoggerFactory.dataLogger(category: "NotificationService")
     ) {
         self.notificationCenter = notificationCenter
@@ -51,8 +52,8 @@ final class NotificationService: NotificationServiceProtocol {
 
     func authorizationStatus() async -> NotificationAuthorizationStatus {
         logger.debug("Checking notification authorization status")
-        let settings = await notificationCenter.notificationSettings()
-        let status = NotificationAuthorizationStatus.from(settings.authorizationStatus)
+        let unStatus = await notificationCenter.authorizationStatus()
+        let status = NotificationAuthorizationStatus.from(unStatus)
         logger.debug("Current authorization status: \(status)")
         return status
     }

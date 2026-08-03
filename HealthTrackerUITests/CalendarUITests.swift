@@ -51,18 +51,48 @@ final class CalendarUITests: HealthTrackerUITestCase {
 
     // MARK: - Helpers
 
+    /// Weeks the strip is currently paged away from today's week (0 = today's week,
+    /// -1 = one week earlier). Selecting a day never moves the strip, so the helper
+    /// tracks its own paging to know which week is on screen.
+    private var visibleWeekOffset = 0
+
     private func calendarDayCell(offset: Int) -> XCUIElement {
         app.buttons[AccessibilityID.calendarDay(offset: offset)]
     }
 
-    /// Selects a day in the strip, paging back one week first when the target
-    /// cell is off-screen (e.g. yesterday when today is the first day of the week).
+    /// Selects the day `offset` days from today, paging the weekly strip (one week
+    /// per swipe on the strip container) to the target day's week first. The paging
+    /// direction is derived from the date, so it works whichever weekday today is —
+    /// including when the target sits on an adjacent week's page and is off-screen
+    /// (e.g. yesterday when today is a Monday). Probing the off-screen cell directly
+    /// is avoided because its frame is invalid while on another page.
     private func selectDay(offset: Int) {
-        let cell = calendarDayCell(offset: offset)
-        if !cell.exists || !cell.isHittable {
-            calendarDayCell(offset: 0).swipeRight()
+        let targetWeek = weekOffset(forDayOffset: offset)
+        let strip = assertExists(element(AccessibilityID.calendarStrip))
+        while visibleWeekOffset > targetWeek {
+            strip.swipeRight() // reveal the previous week
+            visibleWeekOffset -= 1
         }
+        while visibleWeekOffset < targetWeek {
+            strip.swipeLeft() // reveal the next week
+            visibleWeekOffset += 1
+        }
+        let cell = calendarDayCell(offset: offset)
         assertExists(cell).tap()
-        XCTAssertTrue(cell.isSelected)
+        assertSelected(cell)
+    }
+
+    /// Whole weeks between today's week and the day `offset` days away, using a
+    /// Monday-first Gregorian calendar to match `CalendarStrip` and the en_GB launch locale.
+    private func weekOffset(forDayOffset offset: Int) -> Int {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.firstWeekday = 2 // Monday, matching CalendarStrip + en_GB
+        let today = calendar.startOfDay(for: Date())
+        guard let target = calendar.date(byAdding: .day, value: offset, to: today),
+              let todayWeekStart = calendar.dateInterval(of: .weekOfYear, for: today)?.start,
+              let targetWeekStart = calendar.dateInterval(of: .weekOfYear, for: target)?.start
+        else { return 0 }
+        let days = calendar.dateComponents([.day], from: todayWeekStart, to: targetWeekStart).day ?? 0
+        return Int((Double(days) / 7).rounded())
     }
 }

@@ -56,6 +56,51 @@ struct WorkoutTests {
         #expect(decoded == original)
     }
 
+    @Test("Legacy bare-integer durations map old enum raw values (0-6) to real minutes", arguments: [
+        (0, 15),
+        (1, 30),
+        (2, 60),
+        (3, 90),
+        (4, 10),
+        (5, 40),
+        (6, 120)
+    ])
+    func duration_decodesLegacyEnumRawValue_toMinutes(rawValue: Int, expectedMinutes: Int) throws {
+        // Old format stored the duration as a single Int (enum raw value), not a {"minutes": X} object.
+        let json = """
+        { "id": "\(UUID().uuidString)", "description": "Legacy", "duration": \(rawValue) }
+        """
+        let data = try #require(json.data(using: .utf8))
+
+        let decoded = try JSONDecoder().decode(Workout.self, from: data)
+
+        #expect(decoded.duration.minutes == expectedMinutes)
+    }
+
+    @Test("Legacy bare integers of 7+ are treated as literal minutes")
+    func duration_decodesLegacyValueAboveSix_asLiteralMinutes() throws {
+        let json = """
+        { "id": "\(UUID().uuidString)", "description": "Legacy", "duration": 45 }
+        """
+        let data = try #require(json.data(using: .utf8))
+
+        let decoded = try JSONDecoder().decode(Workout.self, from: data)
+
+        #expect(decoded.duration.minutes == 45)
+    }
+
+    @Test("Legacy bare integers above the max are clamped to 300")
+    func duration_decodesLegacyValueAboveMax_clampsTo300() throws {
+        let json = """
+        { "id": "\(UUID().uuidString)", "description": "Legacy", "duration": 500 }
+        """
+        let data = try #require(json.data(using: .utf8))
+
+        let decoded = try JSONDecoder().decode(Workout.self, from: data)
+
+        #expect(decoded.duration.minutes == 300)
+    }
+
     @Test func duration_sumMultipleDurations() {
         let durations = [
             Workout.Duration(minutes: 15),

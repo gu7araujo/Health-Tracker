@@ -16,6 +16,7 @@ enum AccessibilityID {
     static let waterValueLabel = "waterValueLabel"
     static let mealsEmptyState = "mealsEmptyState"
     static let workoutsEmptyState = "workoutsEmptyState"
+    static let calendarStrip = "calendarStrip"
     static let moodButtonGood = "moodButton_good"
     static let moodButtonNeutral = "moodButton_neutral"
     static let moodButtonSad = "moodButton_sad"
