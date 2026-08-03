@@ -502,6 +502,240 @@ struct DayDataTests {
         #expect(dayData.workouts.map(\.id) == [workout3.id, workout1.id, workout2.id])
     }
 
+    // MARK: - Reorder Edge Cases
+
+    private func makeSmallMeal(_ description: String) -> Meal {
+        Meal(description: description, quantity: .small, satisfaction: .fifty)
+    }
+
+    @Test("Moving an element down to the end reinserts it last")
+    func moveMeal_movesElementDown_toEnd() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        let mealA = makeSmallMeal("A")
+        let mealB = makeSmallMeal("B")
+        let mealC = makeSmallMeal("C")
+        dayData.addMeal(mealA)
+        dayData.addMeal(mealB)
+        dayData.addMeal(mealC)
+
+        dayData.moveMeal(fromOffsets: IndexSet(integer: 0), toOffset: 3)
+
+        #expect(dayData.meals.map(\.id) == [mealB.id, mealC.id, mealA.id])
+    }
+
+    @Test("Moving an element up shifts it toward the front")
+    func moveMeal_movesElementUp() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        let mealA = makeSmallMeal("A")
+        let mealB = makeSmallMeal("B")
+        let mealC = makeSmallMeal("C")
+        dayData.addMeal(mealA)
+        dayData.addMeal(mealB)
+        dayData.addMeal(mealC)
+
+        dayData.moveMeal(fromOffsets: IndexSet(integer: 1), toOffset: 0)
+
+        #expect(dayData.meals.map(\.id) == [mealB.id, mealA.id, mealC.id])
+    }
+
+    @Test("Moving a multi-selection preserves the selected order")
+    func moveMeal_movesMultipleSelection() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        let mealA = makeSmallMeal("A")
+        let mealB = makeSmallMeal("B")
+        let mealC = makeSmallMeal("C")
+        dayData.addMeal(mealA)
+        dayData.addMeal(mealB)
+        dayData.addMeal(mealC)
+
+        dayData.moveMeal(fromOffsets: IndexSet([0, 1]), toOffset: 3)
+
+        #expect(dayData.meals.map(\.id) == [mealC.id, mealA.id, mealB.id])
+    }
+
+    @Test("Moving a workout to the front reorders correctly")
+    func moveWorkout_movesToFront() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        let workout1 = Workout(description: "Run", duration: Workout.Duration(minutes: 30))
+        let workout2 = Workout(description: "Gym", duration: Workout.Duration(minutes: 60))
+        let workout3 = Workout(description: "Swim", duration: Workout.Duration(minutes: 45))
+        dayData.addWorkout(workout1)
+        dayData.addWorkout(workout2)
+        dayData.addWorkout(workout3)
+
+        dayData.moveWorkout(fromOffsets: IndexSet(integer: 1), toOffset: 0)
+
+        #expect(dayData.workouts.map(\.id) == [workout2.id, workout1.id, workout3.id])
+    }
+
+    // MARK: - Status Explanation Tests
+
+    private func reason(_ key: String) -> String {
+        NSLocalizedString(key, comment: "")
+    }
+
+    @Test func statusExplanation_isNil_forNoData() {
+        #expect(TestDataBuilder.makeEmptyDay().statusExplanation == nil)
+    }
+
+    @Test func statusExplanation_isNil_forIncomplete() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.water = 1.5
+        #expect(dayData.statusExplanation == nil)
+    }
+
+    @Test func statusExplanation_optimal_returnsSuccessLine() {
+        let dayData = TestDataBuilder.makeOptimalDay()
+        #expect(dayData.statusExplanation == reason("day_status_explanation.optimal"))
+    }
+
+    @Test("Three medium meals surface the multiple-medium reason under the poor header")
+    func statusExplanation_poor_threeMediumMeals_includesMultipleMedium() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "A", quantity: .medium, satisfaction: .fifty))
+        dayData.addMeal(Meal(description: "B", quantity: .medium, satisfaction: .fifty))
+        dayData.addMeal(Meal(description: "C", quantity: .medium, satisfaction: .fifty))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .poor)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_reason.meals_multiple_medium")) == true)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_explanation.poor")) == true)
+    }
+
+    @Test("Any large meal surfaces the multiple-medium reason")
+    func statusExplanation_poor_largeMeal_includesMultipleMedium() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "A", quantity: .large, satisfaction: .fifty))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .poor)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_reason.meals_multiple_medium")) == true)
+    }
+
+    @Test("Exactly two medium meals surface the two-medium reason under the moderate header")
+    func statusExplanation_moderate_twoMediumMeals_includesTwoMedium() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "A", quantity: .medium, satisfaction: .fifty))
+        dayData.addMeal(Meal(description: "B", quantity: .medium, satisfaction: .fifty))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .moderate)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_reason.meals_two_medium")) == true)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_explanation.moderate")) == true)
+    }
+
+    @Test("Zero water surfaces the water-none reason")
+    func statusExplanation_poor_waterZero_includesWaterNone() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(makeSmallMeal("A"))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
+        dayData.water = 0.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .poor)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_reason.water_none")) == true)
+    }
+
+    @Test("Low but non-zero water surfaces the water-low reason")
+    func statusExplanation_poor_waterLow_includesWaterLow() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(makeSmallMeal("A"))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
+        dayData.water = 0.5
+        dayData.mood = .good
+
+        #expect(dayData.status == .poor)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_reason.water_low")) == true)
+    }
+
+    @Test("Water between 1.0 and 1.8 surfaces the water-moderate reason")
+    func statusExplanation_moderate_waterModerate_includesWaterModerate() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(makeSmallMeal("A"))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
+        dayData.water = 1.5
+        dayData.mood = .good
+
+        #expect(dayData.status == .moderate)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_reason.water_moderate")) == true)
+    }
+
+    @Test("No workouts surface the workout-none reason")
+    func statusExplanation_moderate_noWorkout_includesWorkoutNone() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(makeSmallMeal("A"))
+        dayData.water = 1.5
+        dayData.mood = .good
+
+        #expect(dayData.status == .moderate)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_reason.workout_none")) == true)
+    }
+
+    @Test("A short workout surfaces the workout-insufficient reason")
+    func statusExplanation_moderate_shortWorkout_includesWorkoutInsufficient() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(makeSmallMeal("A"))
+        dayData.addWorkout(Workout(description: "Stretch", duration: Workout.Duration(minutes: 10)))
+        dayData.water = 2.0
+        dayData.mood = .good
+
+        #expect(dayData.status == .moderate)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_reason.workout_insufficient")) == true)
+    }
+
+    @Test("A neutral mood surfaces the mood-neutral reason")
+    func statusExplanation_moderate_neutralMood_includesMoodNeutral() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(makeSmallMeal("A"))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
+        dayData.water = 2.0
+        dayData.mood = .neutral
+
+        #expect(dayData.status == .moderate)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_reason.mood_neutral")) == true)
+    }
+
+    @Test("A sad mood surfaces the mood-sad reason")
+    func statusExplanation_poor_sadMood_includesMoodSad() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(makeSmallMeal("A"))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
+        dayData.water = 2.0
+        dayData.mood = .sad
+
+        #expect(dayData.status == .poor)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_reason.mood_sad")) == true)
+    }
+
+    @Test("A poor fallback day with no specific reasons ends with just the header and a period")
+    func statusExplanation_poorFallback_withoutReasons_endsWithPeriodOnly() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        // No meals → not optimal; water ≥ 1.8, workout ≥ 30, good mood → neither poor nor moderate → poor fallback.
+        dayData.water = 2.0
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
+        dayData.mood = .good
+
+        #expect(dayData.status == .poor)
+        #expect(dayData.statusExplanation == reason("day_status_explanation.poor") + ".")
+    }
+
+    @Test("A poor day with reasons joins them after the header and ends with a period")
+    func statusExplanation_poor_joinsReasonsWithHeaderAndPeriod() throws {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(Meal(description: "A", quantity: .large, satisfaction: .fifty))
+        dayData.water = 0.0
+        dayData.mood = .sad
+
+        #expect(dayData.status == .poor)
+        let explanation = try #require(dayData.statusExplanation)
+        #expect(explanation.hasPrefix(reason("day_status_explanation.poor") + ": "))
+        #expect(explanation.hasSuffix("."))
+    }
+
     // MARK: - Helper Methods Tests
 
     @Test func filledCategoriesCount_isZero_whenEmpty() {

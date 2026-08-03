@@ -16,6 +16,7 @@ enum AccessibilityID {
     static let waterValueLabel = "waterValueLabel"
     static let mealsEmptyState = "mealsEmptyState"
     static let workoutsEmptyState = "workoutsEmptyState"
+    static let calendarStrip = "calendarStrip"
 
     /// Calendar day cell identified by its offset in days from today (-1 yesterday, 0 today, 1 tomorrow).
     static func calendarDay(offset: Int) -> String {

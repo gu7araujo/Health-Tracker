@@ -39,7 +39,7 @@ Black-box and isolated — each test drives the shipping app through its accessi
 </rule_3>
 
 <rule_4>
-**SCROLL BEFORE YOU TAP** — SwiftUI `List` rows and pickers below the fold may not exist yet, and controls pushed past the sheet's bottom edge report hittable while taps land dead. `scrollTo` (or swipe the list) the target into view first; reveal card swipe actions through `tapSwipeAction`, which falls back to the visible label when the identifier is not surfaced by the swipe host.
+**SCROLL BEFORE YOU TAP** — SwiftUI `List` rows and pickers below the fold may not exist yet, and controls pushed past the sheet's bottom edge report hittable while taps land dead. `scrollTo` (or swipe the list) the target into view first; reveal card swipe actions through `tapSwipeAction`, which falls back to the visible label when the identifier is not surfaced by the swipe host. The `CalendarStrip` is a horizontally *paged* week view (weeks start Monday): selecting a day does **not** re-page it, and a day on another week's page reports an invalid frame — never probe an off-screen day cell's `.isHittable`/`.tap()` (that records `"Activation point invalid…"`). Page it by swiping its `calendarStrip` container, deriving the direction from the date (see `CalendarUITests.selectDay`), which matters whenever today is a Monday and yesterday sits on the previous page.
 </rule_4>
 
 <rule_5>

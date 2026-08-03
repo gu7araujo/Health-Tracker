@@ -56,6 +56,7 @@ struct CalendarStrip: View {
                     }
                 }
                 .scrollTargetBehavior(.paging)
+                .accessibilityIdentifier(AccessibilityID.calendarStrip)
                 .onAppear {
                     if dates.isEmpty {
                         loadInitialDates()

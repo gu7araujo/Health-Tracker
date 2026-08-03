@@ -2,7 +2,9 @@
 //  DataMigrationTests.swift
 //  HealthTrackerTests
 //
-//  Tests for workout duration migration logic
+//  Tests for DataMigration driving the injectable struct against in-memory fakes.
+//  Covers, per migration: already-migrated no-op, successful migration, and
+//  source-absent (empty) — plus the run() backup-guard orchestration.
 //
 
 import Foundation
@@ -11,66 +13,239 @@ import Testing
 
 @MainActor
 struct DataMigrationTests {
-    // MARK: - Duration Migration Tests
+    // MARK: - Helpers
 
-    @Test func migrateWorkoutDurations_convertsLegacyValues() {
-        // Arrange: Create UserDefaults with test key
-        let userDefaults = UserDefaults.standard
-        let testKey = "workoutDurationMigrationCompleted_test"
-        userDefaults.removeObject(forKey: testKey)
-
-        // Create test data with legacy enum raw values (0-6)
-        let dataSource = ICloudDriveDataSource()
-        let testDays = [
-            DayData(
-                date: Date(),
-                meals: [],
-                workouts: [
-                    Workout(description: "Run", duration: Workout.Duration(minutes: 0)), // Should convert 0 → 15
-                    Workout(description: "Gym", duration: Workout.Duration(minutes: 1)), // Should convert 1 → 30
-                    Workout(description: "Bike", duration: Workout.Duration(minutes: 2)) // Should convert 2 → 60
-                ],
-                water: nil,
-                mood: nil
-            )
-        ]
-        let recordedDays = testDays.compactMap(RecordedDayData.init)
-        dataSource.save(recordedDays)
-
-        // Act: Would call migration here, but it's private
-        // This is a conceptual test - in real implementation, we'd need to expose
-        // migration logic or test through public interface
-
-        // Note: This test demonstrates the expected behavior but cannot execute
-        // the private migrateWorkoutDurations() method directly
+    private func makeMigration(
+        legacy: MockLocalDataSource = MockLocalDataSource(),
+        cloud: MockLocalDataSource = MockLocalDataSource(),
+        flags: MockMigrationFlagStore = MockMigrationFlagStore(),
+        backUp: @escaping () -> Bool = { true }
+    ) -> DataMigration {
+        DataMigration(
+            legacySource: legacy,
+            cloudSource: cloud,
+            flags: flags,
+            backUp: backUp,
+            logger: MockLogger()
+        )
     }
 
-    @Test func migrateWorkoutDurations_preservesNewValues() {
-        // Arrange: Create workouts with new format (>= 7 minutes)
-        let workout1 = Workout(description: "Run", duration: Workout.Duration(minutes: 45))
-        let workout2 = Workout(description: "Bike", duration: Workout.Duration(minutes: 75))
-
-        // Assert: Values should remain unchanged
-        #expect(workout1.duration.minutes == 45)
-        #expect(workout2.duration.minutes == 75)
+    private func recordedDays() throws -> [RecordedDayData] {
+        let day = try #require(TestDataBuilder.makeRecordedOptimalDay())
+        return [day]
     }
 
-    @Test func migrateWorkoutDurations_handlesEdgeCases() {
-        // Test boundary values
-        let minDuration = Workout.Duration(minutes: 1)
-        let maxDuration = Workout.Duration(minutes: 300)
-        let belowMin = Workout.Duration(minutes: -5)
-        let aboveMax = Workout.Duration(minutes: 500)
+    // MARK: - migrateToICloudDrive
 
-        #expect(minDuration.minutes == 1)
-        #expect(maxDuration.minutes == 300)
-        #expect(belowMin.minutes == 1) // Clamped to min
-        #expect(aboveMax.minutes == 300) // Clamped to max
+    @Test("Already-migrated iCloud flag is a no-op")
+    func migrateToICloudDrive_skipsWhenFlagSet() throws {
+        let legacy = MockLocalDataSource()
+        legacy.loadResult = try recordedDays()
+        let cloud = MockLocalDataSource()
+        let flags = MockMigrationFlagStore(done: [DataMigration.iCloudMigrationKey])
+
+        makeMigration(legacy: legacy, cloud: cloud, flags: flags).migrateToICloudDrive()
+
+        #expect(cloud.saveCalledWith == nil)
+        #expect(!flags.clearLegacyStoreCalled)
     }
 
-    // MARK: - Meal Items Migration Tests
+    @Test("Empty legacy store just marks the migration done")
+    func migrateToICloudDrive_marksDoneWhenLegacyEmpty() {
+        let legacy = MockLocalDataSource()
+        legacy.loadResult = []
+        let cloud = MockLocalDataSource()
+        let flags = MockMigrationFlagStore()
 
-    @Test func migrateMealItems_convertsLegacyDescription() throws {
+        makeMigration(legacy: legacy, cloud: cloud, flags: flags).migrateToICloudDrive()
+
+        #expect(cloud.saveCalledWith == nil)
+        #expect(!flags.clearLegacyStoreCalled)
+        #expect(flags.isDone(DataMigration.iCloudMigrationKey))
+    }
+
+    @Test("Non-empty legacy store is copied to iCloud, cleaned up, and flagged done")
+    func migrateToICloudDrive_migratesDataAndCleansUp() throws {
+        let days = try recordedDays()
+        let legacy = MockLocalDataSource()
+        legacy.loadResult = days
+        let cloud = MockLocalDataSource()
+        let flags = MockMigrationFlagStore()
+
+        makeMigration(legacy: legacy, cloud: cloud, flags: flags).migrateToICloudDrive()
+
+        #expect(cloud.saveCalledWith == days)
+        #expect(flags.clearLegacyStoreCalled)
+        #expect(flags.isDone(DataMigration.iCloudMigrationKey))
+    }
+
+    // MARK: - migrateWorkoutDurations
+
+    @Test("Duration migration is a no-op once its flag is set")
+    func migrateWorkoutDurations_skipsWhenFlagSet() throws {
+        let cloud = MockLocalDataSource()
+        cloud.loadResult = try recordedDays()
+        let flags = MockMigrationFlagStore(done: [DataMigration.durationMigrationKey])
+
+        makeMigration(cloud: cloud, flags: flags).migrateWorkoutDurations()
+
+        #expect(cloud.saveCalledWith == nil)
+    }
+
+    @Test("Duration migration marks done without re-saving an empty store")
+    func migrateWorkoutDurations_marksDoneWhenEmpty() {
+        let cloud = MockLocalDataSource()
+        cloud.loadResult = []
+        let flags = MockMigrationFlagStore()
+
+        makeMigration(cloud: cloud, flags: flags).migrateWorkoutDurations()
+
+        #expect(cloud.saveCalledWith == nil)
+        #expect(flags.isDone(DataMigration.durationMigrationKey))
+    }
+
+    @Test("Duration migration re-saves existing data and flags done")
+    func migrateWorkoutDurations_reSavesAndFlagsDone() throws {
+        let days = try recordedDays()
+        let cloud = MockLocalDataSource()
+        cloud.loadResult = days
+        let flags = MockMigrationFlagStore()
+
+        makeMigration(cloud: cloud, flags: flags).migrateWorkoutDurations()
+
+        #expect(cloud.saveCalledWith == days)
+        #expect(flags.isDone(DataMigration.durationMigrationKey))
+    }
+
+    // MARK: - migrateMealItems
+
+    @Test("Meal items migration is a no-op once its flag is set")
+    func migrateMealItems_skipsWhenFlagSet() throws {
+        let cloud = MockLocalDataSource()
+        cloud.loadResult = try recordedDays()
+        let flags = MockMigrationFlagStore(done: [DataMigration.mealItemsMigrationKey])
+
+        makeMigration(cloud: cloud, flags: flags).migrateMealItems()
+
+        #expect(cloud.saveCalledWith == nil)
+    }
+
+    @Test("Meal items migration marks done without re-saving an empty store")
+    func migrateMealItems_marksDoneWhenEmpty() {
+        let cloud = MockLocalDataSource()
+        cloud.loadResult = []
+        let flags = MockMigrationFlagStore()
+
+        makeMigration(cloud: cloud, flags: flags).migrateMealItems()
+
+        #expect(cloud.saveCalledWith == nil)
+        #expect(flags.isDone(DataMigration.mealItemsMigrationKey))
+    }
+
+    @Test("Meal items migration re-saves existing data and flags done")
+    func migrateMealItems_reSavesAndFlagsDone() throws {
+        let days = try recordedDays()
+        let cloud = MockLocalDataSource()
+        cloud.loadResult = days
+        let flags = MockMigrationFlagStore()
+
+        makeMigration(cloud: cloud, flags: flags).migrateMealItems()
+
+        #expect(cloud.saveCalledWith == days)
+        #expect(flags.isDone(DataMigration.mealItemsMigrationKey))
+    }
+
+    // MARK: - migrateWorkoutIntensities
+
+    @Test("Intensity migration is a no-op once its flag is set")
+    func migrateWorkoutIntensities_skipsWhenFlagSet() throws {
+        let cloud = MockLocalDataSource()
+        cloud.loadResult = try recordedDays()
+        let flags = MockMigrationFlagStore(done: [DataMigration.workoutIntensityMigrationKey])
+
+        makeMigration(cloud: cloud, flags: flags).migrateWorkoutIntensities()
+
+        #expect(cloud.saveCalledWith == nil)
+    }
+
+    @Test("Intensity migration marks done without re-saving an empty store")
+    func migrateWorkoutIntensities_marksDoneWhenEmpty() {
+        let cloud = MockLocalDataSource()
+        cloud.loadResult = []
+        let flags = MockMigrationFlagStore()
+
+        makeMigration(cloud: cloud, flags: flags).migrateWorkoutIntensities()
+
+        #expect(cloud.saveCalledWith == nil)
+        #expect(flags.isDone(DataMigration.workoutIntensityMigrationKey))
+    }
+
+    @Test("Intensity migration re-saves existing data and flags done")
+    func migrateWorkoutIntensities_reSavesAndFlagsDone() throws {
+        let days = try recordedDays()
+        let cloud = MockLocalDataSource()
+        cloud.loadResult = days
+        let flags = MockMigrationFlagStore()
+
+        makeMigration(cloud: cloud, flags: flags).migrateWorkoutIntensities()
+
+        #expect(cloud.saveCalledWith == days)
+        #expect(flags.isDone(DataMigration.workoutIntensityMigrationKey))
+    }
+
+    // MARK: - run() orchestration
+
+    @Test("When a file migration is pending and the backup fails, no file migration runs")
+    func run_skipsFileMigrations_whenBackupFails() throws {
+        let cloud = MockLocalDataSource()
+        cloud.loadResult = try recordedDays()
+        // iCloud already migrated so only the file migrations are pending.
+        let flags = MockMigrationFlagStore(done: [DataMigration.iCloudMigrationKey])
+
+        makeMigration(cloud: cloud, flags: flags, backUp: { false }).run()
+
+        #expect(cloud.saveCalledWith == nil)
+        #expect(!flags.isDone(DataMigration.durationMigrationKey))
+        #expect(!flags.isDone(DataMigration.mealItemsMigrationKey))
+        #expect(!flags.isDone(DataMigration.workoutIntensityMigrationKey))
+    }
+
+    @Test("When a file migration is pending and the backup succeeds, all file migrations run")
+    func run_runsFileMigrations_whenBackupSucceeds() throws {
+        let cloud = MockLocalDataSource()
+        cloud.loadResult = try recordedDays()
+        let flags = MockMigrationFlagStore(done: [DataMigration.iCloudMigrationKey])
+
+        makeMigration(cloud: cloud, flags: flags, backUp: { true }).run()
+
+        #expect(cloud.saveCalledWith != nil)
+        #expect(flags.isDone(DataMigration.durationMigrationKey))
+        #expect(flags.isDone(DataMigration.mealItemsMigrationKey))
+        #expect(flags.isDone(DataMigration.workoutIntensityMigrationKey))
+    }
+
+    @Test("No backup is taken when every file migration is already complete")
+    func run_skipsBackup_whenNothingPending() {
+        var backupCalled = false
+        let flags = MockMigrationFlagStore(done: [
+            DataMigration.iCloudMigrationKey,
+            DataMigration.durationMigrationKey,
+            DataMigration.mealItemsMigrationKey,
+            DataMigration.workoutIntensityMigrationKey
+        ])
+
+        makeMigration(flags: flags, backUp: {
+            backupCalled = true
+            return true
+        }).run()
+
+        #expect(!backupCalled)
+    }
+
+    // MARK: - Meal Items Codable Conversion
+
+    @Test("Legacy meal `description` decodes into `items`, which the re-save persists")
+    func migrateMealItems_convertsLegacyDescription() throws {
         // Legacy JSON with `description` only (no `items`) decodes into `items: [description]`,
         // which is the conversion migrateMealItems() persists back to disk on re-save.
         let legacyJSON = """
@@ -92,59 +267,5 @@ struct DataMigrationTests {
         let json = try #require(try JSONSerialization.jsonObject(with: reEncoded) as? [String: Any])
         #expect(json["items"] as? [String] == ["Lunch"])
         #expect(json["description"] == nil)
-    }
-
-    // MARK: - Workout Intensity Migration Tests
-
-    @Test func migrateWorkoutIntensities_defaultsLegacyWorkoutToMedium() throws {
-        // Legacy JSON without `intensity` decodes with `.medium`, which is the value
-        // migrateWorkoutIntensities() persists back to disk on re-save.
-        let legacyJSON = """
-        {
-            "id": "\(UUID().uuidString)",
-            "description": "Run",
-            "duration": {"minutes": 30}
-        }
-        """
-        let data = try #require(legacyJSON.data(using: .utf8))
-
-        let decoded = try JSONDecoder().decode(Workout.self, from: data)
-
-        #expect(decoded.intensity == .medium)
-
-        // Re-encoding (what the migration's re-save does) persists the new `intensity` field
-        let reEncoded = try JSONEncoder().encode(decoded)
-        let json = try #require(try JSONSerialization.jsonObject(with: reEncoded) as? [String: Any])
-        #expect(json["intensity"] as? Int == Workout.Intensity.medium.rawValue)
-    }
-
-    @Test func migrateWorkoutIntensities_preservesExistingIntensity() throws {
-        let workout = Workout(description: "Sprint", duration: Workout.Duration(minutes: 20), intensity: .high)
-
-        let encoded = try JSONEncoder().encode(workout)
-        let decoded = try JSONDecoder().decode(Workout.self, from: encoded)
-
-        #expect(decoded.intensity == .high)
-    }
-
-    @Test func duration_legacyValueMapping() {
-        // Test that we understand the legacy enum mapping correctly
-        let legacyMappings: [(rawValue: Int, expectedMinutes: Int)] = [
-            (0, 15), // fifteenMin
-            (1, 30), // thirtyMin
-            (2, 60), // oneHour
-            (3, 90), // oneHourThirty
-            (4, 10), // tenMin
-            (5, 40), // fortyMin
-            (6, 120) // twoHours
-        ]
-
-        // These mappings are what the migration logic should apply
-        for (rawValue, expectedMinutes) in legacyMappings {
-            // In migration, if duration.minutes == rawValue (0-6),
-            // it should be converted to expectedMinutes
-            #expect(rawValue <= 6)
-            #expect(expectedMinutes >= 10)
-        }
     }
 }
