@@ -38,9 +38,9 @@ xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<s
 
 ## 3. Coverage report (when you need it)
 
-Run with coverage into a result bundle:
+`xcodebuild` errors out if `-resultBundlePath` already exists, so delete `build/` first:
 ```bash
-xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -enableCodeCoverage YES -resultBundlePath build/Test.xcresult | xcbeautify
+rm -rf build && xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -enableCodeCoverage YES -resultBundlePath build/Test.xcresult | xcbeautify
 ```
 
 Then view it:
