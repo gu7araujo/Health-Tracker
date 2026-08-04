@@ -44,55 +44,58 @@ final class CalendarUITests: HealthTrackerUITestCase {
             "No future day is visible when today is the last day of the week"
         )
 
-        assertExists(calendarDayCell(offset: 1)).tap()
+        revealDayCell(offset: 1).tap()
         XCTAssertTrue(calendarDayCell(offset: 0).isSelected)
         XCTAssertFalse(calendarDayCell(offset: 1).isSelected)
     }
 
     // MARK: - Helpers
 
-    /// Weeks the strip is currently paged away from today's week (0 = today's week,
-    /// -1 = one week earlier). Selecting a day never moves the strip, so the helper
-    /// tracks its own paging to know which week is on screen.
-    private var visibleWeekOffset = 0
-
     private func calendarDayCell(offset: Int) -> XCUIElement {
         app.buttons[AccessibilityID.calendarDay(offset: offset)]
     }
 
-    /// Selects the day `offset` days from today, paging the weekly strip (one week
-    /// per swipe on the strip container) to the target day's week first. The paging
-    /// direction is derived from the date, so it works whichever weekday today is —
-    /// including when the target sits on an adjacent week's page and is off-screen
-    /// (e.g. yesterday when today is a Monday). Probing the off-screen cell directly
-    /// is avoided because its frame is invalid while on another page.
-    private func selectDay(offset: Int) {
-        let targetWeek = weekOffset(forDayOffset: offset)
+    /// Pages the horizontally-paged weekly strip until the day `offset` days from
+    /// today sits fully inside the visible page, then returns it. The strip's scroll
+    /// position is not guaranteed to sit on today's week — it can reset to an adjacent
+    /// week on re-layout (e.g. after the add-record modal, or racing the launch scroll),
+    /// and a day on another page reports an off-screen or clipped frame. Reachability is
+    /// judged from the cell's `frame` versus the strip's viewport — never `.isHittable`
+    /// or `.tap`, which hit-test an off-page cell and hard-fail with "Activation point
+    /// invalid…". A rendered-but-clipped cell is nudged toward the edge it hangs off; a
+    /// not-yet-rendered one is chased in its calendar direction (future right, past left).
+    @discardableResult
+    private func revealDayCell(offset: Int) -> XCUIElement {
         let strip = assertExists(element(AccessibilityID.calendarStrip))
-        while visibleWeekOffset > targetWeek {
-            strip.swipeRight() // reveal the previous week
-            visibleWeekOffset -= 1
-        }
-        while visibleWeekOffset < targetWeek {
-            strip.swipeLeft() // reveal the next week
-            visibleWeekOffset += 1
-        }
         let cell = calendarDayCell(offset: offset)
-        assertExists(cell).tap()
-        assertSelected(cell)
+        for _ in 0 ..< 8 {
+            if cell.exists {
+                let cellFrame = cell.frame
+                let viewport = strip.frame
+                if cellFrame.width > 1,
+                   cellFrame.minX >= viewport.minX - 0.5,
+                   cellFrame.maxX <= viewport.maxX + 0.5
+                {
+                    return cell // fully on the visible page → safe to tap
+                }
+                if cellFrame.midX > viewport.midX {
+                    strip.swipeLeft() // clipped/off to the right → reveal the right side
+                } else {
+                    strip.swipeRight() // clipped/off to the left → reveal the left side
+                }
+            } else if offset >= 0 {
+                strip.swipeLeft() // future weeks are to the right
+            } else {
+                strip.swipeRight() // past weeks are to the left
+            }
+        }
+        return cell
     }
 
-    /// Whole weeks between today's week and the day `offset` days away, using a
-    /// Monday-first Gregorian calendar to match `CalendarStrip` and the en_GB launch locale.
-    private func weekOffset(forDayOffset offset: Int) -> Int {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.firstWeekday = 2 // Monday, matching CalendarStrip + en_GB
-        let today = calendar.startOfDay(for: Date())
-        guard let target = calendar.date(byAdding: .day, value: offset, to: today),
-              let todayWeekStart = calendar.dateInterval(of: .weekOfYear, for: today)?.start,
-              let targetWeekStart = calendar.dateInterval(of: .weekOfYear, for: target)?.start
-        else { return 0 }
-        let days = calendar.dateComponents([.day], from: todayWeekStart, to: targetWeekStart).day ?? 0
-        return Int((Double(days) / 7).rounded())
+    /// Selects the day `offset` days from today, paging the strip into view first.
+    private func selectDay(offset: Int) {
+        let cell = revealDayCell(offset: offset)
+        cell.tap()
+        assertSelected(cell)
     }
 }
