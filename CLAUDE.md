@@ -32,9 +32,9 @@ For current, version-accurate Apple API docs (especially fast-moving iOS 26 APIs
 
 ## Workflow
 
-The core loop is **red → green**: write a failing test, then make it pass. Follow it always.
+The core loop is **red → green**: write a failing test, then make it pass. Follow it always: TDD skill.
 
-1. Before coding, state how you'll verify the change — which unit/UI test, which bash command, or screenshot, etc.
+1. Before coding, state how you'll verify the change — which unit/UI test, which bash command, screenshot, skill, or tool, etc.
 2. Write that test first and watch it fail (**red**).
 3. Implement the minimum code to pass it (**green**).
 4. Run the full suite and iterate until it passes clean — that's the bar for a task being done.
@@ -52,74 +52,19 @@ Leave the system committable — build green, tests passing.
 ## Building Systems
 
 - The project uses `PBXFileSystemSynchronizedRootGroup`, so deleting files auto-removes them from the build — no `project.pbxproj` edits needed.
-- If an Xcode MCP tool fails because Xcode is not open, open the project first with `open HealthTracker.xcodeproj`, then retry the tool.
-
-### Using CLI Commands (if Xcode MCP doesn't work)
-
-#### Building
-
-Build the project
-```bash
-xcodebuild -project HealthTracker.xcodeproj -scheme HealthTracker -configuration Debug build | xcbeautify
-```
-
-Build for testing only (compiles tests without running them):
-```bash
-xcodebuild build-for-testing -project HealthTracker.xcodeproj -scheme HealthTracker | xcbeautify
-```
-
-#### Running Tests
-
-Identify possible simulator ids
-```bash
-xcrun simctl list devices
-```
-
-Run all tests
-```bash
-xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' | xcbeautify
-```
-
-Run all Unit tests (fast)
-```bash
-xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerTests | xcbeautify
-```
-
-Run all UI tests (slow — each test launches the app on a simulator)
-```bash
-xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerUITests | xcbeautify
-```
-
-Run specific test file or test
-```bash
-xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerTests/DayDataTests | xcbeautify
-xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerUITests/CalendarUITests/testTodaySelectedOnLaunchAndEmptyStates | xcbeautify
-```
-
-Run with coverage report
-```bash
-xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -enableCodeCoverage YES -resultBundlePath build/Test.xcresult | xcbeautify
-```
-
-View the coverage report from the command line (after running with `-resultBundlePath`):
-```bash
-# Per-file line-coverage table (human-readable)
-xcrun xccov view --report build/Test.xcresult
-
-# Machine-readable JSON (per-target/per-file, for scripting)
-xcrun xccov view --report --json build/Test.xcresult
-```
-The JSON exposes each target's `lineCoverage`, `coveredLines`, and `executableLines`, plus a per-file `files` array — sort by `lineCoverage` to find the least-covered files.
-
-## Worktrees
-
-- Create git worktrees at the root directory inside `.worktrees/` (e.g. `.worktrees/<branch-name>`)
-- Only create a worktree when the task clearly requires it or the user explicitly requests it
+- When the Xcode MCP tools are unavailable or failing, fall back to `xcodebuild`:
+    - **Building** the app or compiling the test target: `cli-build` skill.
+    - **Running** unit/UI tests and reading the coverage report: `cli-test` skill.
 
 ## Validating Work
 
 - After a UI change or adding a new UI element, validate it by rendering its SwiftUI `#Preview` with the Xcode MCP `RenderPreview` tool and reviewing the snapshot (check light/dark and a large Dynamic Type size). If the view has no `#Preview`, add one first.
 - To validate logic or understand how code behaves without editing files or writing a test, run a `print`-based snippet in a source file's context with the Xcode MCP `RunCodeSnippet` tool (e.g. construct a `DayData` and print its `status`).
+
+## Worktrees
+
+- Create git worktrees at the root directory inside `.worktrees/` (e.g. `.worktrees/<branch-name>`)
+- Only create a worktree when the task clearly requires it or the user explicitly requests it
 
 ## Code Quality
 
