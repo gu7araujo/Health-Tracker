@@ -8,13 +8,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Essential Health"
+            "value" : "Clune"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Saúde Essencial"
+            "value" : "Clune"
           }
         }
       }
