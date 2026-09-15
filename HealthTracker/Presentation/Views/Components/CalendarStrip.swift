@@ -240,7 +240,7 @@ struct CalendarStripDay: View {
 // MARK: - Right Semicircle Shape
 
 /// A shape that draws only the right half of a circle (from top to bottom).
-struct RightSemicircle: Shape {
+nonisolated struct RightSemicircle: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         let center = CGPoint(x: rect.midX, y: rect.midY)

@@ -16,15 +16,15 @@ struct DataMigrationTests {
     // MARK: - Helpers
 
     private func makeMigration(
-        legacy: MockLocalDataSource = MockLocalDataSource(),
-        cloud: MockLocalDataSource = MockLocalDataSource(),
-        flags: MockMigrationFlagStore = MockMigrationFlagStore(),
+        legacy: MockLocalDataSource? = nil,
+        cloud: MockLocalDataSource? = nil,
+        flags: MockMigrationFlagStore? = nil,
         backUp: @escaping () -> Bool = { true }
     ) -> DataMigration {
         DataMigration(
-            legacySource: legacy,
-            cloudSource: cloud,
-            flags: flags,
+            legacySource: legacy ?? MockLocalDataSource(),
+            cloudSource: cloud ?? MockLocalDataSource(),
+            flags: flags ?? MockMigrationFlagStore(),
             backUp: backUp,
             logger: MockLogger()
         )
