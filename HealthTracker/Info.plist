@@ -8,10 +8,10 @@
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<true/>
-			<key>NSUbiquitousContainerSupportedFolderLevels</key>
-			<string>None</string>
 			<key>NSUbiquitousContainerName</key>
 			<string>Clune</string>
+			<key>NSUbiquitousContainerSupportedFolderLevels</key>
+			<string>None</string>
 		</dict>
 	</dict>
 </dict>

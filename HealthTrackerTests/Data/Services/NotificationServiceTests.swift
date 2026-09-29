@@ -21,10 +21,13 @@ struct NotificationServiceTests {
     private final class DummyDelegate: NotificationCenterDelegate {}
 
     private func makeService(
-        center: MockUserNotificationCenter = MockUserNotificationCenter(),
-        logger: MockLogger = MockLogger()
+        center: MockUserNotificationCenter? = nil,
+        logger: MockLogger? = nil
     ) -> NotificationService {
-        NotificationService(notificationCenter: center, logger: logger)
+        NotificationService(
+            notificationCenter: center ?? MockUserNotificationCenter(),
+            logger: logger ?? MockLogger()
+        )
     }
 
     private func tag(_ status: NotificationAuthorizationStatus) -> String {
