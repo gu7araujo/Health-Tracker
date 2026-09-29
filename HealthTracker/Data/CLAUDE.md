@@ -2,26 +2,6 @@
 
 Adapts persistence and platform services to the domain: raw I/O, orchestration, DTOs, one-time migrations, and cross-cutting infrastructure.
 
-## Directory Map
-
-| Directory / File | Type | Responsibility |
-|---|---|---|
-| `DataSources/` | — | Raw I/O adapters that read/write bytes; no business logic |
-| `DataSources/ICloudDriveDataSource.swift` | `class ICloudDriveDataSource` | Persists the JSON container to iCloud Drive using `NSFileCoordinator` |
-| `DataSources/UserDefaultsDataSource.swift` | `protocol LocalDataSourceProtocol`, `class UserDefaultsDataSource` | Defines the local-storage contract and its `UserDefaults`-backed implementation |
-| `Repositories/` | — | Orchestrates data sources; exposes domain-friendly CRUD operations |
-| `Repositories/HealthDataRepository.swift` | `class HealthDataRepository` | Loads/saves all days, retrieves a single day, and queries ranges via the injected data source |
-| `Models/` | — | Serialisable data-transfer types shared between data sources and repositories |
-| `Models/DayDataContainer.swift` | `struct DayDataContainer` | Top-level JSON envelope that holds the array of `DayData` values |
-| `Migration/` | — | One-time upgrade logic; runs once per install, then marks itself done |
-| `Migration/DataMigration.swift` | `struct DataMigration`, `protocol MigrationFlagStore` | Migrates legacy `UserDefaults` records to iCloud Drive and upgrades workout/meal fields. Data sources, flag store, and backup are injected (defaults reproduce prod) so the flag-gated branches are unit-testable; `static migrateIfNeeded()` is the app entry point |
-| `Services/` | — | Cross-cutting infrastructure used across the data layer |
-| `Services/NotificationService.swift` | `class NotificationService` | Schedules and cancels local `UNUserNotification` alerts, mapping domain types to `UN*` |
-| `Services/UserNotificationCentering.swift` | `protocol UserNotificationCentering` | Narrow seam over `UNUserNotificationCenter` (returns a constructible `UNAuthorizationStatus`, not `UNNotificationSettings`) so `NotificationService` is testable with a fake center; these two are the only files importing `UserNotifications` |
-| `Services/NotificationPermissionManager.swift` | `class NotificationPermissionManager` | Requests and tracks `UNAuthorizationStatus` from the system |
-| `Services/LoggerFactory.swift` | `enum LoggerFactory` | Creates pre-configured `Logger` instances scoped to a subsystem/category |
-| `Services/OSLogLogger.swift` | `class OSLogLogger` | Bridges the domain `LoggerProtocol` to `os.Logger` |
-
 ## Storage
 
 - All persistence goes through `LocalDataSourceProtocol`; the default implementation is `ICloudDriveDataSource`.

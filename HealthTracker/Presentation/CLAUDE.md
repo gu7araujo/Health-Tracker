@@ -2,22 +2,6 @@
 
 The SwiftUI UI: an `@Observable` ViewModel that owns the screen's mutable state, stateless section views that render it, and reusable Liquid Glass components. The only layer that touches SwiftUI. It reaches the domain solely through use cases — never a repository or data source directly.
 
-## Directory Map
-
-| Directory / File | Type | Responsibility |
-|---|---|---|
-| `ViewModels/MainViewModel.swift` | `@Observable final class MainViewModel` | Sole owner of the in-memory `[DayData]`; CRUD for meals/workouts/water/mood on the selected day; loads via `LoadDayDataUseCase`, persists via `SaveDayDataUseCase`, cancels reminders after each save; exposes `currentDayData`/`currentDayStatus`/`currentDayExplanation` |
-| `Views/MainView.swift` | `struct MainView` | Root screen; owns `MainViewModel` via `@State`, composes the section views in a `List`, drives the add-record alert and add/edit sheets |
-| `Views/AddEditModal.swift` | `struct AddEditModal` | Add/edit sheet for a meal or workout; holds local form `@State`, reads/writes through the injected `MainViewModel` |
-| `Views/MealsSectionView.swift`, `Views/WorkoutsSectionView.swift` | `struct` | Stateless section: renders cards (or `EmptyListRow`), wires swipe edit/delete + drag reorder through closures |
-| `Views/WaterSectionView.swift` | `struct WaterSectionView` | Stateless section: water total + slider |
-| `Views/MoodSectionView.swift` | `struct MoodSectionView` | Stateless section: the three mood buttons, selection tinted via glass |
-| `Views/Components/CardView.swift` | `struct CardView` | Reusable card; optional Liquid Glass `.glassEffect()` (tint/interactive) or plain background, optional tap action |
-| `Views/Components/CardListView.swift` | `struct CardListView` | Horizontal-scroll card variant with dynamic width |
-| `Views/Components/CalendarStrip.swift` | `CalendarStrip`, `CalendarStripDay`, `RightSemicircle` | Paged weekly date strip; lazy past-week loading, per-day status ring (semicircle for `.incomplete`), future days disabled |
-| `Views/Components/EmptyListRow.swift` | `struct EmptyListRow` | Shared empty-state row |
-| `AccessibilityID.swift` | `enum AccessibilityID` | Identifiers the UI tests locate elements by; source of truth, mirrored in the UITests target |
-
 ## State & Data Flow
 
 `MainViewModel` is the **single source of truth** for on-screen day data. State flows one way and mutations flow back through closures:

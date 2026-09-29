@@ -10,6 +10,7 @@
     ]
   },
   "enabledPlugins": {
+    "swift-lsp@claude-plugins-official": true,
     "swiftui-expert@swiftui-expert-skill": true,
     "swift-concurrency@swift-concurrency-agent-skill": true,
     "swift-testing-expert@swift-testing-agent-skill": true,

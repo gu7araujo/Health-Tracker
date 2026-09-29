@@ -2,23 +2,6 @@
 
 The unit-test target. Built on **Swift Testing** (not XCTest), it mirrors the production tree one-to-one: one test struct per type, grouped under `Domain/`, `Data/`, and `Presentation/`. Every test runs against protocol fakes and deterministic fixtures — no real services, files, or wall clock. UI flows live in the separate `HealthTrackerUITests` target.
 
-## Directory Map
-
-| Directory / File | Type | Responsibility |
-|---|---|---|
-| `Domain/Entities/` | — | One struct per entity (`DayDataTests`, `MealTests`, `WorkoutTests`, `MoodTests`, `DayStatusTests`, `RecordedDayDataTests`); status tiers, boundaries, and `Codable` legacy-decode paths |
-| `Domain/UseCases/` | — | Use cases driven against protocol fakes (`Load`/`Save`/`Schedule`/`Cancel`/`RequestNotifPermission`), asserting delegated calls |
-| `Data/DataSources/` | — | `ICloudDriveDataSourceTests`, `UserDefaultsDataSourceTests`: load/save happy paths, empty-store default, error paths |
-| `Data/Repositories/` | — | `HealthDataRepositoryTests`: CRUD + range queries against a fake data source |
-| `Data/Models/` | — | `DayDataContainerTests`: JSON envelope round-trips |
-| `Data/DataMigrationTests.swift` | — | Each migration: already-migrated no-op, success, source-absent |
-| `Presentation/ViewModels/` | — | `MainViewModel` split by concern (`Load`, `Date`, `MealWorkout`, `WaterMood`); CRUD + selection against use-case fakes |
-| `Mocks/MockHealthDataRepository.swift` | `HealthDataRepositoryProtocol` | Stubbed `...Result` returns + `...Called`/`...CalledWith` interaction flags |
-| `Mocks/MockLocalDataSource.swift` | `LocalDataSourceProtocol` | In-memory `load`/`save` with call tracking |
-| `Mocks/MockNotificationService.swift` | `NotificationServiceProtocol` | Stubbed auth results + per-method call flags |
-| `Mocks/MockLogger.swift` | `LoggerProtocol` | Records logs; `didLog(level:containing:)` / `messages(for:)` queries |
-| `TestHelpers/TestDataBuilder.swift` | `enum TestDataBuilder` | Fixed dates + status-tier day factories (`makeOptimalDay`…) and `RecordedDayData` variants |
-
 ## Fixtures & Mocks
 
 The two pieces of shared machinery every test leans on:

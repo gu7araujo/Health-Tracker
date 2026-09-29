@@ -4,31 +4,15 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 
 ## Repo Map
 
-| Path | Purpose |
-|------|---------|
-| `HealthTracker/HealthTrackerApp.swift` | App entry point; wires dependencies and bootstraps the app |
-| `HealthTracker/UITestingSupport.swift` | `-uiTesting` launch-argument hook: temp-dir repository, skips migration and permission prompts |
-| `HealthTracker/Domain/` | Business core: entities, repository/notification/logging protocols, use cases. Owns the health-status rules. **Deep map + rules: `HealthTracker/Domain/CLAUDE.md`** |
-| `HealthTracker/Data/` | Persistence + platform services: data sources, repository, DTOs, migrations, notifications, logging. **Deep map + rules: `HealthTracker/Data/CLAUDE.md`** |
-| `HealthTracker/Presentation/` | SwiftUI UI: `MainViewModel` (`@Observable` state owner), `MainView` + stateless section views, `AddEditModal`, reusable Liquid Glass components, accessibility IDs. Owns UI localization. **Deep map + rules: `HealthTracker/Presentation/CLAUDE.md`** |
-| `HealthTracker/Extensions/` | SwiftUI `View` helpers |
-| `HealthTracker/Resources/` | Localizable strings for `en` and `pt-BR` |
-| `HealthTrackerTests/` | Swift Testing unit suite mirroring the three layers, plus shared `Mocks/` and `TestDataBuilder`. **Deep map + rules: `HealthTrackerTests/CLAUDE.md`** |
-| `HealthTrackerUITests/` | XCUITest end-to-end suites driving the app on a simulator, plus the `Support/` base class, flow helpers, and mirrored identifiers. **Deep map + rules: `HealthTrackerUITests/CLAUDE.md`** |
-| `HealthTracker.xcodeproj/` | Xcode project configuration |
+Deep maps + layer rules: `HealthTracker/Domain/CLAUDE.md`, `HealthTracker/Data/CLAUDE.md`,
+`HealthTracker/Presentation/CLAUDE.md`, `HealthTrackerTests/CLAUDE.md`, `HealthTrackerUITests/CLAUDE.md`
+
+- `HealthTracker/UITestingSupport.swift` — the `-uiTesting` launch-argument hook: temp-dir repository, skips migration and permission prompts.
+- `HealthTracker/Resources/` — localizable strings for `en` and `pt-BR`.
 
 ## Apple Documentation
 
 For current, version-accurate Apple API docs (especially fast-moving iOS 26 APIs like Liquid Glass), use the Xcode MCP `DocumentationSearch` tool instead of relying on your trainning memory. Pass a `query` and optionally scope with `frameworks` (e.g. `["SwiftUI"]`); it returns ranked symbols and articles with signatures and code examples.
-
-## Technology Stack
-
-- **Language**: Swift 6
-- **UI Framework**: SwiftUI with iOS 26+ Liquid Glass effects
-- **Target**: iOS 26.0+
-- **Architecture**: Clean Architecture (Domain/Data/Presentation)
-- **Persistence**: iCloud Drive (JSON file) with local Documents fallback; migrated from UserDefaults
-- **State Management**: @Observable macro
 
 ## Workflow
 

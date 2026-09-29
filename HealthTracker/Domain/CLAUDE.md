@@ -2,28 +2,6 @@
 
 The business core: strongly-typed entities, the abstractions the outer layers depend on, and single-responsibility use cases. Owns the health-status rules. No SwiftUI or persistence framework leaks in here — except the small UI affordances (`localizedName`, `color`) some entities expose for the Presentation layer.
 
-## Directory Map
-
-| Directory / File | Type | Responsibility |
-|---|---|---|
-| `Entities/` | — | Strongly-typed business models |
-| `Entities/DayData.swift` | `struct DayData`, `enum HealthSection` | Primary aggregate: holds meals, workouts, water, mood; add/update/remove/move ops; computes `status` and `statusExplanation` |
-| `Entities/Meal.swift` | `struct Meal` | Meal entry: `items`, nested `Quantity` (verySmall/small/medium/large) and `Satisfaction` enums; tolerant `Codable` |
-| `Entities/Workout.swift` | `struct Workout` | Workout entry: `description`, nested `Duration` (minutes, clamped 1–300) and `Intensity` (low/medium/high); tolerant `Codable` |
-| `Entities/Mood.swift` | `enum Mood` | Daily mood (good/neutral/sad) with `emoji`, `color`, `localizedName` |
-| `Entities/DayStatus.swift` | `enum DayStatus` | Health verdict (optimal/moderate/poor/incomplete/noData) with display `color` |
-| `Entities/RecordedDayData.swift` | `struct RecordedDayData` | Parse-don't-validate wrapper: failable init proves a day has ≥1 recorded category |
-| `Protocols/` | — | Abstractions the domain depends on; concrete implementations live in `Data/` (Dependency Inversion) |
-| `Protocols/HealthDataRepositoryProtocol.swift` | `protocol HealthDataRepositoryProtocol` | Persistence contract, speaks `RecordedDayData` so empty days can never be stored |
-| `Protocols/NotificationServiceProtocol.swift` | `protocol NotificationServiceProtocol` + domain types | Notification contract; the domain mirrors of `UN*` (`NotificationAuthorizationOptions`, `NotificationAuthorizationStatus`, `NotificationCenterDelegate`) live here so the domain never imports UserNotifications |
-| `Protocols/LoggerProtocol.swift` | `protocol LoggerProtocol: Sendable` | Logging contract; message + `metadata` variants for each level |
-| `UseCases/` | — | One business operation each; hold a protocol dependency + logger, no state |
-| `UseCases/LoadDayDataUseCase.swift` | `final class LoadDayDataUseCase` | `execute()` → all recorded days; `execute(for:)` → that day or a fresh empty `DayData` |
-| `UseCases/SaveDayDataUseCase.swift` | `final class SaveDayDataUseCase` | Persist all days, or upsert one |
-| `UseCases/ScheduleNotificationsUseCase.swift` | `final class ScheduleNotificationsUseCase` | Schedules 30 days × 2 (lunch 1 PM, evening 8 PM) with date-specific identifiers; no-ops when unauthorized; DEBUG builds fire in ~2–3 min |
-| `UseCases/CancelNotificationsUseCase.swift` | `final class CancelNotificationsUseCase` | Cancels today's pending + delivered reminders once the user logs data, sparing future days |
-| `UseCases/RequestNotificationPermissionUseCase.swift` | `final class RequestNotificationPermissionUseCase` | Requests alert/sound/badge authorization; `isAuthorized()` checks status |
-
 ## Health Status
 
 `DayData.status` is the app's core rule. This section is its single source of truth. Only **meal size** counts — `Satisfaction` is ignored everywhere. Workout minutes are summed across the day (`Duration.minutes`, 1–300).

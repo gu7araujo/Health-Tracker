@@ -2,18 +2,6 @@
 
 The end-to-end target. Built on **XCUITest**, each suite launches the real app on a simulator and drives it as a black box — tapping, typing, and swiping through user flows, then asserting on accessibility labels. Every test relaunches the app fresh into an isolated temp store (via `-uiTesting`), so suites share no state. Pure logic and view-model behaviour live in the separate `HealthTrackerTests` target.
 
-## Directory Map
-
-| Directory / File | Type | Responsibility |
-|---|---|---|
-| `MealFlowUITests.swift` | suite | Add/edit/delete meals, item add/remove, five-item cap, quantity/satisfaction pickers, cancel-discards |
-| `WorkoutFlowUITests.swift` | suite | Add/edit/delete workouts, wheel-style duration, intensity picker |
-| `WaterMoodUITests.swift` | suite | Water slider start value + drag band, mood select and change |
-| `CalendarUITests.swift` | suite | Launch smoke test, per-day data isolation, future-day-not-selectable guard |
-| `Support/HealthTrackerUITestCase.swift` | base class | Isolated launch, element lookup, waits, and flow helpers — every suite subclasses it |
-| `Support/AccessibilityID.swift` | mirror | Identifiers copied from `HealthTracker/Presentation/AccessibilityID.swift` (UI tests cannot import app types) |
-| `Support/EnglishLabel.swift` | mirror | English labels for elements that carry no identifier (alert buttons, menu picker options) |
-
 ## Support
 
 The shared machinery every suite leans on, all on `HealthTrackerUITestCase`:
