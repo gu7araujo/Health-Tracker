@@ -68,16 +68,6 @@ swiftformat . --swift-version 6
 - Follow the existing pattern: a private migration function guarded by its own `UserDefaults` completion flag, called from `migrateIfNeeded()`.
 - The goal is that existing users' JSON files on disk/iCloud upgrade cleanly without data loss or breaking the app on launch.
 
-## RocketSim Automation Notes
-
-Findings from driving the app via the `rocketsim` CLI/skill in the Simulator. These are quirks of this app's UI + RocketSim's accessibility-tree walking, not fixable by adding `.accessibilityLabel`/`.accessibilityIdentifier` — confirmed by testing with and without explicit labels.
-
-- **`CalendarStrip` day cells don't respond to `interact tap`.** `CalendarStripDay` uses a plain `.onTapGesture` (not a `Button`); RocketSim's synthetic tap event isn't recognized by it. Use `interact long-press --duration 0.1` (or similar short duration) on the day cell instead — it reliably selects the day where `tap` silently does nothing (`screen_changed: false`, no error).
-- **Calendar day frames are only accurate for the currently-visible page.** The strip is a paged, horizontally-scrolling `LazyHStack`. Days still present in `elements` output but scrolled off-screen (e.g. last week's dates while this week is showing) report bogus/negative-x frames — tapping/long-pressing by id or label on those will miss and silently hit whatever's underneath (observed: landed on the "Monitore sua saúde" heading). Always scroll the target day into the visible viewport first, re-run `elements`, and confirm its frame looks sane (increasing x, positive) before interacting with it.
-- **`screen_changed` in interact results is not reliable for this app.** It frequently reports `false` even when the UI visibly changed (day selection, scroll position). Don't gate follow-up logic on it — verify state via a fresh `elements --agent --agent-mode act` read (check for `,selected` on the target) or a screenshot instead.
-- **Meal/Workout card swipe-actions (Editar/Excluir) could not be revealed via synthetic `interact swipe`** on the card, across several distances/durations tried. If you need to edit or delete an existing meal/workout entry through RocketSim, this path is currently blocked — no workaround found yet.
-- **RocketSim does not expose `accessibilityIdentifier` at all** — its element schema is only `{frame, traits, state, label, value, id, role, stableKey}`, and `--label`/`--type`/`--value` selectors match against the accessibility *label* (usually inferred from visible text via `.accessibilityElement(children: .combine)`), never the identifier. This mostly works fine here since visible text doubles as a usable label, but icon-only controls with an identifier and no visible text/explicit `.accessibilityLabel` will show up with a blank label — target those by `--id` (re-resolved per snapshot) or raw coordinates instead.
-
 ## Committing
 
 - Run code quality (`swiftlint`, `swiftformat`) and the full test suite before every commit; never commit a broken build or failing tests.
