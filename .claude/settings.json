@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "mcp__xcode",
+      "mcp__xcode-tools",
       "Bash(rocketsim *)",
       "Bash(swiftlint *)",
       "Bash(swiftformat *)",
@@ -11,9 +12,9 @@
   },
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true,
-    "swiftui-expert@swiftui-expert-skill": true,
+    "swiftui-expert@swiftui-expert-skill": false,
     "swift-concurrency@swift-concurrency-agent-skill": true,
     "swift-testing-expert@swift-testing-agent-skill": true,
-    "swift-api-design-guidelines@swift-api-design-guidelines-skill": true
+    "swift-api-design-guidelines@swift-api-design-guidelines-skill": false
   }
 }
