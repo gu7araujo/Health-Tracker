@@ -3,7 +3,6 @@
     "allow": [
       "mcp__xcode",
       "mcp__xcode-tools",
-      "Bash(rocketsim *)",
       "Bash(swiftlint *)",
       "Bash(swiftformat *)",
       "Bash(xcodebuild *)",
