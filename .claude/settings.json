@@ -9,6 +9,7 @@
       "Bash(xcbeautify *)"
     ]
   },
+  "enabledMcpjsonServers": ["xcode"],
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true,
     "swiftui-expert@swiftui-expert-skill": false,
