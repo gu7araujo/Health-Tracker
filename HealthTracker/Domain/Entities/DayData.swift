@@ -86,7 +86,7 @@ struct DayData: Codable, Equatable, Identifiable {
         for index in source.sorted(by: >) {
             result.remove(at: index)
         }
-        let insertionIndex = destination - source.count(where: { $0 < destination })
+        let insertionIndex = destination - source.filter { $0 < destination }.count
         result.insert(contentsOf: moved, at: insertionIndex)
         return result
     }
@@ -134,7 +134,7 @@ struct DayData: Codable, Equatable, Identifiable {
         var reasons: [String] = []
 
         // Check meal issues
-        let mediumMealCount = meals.count(where: { $0.quantity == .medium })
+        let mediumMealCount = meals.filter { $0.quantity == .medium }.count
         let hasLargeMeal = meals.contains { $0.quantity == .large }
 
         if mediumMealCount >= 3 || hasLargeMeal {
@@ -206,8 +206,8 @@ struct DayData: Codable, Equatable, Identifiable {
         guard !meals.isEmpty else { return false }
 
         // Count medium meals (satiety ignored)
-        let mediumMealCount = meals.count(where: { $0.quantity == .medium })
-        let smallMealCount = meals.count(where: { $0.quantity == .small || $0.quantity == .verySmall })
+        let mediumMealCount = meals.filter { $0.quantity == .medium }.count
+        let smallMealCount = meals.filter { $0.quantity == .small || $0.quantity == .verySmall }.count
 
         // Allow only small/verySmall meals OR at most 1 medium meal (rest must be small/verySmall)
         let hasOptimalMeals = mediumMealCount <= 1 && (mediumMealCount + smallMealCount) == meals.count
@@ -226,7 +226,7 @@ struct DayData: Codable, Equatable, Identifiable {
     /// - Workouts: Total duration < 30 min
     /// - Mood: neutral
     private var meetsModerateCriteria: Bool {
-        let mediumMealCount = meals.count(where: { $0.quantity == .medium })
+        let mediumMealCount = meals.filter { $0.quantity == .medium }.count
         let hasModerateMeals = mediumMealCount == 2
 
         let waterAmount = water ?? 0
@@ -246,7 +246,7 @@ struct DayData: Codable, Equatable, Identifiable {
     /// - Mood: sad
     /// Note: Workouts don't affect poor status
     private var meetsPoorCriteria: Bool {
-        let mediumMealCount = meals.count(where: { $0.quantity == .medium })
+        let mediumMealCount = meals.filter { $0.quantity == .medium }.count
         let hasLargeMeal = meals.contains { $0.quantity == .large }
         let poorMeals = mediumMealCount >= 3 || hasLargeMeal
 
