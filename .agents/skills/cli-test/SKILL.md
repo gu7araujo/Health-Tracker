@@ -15,6 +15,14 @@ xcrun simctl list devices
 ```
 Substitute its UDID for `<simulator-id>` below.
 
+**When other agents may be testing in parallel** ([`AGENTS.md` → Parallel agents](../../../AGENTS.md#parallel-agents)), run on a simulator of your own:
+
+```bash
+xcrun simctl clone <shut-down-simulator-id> "HT-<branch-name>"   # prints the new UDID: your <simulator-id>
+```
+
+and append `-parallel-testing-enabled NO` to every `xcodebuild test` below. The scheme marks its test targets parallelizable, so by default a run spreads over clones from Xcode's shared pool, which another worktree's run tears down when it finishes. Isolated, two worktrees' full suites pass side by side, though with UI tests serialized each takes ~17 min instead of ~4, so iterate on unit tests and run the full suite once at the end. Remove the simulator when the work is done: `xcrun simctl delete "HT-<branch-name>"`.
+
 ## 2. Run the tests
 
 Scope the run to what you changed — unit tests are fast, UI tests are slow (each launches the app on the simulator).
