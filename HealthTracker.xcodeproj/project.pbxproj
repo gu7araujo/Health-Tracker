@@ -34,12 +34,9 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Data/AGENTS.md,
-				Data/CLAUDE.md,
 				Domain/AGENTS.md,
-				Domain/CLAUDE.md,
 				Info.plist,
 				Presentation/AGENTS.md,
-				Presentation/CLAUDE.md,
 			);
 			target = B756C6112EA3F8900057DE0C /* HealthTracker */;
 		};
