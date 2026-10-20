@@ -84,3 +84,4 @@ swiftformat . --swift-version 6
 
 - Run code quality (`swiftlint`, `swiftformat`) and the full test suite before every commit; never commit a broken build or failing tests.
 - On `main`, branch first — commit there only when the user asks or confirms.
+- Use the `gh` CLI for GitHub work — pull requests, issues, reviews, checks, releases, API calls.
