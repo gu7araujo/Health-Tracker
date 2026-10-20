@@ -21,7 +21,7 @@ Count the filled categories among `{meals, water, workouts, mood}`:
 
 ## Rules
 
-Type-Driven Design — encode invariants in types so they hold by construction (mirrors `Data/CLAUDE.md`, from the other side of the boundary).
+Type-Driven Design — encode invariants in types so they hold by construction (mirrors `Data/AGENTS.md`, from the other side of the boundary).
 
 <rule_1>
 **PARSE, DON'T VALIDATE** — `RecordedDayData`'s failable init is the only way to make one, so an empty day is unrepresentable downstream. Repository and use cases traffic in `RecordedDayData`, never raw `DayData`, so the guarantee can't be bypassed.
