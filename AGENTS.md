@@ -36,6 +36,7 @@ Leave the system committable — build green, tests passing.
 ## Building Systems
 
 - The project uses `PBXFileSystemSynchronizedRootGroup`, so deleting files auto-removes them from the build — no `project.pbxproj` edits needed.
+- Build, test, and preview through the Xcode MCP tools — from a worktree too (see [Worktrees](#worktrees)).
 - When the Xcode MCP tools are unavailable or failing, fall back to `xcodebuild`:
     - **Building** the app or compiling the test target: `cli-build` skill.
     - **Running** unit/UI tests and reading the coverage report: `cli-test` skill.
@@ -47,8 +48,20 @@ Leave the system committable — build green, tests passing.
 
 ## Worktrees
 
-- Create git worktrees at the root directory inside `.worktrees/` (e.g. `.worktrees/<branch-name>`)
+- Create git worktrees inside `.claude/worktrees/` (e.g. `.claude/worktrees/<branch-name>`) — the one location Claude Code's worktree tools can switch a session between.
 - Only create a worktree when the task clearly requires it or the user explicitly requests it
+
+### Parallel agents
+
+One agent per worktree; a single running Xcode serves every worktree's Xcode MCP calls concurrently, so parallel agents stay on the MCP.
+
+1. **Open your worktree's project first:** `XcodeOpenWorkspace` with the absolute path `<worktree>/HealthTracker.xcodeproj`. Done when it returns a `workspaceIdentifier`. Xcode rejects tool calls for a project it hasn't opened ("Unknown workspace identifier"), and a new agent's first open asks the user to approve it in Xcode.
+2. **Pass that `workspaceIdentifier` on every Xcode MCP call.** The main checkout and each worktree are all open as `HealthTracker.xcodeproj`; the identifier is what keeps a build or test on your branch.
+3. **Build and run unit tests freely** (`BuildProject`, `RunSomeTests` on `HealthTrackerTests`): each worktree builds into its own DerivedData.
+4. **Run UI tests through the MCP from one agent at a time** — `HealthTrackerUITests`, and `RunAllTests`, which includes them. Concurrent runs share Xcode's simulator-clone pool: when one run finishes, the other's clones get torn down and rebuilt, stretching a ~4 min suite past 15 min or stalling it outright, even with each worktree on its own run destination. Iterate on unit tests; run the full suite once at the end.
+5. **Read results from the tool response** (pass/fail counts, errors) or `GetBuildLog` with your `workspaceIdentifier`. The artifact files it points to (`fullLogPath`, test console logs, `.xcresult`) are named by timestamp and overwritten when two runs finish in the same second.
+6. **On the `xcodebuild` fallback, test on a simulator of your own** — the `cli-test` skill's parallel setup. Isolated from the shared clone pool, UI tests can run in parallel there; leave `-derivedDataPath` at its default, which already separates worktrees by path.
+7. **Stop what you abandon:** a run keeps going inside Xcode after its caller gives up and blocks the next one ("There is already a test running"). `StopProject` with your `workspaceIdentifier` clears it; do the same for a test run with no result after ~15 min.
 
 ## Code Quality
 
@@ -72,3 +85,4 @@ swiftformat . --swift-version 6
 
 - Run code quality (`swiftlint`, `swiftformat`) and the full test suite before every commit; never commit a broken build or failing tests.
 - On `main`, branch first — commit there only when the user asks or confirms.
+- Use the `gh` CLI for GitHub work — pull requests, issues, reviews, checks, releases, API calls.

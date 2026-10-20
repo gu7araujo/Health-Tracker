@@ -10,7 +10,7 @@ The store is **cold**: the app reads it only at launch and write-through on ever
 ## Steps
 
 ### 1. Locate the booted simulator and its data file
-- Booted device: `xcrun simctl list devices | grep Booted` → the UDID.
+- Booted device: `xcrun simctl list devices | grep Booted` → the UDID. Parallel agents can boot several; pick the one named by your project's run destination (`XcodeListRunDestinations` → `activeDestinationDisplayTitle`).
 - The file (app uses the local Documents fallback, **not** iCloud — search, don't assume the path):
   `find ~/Library/Developer/CoreSimulator/Devices/<UDID>/data -name "HealthTrackerData.json" 2>/dev/null`
 
