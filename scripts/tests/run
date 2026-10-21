@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Runs every scripts/tests/test-*.sh; exits non-zero if any fails.
+set -uo pipefail
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+failed=0
+total=0
+
+for test in "$DIR"/test-*.sh; do
+  total=$((total + 1))
+  if "$test"; then
+    printf '✓ %s\n' "$(basename "$test")"
+  else
+    printf '✗ %s\n' "$(basename "$test")"
+    failed=$((failed + 1))
+  fi
+done
+
+printf '\n%d/%d test files passed.\n' "$((total - failed))" "$total"
+[ "$failed" -eq 0 ]

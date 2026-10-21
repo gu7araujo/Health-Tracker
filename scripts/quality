@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+# The single quality gate: prints a pass/fail table and exits 0 only if every gate passes.
+set -uo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-baseline]
+
+  --fast             Format, lint, unit tests, Domain/Data unit coverage ratchets (default).
+  --full             Format, lint, unit + UI tests, app coverage and per-file floor.
+  --json             Also write build/quality.json.
+  --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
+                     (an exported SIMULATOR_ID is ignored so worktrees never share a device).
+  --update-baseline  With --fast: raise the *_UNIT_MIN ratchets to the measured coverage.
+
+Thresholds: scripts/quality-thresholds.env. Per-file floor exceptions: scripts/coverage-exceptions.txt.
+Exit codes: 0 all gates passed, 1 a gate failed, 2 usage error.
+EOF
+}
+
+MODE="fast"
+JSON=""
+UPDATE_BASELINE=""
+SIMULATOR=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --fast | --full) MODE="${1#--}" ;;
+    --json) JSON="build/quality.json" ;;
+    --update-baseline) UPDATE_BASELINE=1 ;;
+    --simulator)
+      [ $# -ge 2 ] || { usage >&2 && exit 2; }
+      SIMULATOR="$2"
+      shift
+      ;;
+    -h | --help) usage && exit 0 ;;
+    *) usage >&2 && exit 2 ;;
+  esac
+  shift
+done
+
+if [ -n "$UPDATE_BASELINE" ] && [ "$MODE" = "full" ]; then
+  echo "error: --update-baseline needs --fast (the ratchets measure unit-only coverage)" >&2
+  exit 2
+fi
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+LIB="$ROOT/scripts/lib"
+RESULT="build/Test.xcresult"
+cd "$ROOT" || exit 1
+# shellcheck source=quality-thresholds.env
+source scripts/quality-thresholds.env
+
+"$ROOT/scripts/doctor" || exit 1
+mkdir -p build
+rows=""
+
+# row <name> <value> <comparator> <threshold> <passed>
+row() {
+  rows+="$1"$'\t'"$2"$'\t'"$3"$'\t'"$4"$'\t'"$5"$'\n'
+}
+
+# count_row <name> <count or empty>: a "<= 0" gate; an empty count is reported as n/a.
+count_row() {
+  if [ -z "$2" ]; then
+    row "$1" "n/a" "<=" 0 false
+  elif [ "$2" -eq 0 ]; then
+    row "$1" 0 "<=" 0 true
+  else
+    row "$1" "$2" "<=" 0 false
+  fi
+}
+
+echo "Format: swiftformat --lint"
+format_out="$(swiftformat . --lint --swift-version 6 2>&1)"
+grep 'error:' <<<"$format_out" >&2
+count_row "Format" "$(sed -nE 's|^([0-9]+)/[0-9]+ files? requires? formatting.*|\1|p' <<<"$format_out")"
+
+echo "Lint: swiftlint lint --strict"
+lint_out="$(swiftlint lint --strict --quiet --reporter json 2>/dev/null)"
+jq -r '.[] | "\(.file):\(.line): \(.severity): \(.reason) (\(.rule_id))"' <<<"$lint_out" >&2
+count_row "Lint" "$(jq 'length' <<<"$lint_out" 2>/dev/null)"
+
+if [ -z "$SIMULATOR" ]; then
+  branch="$(git rev-parse --abbrev-ref HEAD)"
+  SIMULATOR="$("$LIB/simulator.sh" "HT-${branch//\//-}")" || exit 1
+fi
+
+bundles=(HealthTrackerTests)
+[ "$MODE" = "full" ] && bundles+=(HealthTrackerUITests)
+only_testing=()
+for bundle in "${bundles[@]}"; do
+  only_testing+=("-only-testing:$bundle")
+done
+
+echo "Tests: ${bundles[*]} on simulator $SIMULATOR (full log: build/xcodebuild.log)"
+rm -rf "$RESULT"
+# Boot and wait first: launching on a still-booting clone fails every test with "Application failed preflight checks".
+xcrun simctl bootstatus "$SIMULATOR" -b >/dev/null
+xcodebuild test \
+  -scheme HealthTracker \
+  -destination "platform=iOS Simulator,id=$SIMULATOR" \
+  "${only_testing[@]}" \
+  -parallel-testing-enabled NO \
+  -enableCodeCoverage YES \
+  -resultBundlePath "$RESULT" 2>&1 | tee build/xcodebuild.log | xcbeautify --quieter --disable-logging
+
+xcrun xcresulttool get test-results tests --path "$RESULT" >build/test-results.json 2>/dev/null
+for bundle in "${bundles[@]}"; do
+  name="Unit tests"
+  [ "$bundle" = "HealthTrackerUITests" ] && name="UI tests"
+  count_row "$name" "$("$LIB/test-failures.sh" build/test-results.json "$bundle")"
+done
+
+if xcrun xccov view --report --json "$RESULT" >build/coverage.json 2>/dev/null; then
+  rows+="$("$LIB/evaluate-coverage.sh" "$MODE" build/coverage.json "$ROOT" \
+    scripts/quality-thresholds.env scripts/coverage-exceptions.txt)"$'\n'
+  # Only a green run may raise the ratchets.
+  if [ -n "$UPDATE_BASELINE" ] && ! grep -q $'\tfalse$' <<<"$rows"; then
+    "$LIB/update-baseline.sh" build/coverage.json "$ROOT" scripts/quality-thresholds.env
+  fi
+elif [ "$MODE" = "fast" ]; then
+  row "Domain unit line coverage" "n/a" ">=" "$DOMAIN_UNIT_MIN" false
+  row "Data unit line coverage" "n/a" ">=" "$DATA_UNIT_MIN" false
+else
+  row "App line coverage" "n/a" ">=" "$APP_LINE_MIN" false
+  row "Per-file floor" "n/a" ">=" "$FILE_FLOOR" false
+fi
+
+"$LIB/report.sh" "$MODE" ${JSON:+"$JSON"} <<<"${rows%$'\n'}"

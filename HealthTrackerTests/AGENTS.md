@@ -39,5 +39,5 @@ let expected = NSLocalizedString("mood_good", comment: "")
 </rule_4>
 
 <rule_5>
-**WHAT-TO-COVER LIVES WITH THE LAYER** — this suite is the *how*; the per-layer *what* is owned by each layer's `AGENTS.md` (`Domain`, `Data`, `Presentation`). Every layer holds to a `≥ 80%` coverage bar. Adding a feature or fixing a bug ends green — see the root **Workflow** for the red → green loop and the test commands.
+**WHAT-TO-COVER LIVES WITH THE LAYER** — this suite is the *how*; the per-layer *what* is owned by each layer's `AGENTS.md` (`Domain`, `Data`, `Presentation`). Coverage bars live in `scripts/quality-thresholds.env`, enforced by `scripts/quality`. Adding a feature or fixing a bug ends green — see the root **Workflow** for the red → green loop and the test commands.
 </rule_5>

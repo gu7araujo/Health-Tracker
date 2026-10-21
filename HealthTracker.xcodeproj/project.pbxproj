@@ -139,7 +139,7 @@
 			buildConfigurationList = B756C61D2EA3F8920057DE0C /* Build configuration list for PBXNativeTarget "HealthTracker" */;
 			buildPhases = (
 				B756C60E2EA3F8900057DE0C /* Sources */,
-				B7D92CBB2F37D635000A6B50 /* SwiftLint && SwiftFormat commands */,
+				B7D92CBB2F37D635000A6B50 /* SwiftLint */,
 				B756C60F2EA3F8900057DE0C /* Frameworks */,
 				B756C6102EA3F8900057DE0C /* Resources */,
 			);
@@ -250,7 +250,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		B7D92CBB2F37D635000A6B50 /* SwiftLint && SwiftFormat commands */ = {
+		B7D92CBB2F37D635000A6B50 /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -261,16 +261,15 @@
 			inputPaths = (
 				"$(SRCROOT)/**/*.swift",
 			);
-			name = "SwiftLint && SwiftFormat commands";
+			name = SwiftLint;
 			outputFileListPaths = (
 			);
 			outputPaths = (
 				"$(DERIVED_FILE_DIR)/swiftlint-result.txt",
-				"$(DERIVED_FILE_DIR)/swiftformat-result.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Add Homebrew paths for both Intel (/usr/local) and Apple Silicon (/opt/homebrew)\nif test -d \"/opt/homebrew/bin\"; then\n  PATH=\"/opt/homebrew/bin:${PATH}\"\nelif test -d \"/usr/local/bin\"; then\n  PATH=\"/usr/local/bin:${PATH}\"\nfi\nexport PATH\n\nif which swiftformat >/dev/null; then\n  swiftformat . --swift-version 6\nelse\n  echo \"warning: SwiftFormat not installed\"\nfi\n\nif which swiftlint >/dev/null; then\n    swiftlint --fix && swiftlint\nelse\n  echo \"warning: SwiftLint not installed\"\nfi\n";
+			shellScript = "# Lint only: never rewrites sources. Formatting runs in the pre-commit hook.\n# CI runs lint as its own job, so skip it there.\nif [ \"${CI:-}\" = \"true\" ]; then\n  exit 0\nfi\n\n# Add Homebrew paths for both Intel (/usr/local) and Apple Silicon (/opt/homebrew)\nif test -d \"/opt/homebrew/bin\"; then\n  PATH=\"/opt/homebrew/bin:${PATH}\"\nelif test -d \"/usr/local/bin\"; then\n  PATH=\"/usr/local/bin:${PATH}\"\nfi\nexport PATH\n\nif which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

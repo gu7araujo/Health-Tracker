@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Refuses commits on main, formats staged Swift files with SwiftFormat and
+# re-stages them, then lints them with SwiftLint --strict.
+set -euo pipefail
+
+if [ "$(git symbolic-ref --short -q HEAD || true)" = "main" ]; then
+  echo "pre-commit: refusing to commit on main. branch first: git switch -c <type>/<name>" >&2
+  exit 1
+fi
+
+cd "$(git rev-parse --show-toplevel)"
+
+files=()
+while IFS= read -r -d '' file; do
+  files+=("$file")
+done < <(git diff --cached --name-only --diff-filter=ACM -z -- '*.swift')
+
+if [ "${#files[@]}" -eq 0 ]; then
+  exit 0
+fi
+
+# Re-staging after formatting would sweep unstaged hunks into the commit.
+partial="$(git diff --name-only -- "${files[@]}")"
+if [ -n "$partial" ]; then
+  echo "pre-commit: these staged Swift files also have unstaged changes; stage or stash them first:" >&2
+  echo "$partial" >&2
+  exit 1
+fi
+
+if [ -x scripts/doctor ]; then
+  scripts/doctor || true
+fi
+
+swiftformat --swift-version 6 --quiet -- "${files[@]}"
+git add -- "${files[@]}"
+swiftlint lint --strict --quiet -- "${files[@]}"

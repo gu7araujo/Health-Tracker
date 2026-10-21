@@ -1,0 +1,8 @@
+# Files exempt from the per-file floor (FILE_FLOOR in scripts/quality-thresholds.env).
+# One repo-relative path per line, then a comment with its measured line coverage (unit + UI, 2026-10-21).
+# Grandfathered offenders: remove an entry once its file is covered. Never add a new file here silently.
+
+HealthTracker/Data/Services/UserNotificationCentering.swift  # 0.00% (3-line protocol)
+HealthTracker/Data/Services/NotificationPermissionManager.swift  # 19.05%
+HealthTracker/Extensions/View+Extensions.swift  # 72.00%
+HealthTracker/Data/Migration/DataMigration.swift  # 78.11%

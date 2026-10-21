@@ -1,0 +1,5 @@
+struct Caster {
+    func cast(value: Any) -> Int {
+        value as! Int
+    }
+}

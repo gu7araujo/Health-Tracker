@@ -1,0 +1,15 @@
+{
+  "devices": {
+    "com.apple.CoreSimulator.SimRuntime.iOS-26-2": [
+      { "name": "iPhone 16", "udid": "OLD-RUNTIME", "state": "Shutdown", "isAvailable": true }
+    ],
+    "com.apple.CoreSimulator.SimRuntime.iOS-26-5": [
+      { "name": "iPad Pro", "udid": "IPAD", "state": "Shutdown", "isAvailable": true },
+      { "name": "iPhone 17 Pro", "udid": "BOOTED", "state": "Booted", "isAvailable": true },
+      { "name": "iPhone 17", "udid": "SOURCE", "state": "Shutdown", "isAvailable": true }
+    ],
+    "com.apple.CoreSimulator.SimRuntime.iOS-27-0": [
+      { "name": "iPhone 18", "udid": "IOS-27", "state": "Shutdown", "isAvailable": true }
+    ]
+  }
+}

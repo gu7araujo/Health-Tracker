@@ -21,7 +21,7 @@ The core loop is **red → green**: write a failing test, then make it pass. Fol
 1. Before coding, state how you'll verify the change — which unit/UI test, which bash command, screenshot, skill, or tool, etc.
 2. Write that test first and watch it fail (**red**).
 3. Implement the minimum code to pass it (**green**).
-4. Run the full suite and iterate until it passes clean — that's the bar for a task being done.
+4. Run `scripts/quality --full` and iterate until it exits 0 — that's the bar for a task being done (see [Quality Gates](#quality-gates)).
 
 Every bug fix starts with a regression test that reproduces the bug. Aim for near-total coverage: every public function, file, and edge case earns a test. Prefer Xcode MCP tools when they fit, and follow the plan when we have one.
 
@@ -39,7 +39,7 @@ Leave the system committable — build green, tests passing.
 - Build, test, and preview through the Xcode MCP tools — from a worktree too (see [Worktrees](#worktrees)).
 - When the Xcode MCP tools are unavailable or failing, fall back to `xcodebuild`:
     - **Building** the app or compiling the test target: `cli-build` skill.
-    - **Running** unit/UI tests and reading the coverage report: `cli-test` skill.
+    - **Running** unit/UI tests: `cli-test` skill. Coverage: `quality-gate` skill.
 
 ## Validating Work
 
@@ -63,17 +63,17 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
 6. **On the `xcodebuild` fallback, test on a simulator of your own** — the `cli-test` skill's parallel setup. Isolated from the shared clone pool, UI tests can run in parallel there; leave `-derivedDataPath` at its default, which already separates worktrees by path.
 7. **Stop what you abandon:** a run keeps going inside Xcode after its caller gives up and blocks the next one ("There is already a test running"). `StopProject` with your `workspaceIdentifier` clears it; do the same for a test run with no result after ~15 min.
 
-## Code Quality
+## Quality Gates
 
-Lint Swift code and apply fixes for autocorrectable rules (run after editing)
-```bash
-swiftlint --fix && swiftlint
-```
+`scripts/quality` is the one gate: it prints a pass/fail table and exits 0 only when every gate passes. Reading its output, chasing coverage, and fixing a red gate: `quality-gate` skill.
 
-Format Swift code (run after editing)
-```bash
-swiftformat . --swift-version 6
-```
+- Run `scripts/bootstrap` once per clone: it installs the git hooks and checks tool versions.
+- Iterate with `scripts/quality --fast` (format, lint, unit tests, Domain/Data coverage).
+- A task is **done** when `scripts/quality --full` exits 0. Paste its gate table in your final report and PR.
+- Fix a red gate in code or tests. Lowering a threshold, editing `scripts/coverage-exceptions.txt`, or adding a `swiftlint:disable` is a decision for the user: call each one out explicitly in the report and PR.
+- Each `.swift` file you edit or write is formatted in place and linted by a Claude Code hook; fix the violations it reports.
+- The git hooks refuse commits and pushes to `main` and run `--fast` before every push. Let them run: no `--no-verify`, no `SKIP_QUALITY`. The push takes ~2 min, past the Bash tool's 120 s default, so run `git push` with a 600000 ms timeout.
+- Open PRs as **draft** and stop at PR-ready with the link: the user approves and merges every PR.
 
 ## Data Migrations
 
@@ -83,6 +83,6 @@ swiftformat . --swift-version 6
 
 ## Committing
 
-- Run code quality (`swiftlint`, `swiftformat`) and the full test suite before every commit; never commit a broken build or failing tests.
-- On `main`, branch first — commit there only when the user asks or confirms.
+- The pre-push hook runs `scripts/quality --fast`; run `scripts/quality --full` before marking a PR ready. Never push a broken build or failing tests.
+- Branch first (`git switch -c <type>/<name>`): the hooks refuse commits on `main`.
 - Use the `gh` CLI for GitHub work — pull requests, issues, reviews, checks, releases, API calls.

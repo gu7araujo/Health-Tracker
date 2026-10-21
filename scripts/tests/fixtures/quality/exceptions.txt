@@ -1,0 +1,3 @@
+# Grandfathered files
+
+HealthTracker/Data/Migration/B.swift  # 70.0%
