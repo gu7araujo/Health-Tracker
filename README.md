@@ -46,7 +46,7 @@ Per-file floor                  88.36%  >= 80.0%   ✓
 | Command | Runs | Time | Use it |
 |---|---|---|---|
 | `scripts/quality` or `scripts/quality --fast` | format, lint, unit tests, Domain/Data unit coverage | ~2 min | while you work; the pre-push hook runs it too |
-| `scripts/quality --full` | everything above, plus UI tests, app coverage and the per-file floor | ~8 min | before marking a PR ready; this is the definition of done |
+| `scripts/quality --full` | everything above (Domain/Data ratchets included), plus UI tests, app coverage and the per-file floor | ~8 min | before marking a PR ready; this is the definition of done |
 
 Other options (`scripts/quality --help` lists them all):
 
@@ -72,8 +72,8 @@ Thresholds live in `scripts/quality-thresholds.env`:
 |---|---|---|---|
 | App line coverage | `--full` | `APP_LINE_MIN` = 90.0 | whole app, unit + UI tests |
 | Per-file floor | `--full` | `FILE_FLOOR` = 80.0 | every non-View file, so a new untested file can't hide behind a good average |
-| Domain unit line coverage | `--fast` | `DOMAIN_UNIT_MIN` (ratchet) | `HealthTracker/Domain/`, unit tests only |
-| Data unit line coverage | `--fast` | `DATA_UNIT_MIN` (ratchet) | `HealthTracker/Data/`, unit tests only |
+| Domain unit line coverage | both | `DOMAIN_UNIT_MIN` (ratchet) | `HealthTracker/Domain/`, unit tests only |
+| Data unit line coverage | both | `DATA_UNIT_MIN` (ratchet) | `HealthTracker/Data/`, unit tests only |
 
 - **Unit-only ratchets.** Domain and Data are counted from unit tests alone because UI tests run code without really asserting it. The ratchets start at today's measured values and only go up.
 - **Raising them.** After adding tests, lock the gain in, then commit the updated thresholds file together with the tests:

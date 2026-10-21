@@ -7,7 +7,7 @@ usage() {
 Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-baseline]
 
   --fast             Format, lint, unit tests, Domain/Data unit coverage ratchets (default).
-  --full             Format, lint, unit + UI tests, app coverage and per-file floor.
+  --full             Everything in --fast, plus UI tests, app coverage and per-file floor.
   --json             Also write build/quality.json.
   --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
                      (an exported SIMULATOR_ID is ignored so worktrees never share a device).
@@ -86,45 +86,60 @@ if [ -z "$SIMULATOR" ]; then
   SIMULATOR="$("$LIB/simulator.sh" "HT-${branch//\//-}")" || exit 1
 fi
 
+# Each bundle runs on its own so the Domain/Data ratchets can measure unit-only coverage
+# in --full too; --full then merges both runs into $RESULT for app coverage and the floor.
+UNIT_RESULT="$RESULT"
 bundles=(HealthTrackerTests)
-[ "$MODE" = "full" ] && bundles+=(HealthTrackerUITests)
-only_testing=()
-for bundle in "${bundles[@]}"; do
-  only_testing+=("-only-testing:$bundle")
-done
+if [ "$MODE" = "full" ]; then
+  UNIT_RESULT="build/Unit.xcresult"
+  bundles+=(HealthTrackerUITests)
+fi
 
 echo "Tests: ${bundles[*]} on simulator $SIMULATOR (full log: build/xcodebuild.log)"
-rm -rf "$RESULT"
+rm -rf "$RESULT" build/Unit.xcresult build/UI.xcresult
+: >build/xcodebuild.log
 # Boot and wait first: launching on a still-booting clone fails every test with "Application failed preflight checks".
 xcrun simctl bootstatus "$SIMULATOR" -b >/dev/null
-xcodebuild test \
-  -scheme HealthTracker \
-  -destination "platform=iOS Simulator,id=$SIMULATOR" \
-  "${only_testing[@]}" \
-  -parallel-testing-enabled NO \
-  -enableCodeCoverage YES \
-  -resultBundlePath "$RESULT" 2>&1 | tee build/xcodebuild.log | xcbeautify --quieter --disable-logging
-
-xcrun xcresulttool get test-results tests --path "$RESULT" >build/test-results.json 2>/dev/null
 for bundle in "${bundles[@]}"; do
   name="Unit tests"
-  [ "$bundle" = "HealthTrackerUITests" ] && name="UI tests"
+  bundle_result="$UNIT_RESULT"
+  if [ "$bundle" = "HealthTrackerUITests" ]; then
+    name="UI tests"
+    bundle_result="build/UI.xcresult"
+  fi
+  xcodebuild test \
+    -scheme HealthTracker \
+    -destination "platform=iOS Simulator,id=$SIMULATOR" \
+    "-only-testing:$bundle" \
+    -parallel-testing-enabled NO \
+    -enableCodeCoverage YES \
+    -resultBundlePath "$bundle_result" 2>&1 | tee -a build/xcodebuild.log | xcbeautify --quieter --disable-logging
+  xcrun xcresulttool get test-results tests --path "$bundle_result" >build/test-results.json 2>/dev/null
   count_row "$name" "$("$LIB/test-failures.sh" build/test-results.json "$bundle")"
 done
 
-if xcrun xccov view --report --json "$RESULT" >build/coverage.json 2>/dev/null; then
-  rows+="$("$LIB/evaluate-coverage.sh" "$MODE" build/coverage.json "$ROOT" \
+if xcrun xccov view --report --json "$UNIT_RESULT" >build/unit-coverage.json 2>/dev/null; then
+  rows+="$("$LIB/evaluate-coverage.sh" fast build/unit-coverage.json "$ROOT" \
     scripts/quality-thresholds.env scripts/coverage-exceptions.txt)"$'\n'
-  # Only a green run may raise the ratchets.
-  if [ -n "$UPDATE_BASELINE" ] && ! grep -q $'\tfalse$' <<<"$rows"; then
-    "$LIB/update-baseline.sh" build/coverage.json "$ROOT" scripts/quality-thresholds.env
-  fi
-elif [ "$MODE" = "fast" ]; then
+else
   row "Domain unit line coverage" "n/a" ">=" "$DOMAIN_UNIT_MIN" false
   row "Data unit line coverage" "n/a" ">=" "$DATA_UNIT_MIN" false
-else
-  row "App line coverage" "n/a" ">=" "$APP_LINE_MIN" false
-  row "Per-file floor" "n/a" ">=" "$FILE_FLOOR" false
+fi
+
+if [ "$MODE" = "full" ]; then
+  if xcrun xcresulttool merge --output-path "$RESULT" "$UNIT_RESULT" build/UI.xcresult >/dev/null 2>&1 &&
+    xcrun xccov view --report --json "$RESULT" >build/coverage.json 2>/dev/null; then
+    rows+="$("$LIB/evaluate-coverage.sh" full build/coverage.json "$ROOT" \
+      scripts/quality-thresholds.env scripts/coverage-exceptions.txt)"$'\n'
+  else
+    row "App line coverage" "n/a" ">=" "$APP_LINE_MIN" false
+    row "Per-file floor" "n/a" ">=" "$FILE_FLOOR" false
+  fi
+fi
+
+# Only a green run may raise the ratchets.
+if [ -n "$UPDATE_BASELINE" ] && ! grep -q $'\tfalse$' <<<"$rows"; then
+  "$LIB/update-baseline.sh" build/unit-coverage.json "$ROOT" scripts/quality-thresholds.env
 fi
 
 "$LIB/report.sh" "$MODE" ${JSON:+"$JSON"} <<<"${rows%$'\n'}"

@@ -26,7 +26,7 @@ cat >"$TMP/simulators.json" <<'EOF'
   {"name":"HT-feat-x","udid":"WORKTREE-UDID","state":"Shutdown"},
   {"name":"iPhone 17 Pro","udid":"SHARED-UDID","state":"Shutdown"}]}}
 EOF
-printf '{"testNodes":[{"name":"HealthTracker","nodeType":"Test Plan","result":"Passed","children":[{"name":"HealthTrackerTests","nodeType":"Unit test bundle","result":"Passed","children":[]}]}]}\n' >"$TMP/tests.json"
+printf '{"testNodes":[{"name":"HealthTracker","nodeType":"Test Plan","result":"Passed","children":[{"name":"HealthTrackerTests","nodeType":"Unit test bundle","result":"Passed","children":[]},{"name":"HealthTrackerUITests","nodeType":"UI test bundle","result":"Passed","children":[]}]}]}\n' >"$TMP/tests.json"
 
 mkdir -p "$TMP/bin"
 cat >"$TMP/bin/xcrun" <<EOF
@@ -38,7 +38,7 @@ case "\$1 \$2" in
   *) exit 0 ;;
 esac
 EOF
-printf '#!/bin/sh\nexit 0\n' >"$TMP/bin/xcodebuild"
+printf '#!/bin/sh\necho "$*" >>"%s"\n' "$TMP/xcodebuild.calls" >"$TMP/bin/xcodebuild"
 printf '#!/bin/sh\ncat >/dev/null\n' >"$TMP/bin/xcbeautify"
 printf '#!/bin/sh\necho "0/1 files require formatting."\n' >"$TMP/bin/swiftformat"
 chmod +x "$TMP/bin/"*
@@ -67,5 +67,17 @@ run_quality '[{"file":"A.swift","line":1,"severity":"Error","reason":"r","rule_i
 
 run_quality '[]' --fast --update-baseline
 [ "$(cat "$REPO/scripts/quality-thresholds.env")" != "$before" ] || fail "--update-baseline should raise thresholds on a green run: $out"
+
+# --full is a superset of --fast: it also checks the Domain/Data unit ratchets, measured on a
+# unit-only run, beside the app coverage and per-file floor measured on the merged runs.
+: >"$TMP/xcodebuild.calls"
+run_quality '[]' --full
+for gate in "Unit tests" "UI tests" "Domain unit line coverage" "Data unit line coverage" "App line coverage" "Per-file floor"; do
+  [[ "$out" == *"$gate "* ]] || fail "--full should report '$gate', got: $out"
+done
+[ "$(grep -c -- '-only-testing:HealthTrackerTests' "$TMP/xcodebuild.calls")" -eq 1 ] &&
+  [ "$(grep -c -- '-only-testing:HealthTrackerUITests' "$TMP/xcodebuild.calls")" -eq 1 ] &&
+  ! grep -q -- '-only-testing:HealthTrackerTests.*-only-testing:HealthTrackerUITests' "$TMP/xcodebuild.calls" ||
+  fail "--full should run unit and UI tests as separate xcodebuild runs, got: $(cat "$TMP/xcodebuild.calls")"
 
 [ "$failures" -eq 0 ]
