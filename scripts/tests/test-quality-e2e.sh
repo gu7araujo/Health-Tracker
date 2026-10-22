@@ -43,14 +43,14 @@ printf '#!/bin/sh\necho "$*" >>"%s"\ncat >/dev/null\n' "$TMP/xcbeautify.calls" >
 printf '#!/bin/sh\necho "0/1 files require formatting."\n' >"$TMP/bin/swiftformat"
 chmod +x "$TMP/bin/"*
 
-# run_quality <lint json> [args...] -> sets out, code. CI is cleared (the stubs are not the pinned
-# versions, so doctor would fail) and GITHUB_ACTIONS comes from $GHA, so the test behaves the same
-# inside a GitHub Actions job.
+# run_quality <lint json> [args...] -> sets out, code. CI comes from $CI_ENV (cleared by default: the
+# stubs are not the pinned versions, so doctor would fail) and GITHUB_ACTIONS from $GHA, so the test
+# behaves the same inside a GitHub Actions job.
 run_quality() {
   printf '#!/bin/sh\necho %s\n' "'$1'" >"$TMP/bin/swiftlint"
   chmod +x "$TMP/bin/swiftlint"
   shift
-  out="$(cd "$REPO" && PATH="$TMP/bin:$PATH" SIMULATOR_ID=SHARED-UDID CI='' GITHUB_ACTIONS="${GHA:-}" \
+  out="$(cd "$REPO" && PATH="$TMP/bin:$PATH" SIMULATOR_ID=SHARED-UDID CI="${CI_ENV:-}" GITHUB_ACTIONS="${GHA:-}" \
     "$REPO/scripts/quality" "$@" 2>&1)"
   code=$?
 }
@@ -92,5 +92,16 @@ run_quality '[]' --fast
 GHA=true run_quality '[]' --fast
 [ "$(cat "$TMP/xcbeautify.calls")" = "--quieter --disable-logging --renderer github-actions" ] ||
   fail "on GitHub Actions xcbeautify should use the github-actions renderer, got: $(cat "$TMP/xcbeautify.calls")"
+
+# CI fails the build on compiler warnings; locally they stay warnings.
+: >"$TMP/xcodebuild.calls"
+run_quality '[]' --fast
+! grep -q 'TREAT_WARNINGS_AS_ERRORS' "$TMP/xcodebuild.calls" ||
+  fail "locally warnings should not be errors, got: $(cat "$TMP/xcodebuild.calls")"
+printf '#!/bin/sh\nexit 0\n' >"$REPO/scripts/doctor" # strict doctor would reject the stubbed tools
+: >"$TMP/xcodebuild.calls"
+CI_ENV=true run_quality '[]' --fast
+grep -q -- 'SWIFT_TREAT_WARNINGS_AS_ERRORS=YES GCC_TREAT_WARNINGS_AS_ERRORS=YES' "$TMP/xcodebuild.calls" ||
+  fail "with CI=true xcodebuild should treat warnings as errors, got: $(cat "$TMP/xcodebuild.calls")"
 
 [ "$failures" -eq 0 ]

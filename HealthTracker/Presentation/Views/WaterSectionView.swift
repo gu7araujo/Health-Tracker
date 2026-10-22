@@ -24,8 +24,9 @@ struct WaterSectionView: View {
                 backgroundColor: .constant(Color(.secondarySystemBackground))
             ) {
                 VStack {
-                    (Text(water, format: .number.precision(.fractionLength(1)))
-                        + Text(String(localized: "water_unit")))
+                    let value = Text(water, format: .number.precision(.fractionLength(1)))
+                    let unit = Text(String(localized: "water_unit"))
+                    Text("\(value)\(unit)")
                         .font(.title)
                         .bold()
                         .accessibilityIdentifier(AccessibilityID.waterValueLabel)
@@ -47,4 +48,11 @@ struct WaterSectionView: View {
             .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 15, trailing: 20))
         }
     }
+}
+
+#Preview {
+    List {
+        WaterSectionView(water: 1.5, waterIntake: 1.5, onUpdateWater: { _ in })
+    }
+    .listStyle(.plain)
 }
