@@ -191,6 +191,72 @@ test_commit_without_swift_or_strings_skips_fitness() {
   [ ! -e "$WORK/fitness-ran" ] || { echo "fitness ran"; return 1; }
 }
 
+# The real scripts/fitness checks, AccessibilityID files and matching en/pt-BR Localizable.strings,
+# committed on branch $2.
+new_fitness_repo() {
+  new_repo "$1"
+  git switch -q -c "$2"
+  mkdir -p scripts HealthTracker/Resources/en.lproj HealthTracker/Resources/pt-BR.lproj \
+    HealthTracker/Presentation HealthTrackerUITests/Support
+  cp -R "$ROOT/scripts/fitness" scripts/fitness
+  : > scripts/fitness/test-mirror-exceptions.txt
+  cp "$ROOT/HealthTracker/Presentation/AccessibilityID.swift" HealthTracker/Presentation/
+  cp "$ROOT/HealthTrackerUITests/Support/AccessibilityID.swift" HealthTrackerUITests/Support/
+  echo '"a" = "A";' > HealthTracker/Resources/en.lproj/Localizable.strings
+  echo '"a" = "A";' > HealthTracker/Resources/pt-BR.lproj/Localizable.strings
+  git add scripts HealthTracker HealthTrackerUITests
+  git commit -q --no-verify -m fitness
+}
+
+test_commit_checks_fitness_on_the_staged_source_not_its_unstaged_test() {
+  new_fitness_repo "fitness staged source" feat/source
+  mkdir -p HealthTracker/Domain/UseCases HealthTrackerTests/Domain/UseCases
+  cp "$FIXTURES/Formatted.swift.fixture" HealthTracker/Domain/UseCases/X.swift
+  cp "$FIXTURES/Formatted.swift.fixture" HealthTrackerTests/Domain/UseCases/XTests.swift
+  git add HealthTracker/Domain/UseCases/X.swift
+  local out
+  if out="$(git commit -m source 2>&1)"; then echo "commit succeeded without its staged test"; return 1; fi
+  [[ "$out" == *"test-mirror: HealthTracker/Domain/UseCases/X.swift"*"fitness checks failed"* ]] ||
+    { echo "violation not reported: $out"; return 1; }
+}
+
+test_commit_ignores_an_intent_to_add_test() {
+  new_fitness_repo "fitness intent to add" feat/ita
+  mkdir -p HealthTracker/Domain/UseCases HealthTrackerTests/Domain/UseCases
+  cp "$FIXTURES/Formatted.swift.fixture" HealthTracker/Domain/UseCases/Zed.swift
+  cp "$FIXTURES/Formatted.swift.fixture" HealthTrackerTests/Domain/UseCases/ZedTests.swift
+  git add HealthTracker/Domain/UseCases/Zed.swift
+  git add -N HealthTrackerTests/Domain/UseCases/ZedTests.swift
+  local out
+  if out="$(git commit -m source 2>&1)"; then echo "commit succeeded with only an intent-to-add test"; return 1; fi
+  [[ "$out" == *"test-mirror: HealthTracker/Domain/UseCases/Zed.swift"* ]] ||
+    { echo "violation not reported: $out"; return 1; }
+}
+
+test_commit_checks_fitness_on_the_staged_strings_not_unstaged_ones() {
+  new_fitness_repo "fitness staged strings" feat/strings
+  echo '"b" = "B";' >> HealthTracker/Resources/en.lproj/Localizable.strings
+  echo '"b" = "B";' >> HealthTracker/Resources/pt-BR.lproj/Localizable.strings
+  git add HealthTracker/Resources/en.lproj
+  local out
+  if out="$(git commit -m strings 2>&1)"; then echo "commit succeeded without its staged pt-BR key"; return 1; fi
+  [[ "$out" == *"pt-BR.lproj/Localizable.strings: missing key \"b\""*"fitness checks failed"* ]] ||
+    { echo "violation not reported: $out"; return 1; }
+}
+
+test_commit_passes_fitness_when_both_sides_are_staged_from_a_linked_worktree() {
+  new_fitness_repo "fitness staged both" feat/both-main
+  git worktree add -q -b feat/both "$WORK/fitness wt"
+  cd "$WORK/fitness wt" || return 1
+  mkdir -p HealthTracker/Domain/UseCases HealthTrackerTests/Domain/UseCases
+  cp "$FIXTURES/Formatted.swift.fixture" HealthTracker/Domain/UseCases/X.swift
+  cp "$FIXTURES/Formatted.swift.fixture" HealthTrackerTests/Domain/UseCases/XTests.swift
+  echo '"b" = "B";' >> HealthTracker/Resources/en.lproj/Localizable.strings
+  echo '"b" = "B";' >> HealthTracker/Resources/pt-BR.lproj/Localizable.strings
+  git add HealthTracker HealthTrackerTests
+  git commit -q -m both || { echo "commit failed"; return 1; }
+}
+
 test_push_runs_the_persisted_shape_guard_against_origin_main_but_never_blocks() {
   new_repo push-guard
   git switch -q -c feat/guard

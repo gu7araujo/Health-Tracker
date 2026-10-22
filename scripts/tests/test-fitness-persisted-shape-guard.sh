@@ -88,6 +88,26 @@ commit
 guard
 expect "$out" "persisted-shape-guard: $MOOD: warning: $MESSAGE"
 
+# A stored property with an inferred type changes the encoded JSON too.
+branch inferred-var
+put "$MEAL" "$(awk '{ print } /var items:/ { print "    var note = \"\"" }' "$REPO/$MEAL")"
+commit
+guard
+expect "$out" "persisted-shape-guard: $MEAL: warning: $MESSAGE"
+
+branch inferred-let
+put "$MEAL" "$(awk '{ print } /let id:/ { print "    let createdAt = Date()" }' "$REPO/$MEAL")"
+commit
+guard
+expect "$out" "persisted-shape-guard: $MEAL: warning: $MESSAGE"
+
+# Static members are not encoded, so adding them is not a shape change.
+branch static-members
+put "$MEAL" "$(awk '{ print } /let id:/ { print "    static let maxItems = 10"; print "    static var cache: [String] = []" }' "$REPO/$MEAL")"
+commit
+guard
+[ -z "$out" ] || fail "static members should not warn, got: $out"
+
 # Editing only the entity's own tests does not silence it: a rename usually forces those edits anyway.
 branch with-entity-tests
 put "$MEAL" "$(sed 's/let id: UUID/let id: String/' "$REPO/$MEAL")"

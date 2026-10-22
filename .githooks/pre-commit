@@ -13,11 +13,18 @@ fi
 cd "$(git rev-parse --show-toplevel)"
 
 # Any staged .swift/.strings change, deletions and renames included, can break a cross-file
-# rule (key parity, test mirroring, accessibility IDs). The checks read the working tree.
-if [ -x scripts/fitness/run ] && [ -n "$(git diff --cached --name-only -- '*.swift' '*.strings')" ] &&
-  ! scripts/fitness/run >&2; then
-  echo "pre-commit: fitness checks failed; fix the violations above (scripts/fitness/run)" >&2
-  exit 1
+# rule (key parity, test mirroring, accessibility IDs). The checks read the staged snapshot, so an
+# unstaged test or translation cannot make the commit look complete.
+if [ -x scripts/fitness/run ] && [ -n "$(git diff --cached --name-only -- '*.swift' '*.strings')" ]; then
+  staged="$(mktemp -d)"
+  trap 'rm -rf "$staged"' EXIT
+  # Export the tree the commit will record: checkout-index would also write intent-to-add
+  # (`git add -N`) entries as empty files, making an uncommitted test look present.
+  git archive "$(git write-tree)" | tar -x -C "$staged"
+  if ! scripts/fitness/run "$staged" >&2; then
+    echo "pre-commit: fitness checks failed; fix the violations above (scripts/fitness/run)" >&2
+    exit 1
+  fi
 fi
 
 files=()

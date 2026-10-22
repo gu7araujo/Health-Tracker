@@ -41,7 +41,7 @@ Every gate turns green through code or tests:
   - `.swiftlint-baseline.json` freezes the pre-existing violations, matched by file, rule, line text and message, so editing a baselined closure or function can resurface its violation. Fix it then, and regenerate the baseline in the same commit with the command in `AGENTS.md` (Quality Gates).
 - **Fitness**: `scripts/fitness/run` prints each violation as `<check>: <file>[:<line>]: <message>`:
   - `localization-parity`, `missing key "k"` / `missing file`: add that key (or `.strings` file) to the named locale, translated.
-  - `test-mirror`, `no HealthTrackerTests/**/<Name>Tests.swift`: write that test file for the Domain/Data type. `stale exception`: delete that line from `scripts/fitness/test-mirror-exceptions.txt`.
+  - `test-mirror`, `no HealthTrackerTests/**/<Name>Tests.swift`: write that test file for the Domain/Data type. `... is not a unique name`: put the test at the mirrored path the message names. `stale exception`: delete that line from `scripts/fitness/test-mirror-exceptions.txt`.
   - `accessibility-ids`, `"<id>" not declared in HealthTracker/Presentation/AccessibilityID.swift`: make the UI tests' `AccessibilityID` match the app's (rename or remove the stale ID, or add the identifier to the app).
 - **Unit tests / UI tests**: the failures are in `build/xcodebuild.log`; reproduce one with the `cli-test` skill's single-test command.
 - **Coverage**: add tests for the least-covered files (section 4) until the measured value clears the threshold.

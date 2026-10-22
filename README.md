@@ -236,7 +236,7 @@ Some rules span several files, which SwiftLint can't see. Small bash scripts in 
 | Check | Fails when | Enforces |
 |---|---|---|
 | `localization-parity.sh` | A `.strings` file, or a key in one, exists in `en.lproj` but not `pt-BR.lproj`, or the reverse | `Presentation/AGENTS.md` localization |
-| `test-mirror.sh` | A Domain/Data `.swift` file has no `HealthTrackerTests/**/<Name>Tests.swift`. Protocol-only files don't count | `HealthTrackerTests/AGENTS.md` (mirrors the production tree) |
+| `test-mirror.sh` | A Domain/Data `.swift` file has no `HealthTrackerTests/**/<Name>Tests.swift`. Protocol-only files don't count. A name shared with another app file needs its test at the mirrored path, `HealthTrackerTests/<dirs>/<Name>Tests.swift` | `HealthTrackerTests/AGENTS.md` (mirrors the production tree) |
 | `accessibility-ids.sh` | An ID in `HealthTrackerUITests/Support/AccessibilityID.swift` isn't declared in `HealthTracker/Presentation/AccessibilityID.swift` | `HealthTrackerUITests/AGENTS.md` rule_2 |
 | `persisted-shape-guard.sh` (warns only) | A `Codable` member of `DayData`, `RecordedDayData`, `Meal`, `Workout`, `Mood` or `DayDataContainer` changed, but neither `HealthTracker/Data/Migration/` nor `DataMigrationTests` did | `AGENTS.md` Data Migrations |
 
@@ -257,7 +257,7 @@ Enabled by `scripts/bootstrap`. They live in `.githooks/`.
 - refuses when a staged `.swift` file also has unstaged changes, because re-staging after formatting would sweep those changes into the commit (stage or stash them first);
 - formats the staged `.swift` files with SwiftFormat and re-stages them;
 - lints them with `swiftlint --strict`, and fails on any violation;
-- when a `.swift` or `.strings` file is staged, runs `scripts/fitness/run` on the working tree, and fails on any violation.
+- when a `.swift` or `.strings` file is staged, runs `scripts/fitness/run` on the staged snapshot (unstaged or `git add -N` tests and translations don't count), and fails on any violation.
 
 **pre-push** (~2 min):
 - refuses to push to `main`;

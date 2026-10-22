@@ -4,8 +4,9 @@
 # Editing only the entity's own tests does not count: renaming a field usually forces those edits anyway.
 #
 # Shape lines: added or removed diff lines (comments aside) in a persisted file that declare a
-# type-annotated `let`/`var`, an enum `case`, an enum with a raw type or conformances, or mention
-# CodingKeys, init(from:), encode(to:) or a container decode/encode call.
+# non-static `let`/`var` with a type annotation or an initializer (so a method-local `let x =` warns
+# too), an enum `case`, an enum with a raw type or conformances, or mention CodingKeys,
+# init(from:), encode(to:) or a container decode/encode call. Static members are not encoded.
 # With GITHUB_ACTIONS=true each warning is a `::warning file=...::` annotation on the PR.
 #
 # Usage: persisted-shape-guard.sh <base-ref> [repo-root]
@@ -42,7 +43,8 @@ shaped="$(git -C "$REPO" diff --no-color --no-ext-diff --src-prefix=a/ --dst-pre
     line = substr($0, 2)
     sub(/^[[:space:]]+/, "", line)
     if (line ~ /^(\/\/|\/\*|\*)/) next
-    if (line ~ /^(@[A-Za-z]+[[:space:]]+)*([a-z()]+[[:space:]]+)*(let|var)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*:/ ||
+    if (line ~ /(^|[[:space:]])(static|class)[[:space:]]+(let|var)[[:space:]]/) next
+    if (line ~ /^(@[A-Za-z]+[[:space:]]+)*([a-z()]+[[:space:]]+)*(let|var)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*[:=]/ ||
         line ~ /^(indirect[[:space:]]+)?case[[:space:]]/ ||
         line ~ /^((public|internal|fileprivate|private)[[:space:]]+)?(indirect[[:space:]]+)?enum[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*:/ ||
         line ~ /CodingKeys|init\(from|encode\(to|\.(decode|decodeIfPresent|encode|encodeIfPresent)\(/) {

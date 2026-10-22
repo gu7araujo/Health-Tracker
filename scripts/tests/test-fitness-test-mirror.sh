@@ -111,6 +111,29 @@ final class BigImpl: Big { func work() {} }"
 out="$("$SCRIPT" "$R")"
 expect "$out" 'test-mirror: HealthTracker/Domain/Services/Big.swift: no HealthTrackerTests/**/BigTests.swift'
 
+# Must fail: a basename shared by two sources needs each test at its mirrored path, not one test anywhere.
+R="$TMP/duplicate"
+put "$R" HealthTracker/Domain/A/Constants.swift
+put "$R" HealthTracker/Data/B/Constants.swift
+put "$R" HealthTrackerTests/Domain/A/ConstantsTests.swift
+out="$("$SCRIPT" "$R")"
+code=$?
+[ "$code" -eq 1 ] || fail "an ambiguous basename without its mirrored test should exit 1 (got $code)"
+expect "$out" 'test-mirror: HealthTracker/Data/B/Constants.swift: no HealthTrackerTests/Data/B/ConstantsTests.swift (Constants.swift is not a unique name, so its test must mirror its path)'
+[ "$(wc -l <<<"$out" | tr -d ' ')" -eq 1 ] || fail "expected exactly 1 violation, got:"$'\n'"$out"
+
+# Must pass: each duplicated basename has its test at the mirrored path.
+put "$R" HealthTrackerTests/Data/B/ConstantsTests.swift
+out="$("$SCRIPT" "$R")" || fail "mirrored tests for a duplicated basename should pass, got: $out"
+
+# Must fail: a Domain basename shared with a Presentation file is ambiguous too.
+R="$TMP/dup-presentation"
+put "$R" HealthTracker/Domain/X/Foo.swift
+put "$R" HealthTracker/Presentation/Foo.swift
+put "$R" HealthTrackerTests/Presentation/FooTests.swift
+out="$("$SCRIPT" "$R")"
+expect "$out" 'test-mirror: HealthTracker/Domain/X/Foo.swift: no HealthTrackerTests/Domain/X/FooTests.swift (Foo.swift is not a unique name, so its test must mirror its path)'
+
 # A missing exceptions file means no exceptions.
 R="$TMP/no-exceptions"
 put "$R" HealthTracker/Domain/Entities/Meal.swift
