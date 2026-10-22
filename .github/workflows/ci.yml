@@ -31,12 +31,21 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The PR checkout is a merge commit; depth 2 brings its first parent (the base), which is all
+          # "Persisted shape" diffs against. No later `git fetch` (persist-credentials: false leaves no token).
+          fetch-depth: 2
       - name: Install tools
         run: scripts/ci/install-tools.sh
       - name: SwiftFormat
         run: swiftformat . --lint --swift-version 6
       - name: SwiftLint
         run: swiftlint lint --strict --reporter github-actions-logging
+      - name: Fitness
+        run: scripts/fitness/run
+      # Warn-only: annotates the PR, never fails the job.
+      - name: Persisted shape
+        if: github.event_name == 'pull_request'
+        run: scripts/fitness/persisted-shape-guard.sh HEAD^1
       - name: ShellCheck
         run: grep -rlE '^#!(/usr/bin/env (ba)?sh|/bin/(ba)?sh)' scripts .githooks .claude/hooks | xargs shellcheck --severity=warning
       - name: actionlint

@@ -6,7 +6,8 @@ usage() {
   cat <<'EOF'
 Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-baseline]
 
-  --fast             Format, lint, unit tests, Domain/Data unit coverage ratchets (default).
+  --fast             Format, lint, fitness checks, unit tests, Domain/Data unit coverage ratchets
+                     (default).
   --full             Everything in --fast, plus UI tests, app coverage and per-file floor.
   --json             Also write build/quality.json.
   --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
@@ -80,6 +81,11 @@ echo "Lint: swiftlint lint --strict"
 lint_out="$(swiftlint lint --strict --quiet --reporter json 2>/dev/null)"
 jq -r '.[] | "\(.file):\(.line): \(.severity): \(.reason) (\(.rule_id))"' <<<"$lint_out" >&2
 count_row "Lint" "$(jq 'length' <<<"$lint_out" 2>/dev/null)"
+
+echo "Fitness: scripts/fitness/run"
+fitness_out="$(scripts/fitness/run 2>&1)"
+grep -vE '^[0-9]+ violation\(s\)$' <<<"$fitness_out" >&2
+count_row "Fitness" "$(sed -nE 's/^([0-9]+) violation\(s\)$/\1/p' <<<"$fitness_out")"
 
 if [ -z "$SIMULATOR" ]; then
   branch="$(git rev-parse --abbrev-ref HEAD)"

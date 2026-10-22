@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Runs every cross-file fitness check (not persisted-shape-guard.sh, which needs a base ref),
+# prints each violation and a final "N violation(s)" line; exits 1 if any.
+#
+# Usage: scripts/fitness/run [repo-root]
+set -uo pipefail
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO="${1:-$(cd "$DIR/../.." && pwd)}"
+total=0
+
+for check in localization-parity test-mirror accessibility-ids; do
+  out="$("$DIR/$check.sh" "$REPO")"
+  code=$?
+  if [ -n "$out" ]; then
+    printf '%s\n' "$out"
+    total=$((total + $(wc -l <<<"$out")))
+  elif [ "$code" -ne 0 ]; then
+    printf '%s: failed with exit %d and no violations\n' "$check" "$code"
+    total=$((total + 1))
+  fi
+done
+
+printf '%d violation(s)\n' "$total"
+[ "$total" -eq 0 ]

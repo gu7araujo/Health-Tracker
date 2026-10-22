@@ -25,7 +25,7 @@ convenience init(repository: HealthDataRepositoryProtocol = HealthDataRepository
 
 ## Localization
 
-The app ships `en` and `pt-BR` (Brazil is the primary locale). Every user-facing string is localized; display text is never hardcoded. The two `.strings` files stay in sync — a key added to one is added to both:
+The app ships `en` and `pt-BR` (Brazil is the primary locale). Every user-facing string is localized; display text is never hardcoded. The two locales' `.strings` files stay in sync — a key added to one is added to both (enforced by `scripts/fitness/localization-parity.sh`):
 
 - `HealthTracker/Resources/en.lproj/Localizable.strings`
 - `HealthTracker/Resources/pt-BR.lproj/Localizable.strings`

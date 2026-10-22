@@ -1,6 +1,6 @@
 # Test Suite
 
-The unit-test target. Built on **Swift Testing** (not XCTest), it mirrors the production tree one-to-one: one test struct per type, grouped under `Domain/`, `Data/`, and `Presentation/`. Every test runs against protocol fakes and deterministic fixtures — no real services, files, or wall clock. UI flows live in the separate `HealthTrackerUITests` target.
+The unit-test target. Built on **Swift Testing** (not XCTest), it mirrors the production tree one-to-one (`scripts/fitness/test-mirror.sh` requires a `<Name>Tests.swift` per Domain/Data file, minus `scripts/fitness/test-mirror-exceptions.txt`): one test struct per type, grouped under `Domain/`, `Data/`, and `Presentation/`. Every test runs against protocol fakes and deterministic fixtures — no real services, files, or wall clock. UI flows live in the separate `HealthTrackerUITests` target.
 
 ## Fixtures & Mocks
 

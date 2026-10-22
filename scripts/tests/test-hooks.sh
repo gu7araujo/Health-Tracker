@@ -159,9 +159,66 @@ test_skip_quality_skips_the_gate_with_a_warning() {
   [[ "$out" != *"until CI exists"* ]] || { echo "warning says CI does not exist: $out"; return 1; }
 }
 
+test_commit_with_staged_strings_runs_fitness_and_is_refused_on_violations() {
+  new_repo fitness-red
+  git switch -q -c feat/strings
+  mkdir -p scripts/fitness
+  printf '#!/usr/bin/env bash\ntouch "%s"\necho "localization-parity: missing key"\necho "1 violation(s)"\nexit 1\n' \
+    "$WORK/fitness-ran" > scripts/fitness/run
+  chmod +x scripts/fitness/run
+  mkdir en.lproj && echo '"k" = "v";' > en.lproj/Localizable.strings && git add en.lproj
+  local out
+  if out="$(git commit -m strings 2>&1)"; then echo "commit succeeded despite fitness violations"; return 1; fi
+  [ -e "$WORK/fitness-ran" ] || { echo "fitness not run"; return 1; }
+  [[ "$out" == *"localization-parity: missing key"*"fitness"* ]] || { echo "violations not reported: $out"; return 1; }
+}
+
+test_commit_with_staged_swift_runs_fitness() {
+  new_repo fitness-green
+  git switch -q -c feat/fitness
+  mkdir -p scripts/fitness && stub scripts/fitness/run "$WORK/fitness-ran" 0
+  cp "$FIXTURES/Formatted.swift.fixture" Greeter.swift && git add Greeter.swift
+  git commit -q -m add || { echo "commit failed"; return 1; }
+  [ -e "$WORK/fitness-ran" ] || { echo "fitness not run"; return 1; }
+}
+
+test_commit_without_swift_or_strings_skips_fitness() {
+  new_repo fitness-skip
+  git switch -q -c feat/docs
+  mkdir -p scripts/fitness && stub scripts/fitness/run "$WORK/fitness-ran" 1
+  echo hi > notes.txt && git add notes.txt
+  git commit -q -m docs || { echo "commit failed"; return 1; }
+  [ ! -e "$WORK/fitness-ran" ] || { echo "fitness ran"; return 1; }
+}
+
+test_push_runs_the_persisted_shape_guard_against_origin_main_but_never_blocks() {
+  new_repo push-guard
+  git switch -q -c feat/guard
+  mkdir -p scripts/fitness
+  printf '#!/usr/bin/env bash\necho "$*" > "%s"\necho "persisted-shape-guard: X.swift: warning: w"\nexit 1\n' \
+    "$WORK/guard-args" > scripts/fitness/persisted-shape-guard.sh
+  chmod +x scripts/fitness/persisted-shape-guard.sh
+  stub "$WORK/quality" "$WORK/quality-ran" 0
+  local out
+  out="$(QUALITY_CMD="$WORK/quality" git push -q origin feat/guard 2>&1)" || { echo "push failed: $out"; return 1; }
+  [ "$(cat "$WORK/guard-args" 2>/dev/null)" = "origin/main" ] || { echo "guard not run against origin/main"; return 1; }
+  [[ "$out" == *"warning: w"* ]] || { echo "guard warning not shown: $out"; return 1; }
+  [ -e "$WORK/quality-ran" ] || { echo "quality not run after the guard"; return 1; }
+}
+
+test_push_without_origin_main_still_succeeds_with_the_real_guard() {
+  new_repo push-no-main
+  git switch -q -c feat/no-main
+  mkdir -p scripts/fitness && cp "$ROOT/scripts/fitness/persisted-shape-guard.sh" scripts/fitness/
+  local out
+  out="$(QUALITY_CMD=true git push -q origin feat/no-main 2>&1)" || { echo "push failed: $out"; return 1; }
+  [[ "$out" == *"persisted-shape-guard: note: base ref 'origin/main' not found; skipping"* ]] ||
+    { echo "missing note: $out"; return 1; }
+}
+
 failures=0
 for test in $(declare -F | awk '{ print $3 }' | grep '^test_'); do
-  rm -f "$WORK"/*-ran "$WORK/quality-args"
+  rm -f "$WORK"/*-ran "$WORK/quality-args" "$WORK/guard-args"
   if output="$("$test" 2>&1)"; then
     printf '✓ %s\n' "$test"
   else
