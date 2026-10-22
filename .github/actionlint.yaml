@@ -1,0 +1,4 @@
+# actionlint does not know GitHub's public-preview runner labels yet.
+self-hosted-runner:
+  labels:
+    - xcode-27 # macOS 26 + Xcode 27 public-preview image (standard size)

@@ -1,0 +1,4 @@
+{"mode":"fast","passed":false,"gates":[
+  {"name":"Lint","value":3,"threshold":0,"comparator":"<=","passed":false},
+  {"name":"Unit tests","value":null,"threshold":0,"comparator":"<=","passed":false},
+  {"name":"Domain unit line coverage","value":null,"threshold":95,"comparator":">=","passed":false}]}

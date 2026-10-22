@@ -1,6 +1,6 @@
 ---
 name: quality-gate
-description: Run HealthTracker's quality gate (scripts/quality) and act on its result. Use when checking whether a task is done, when a gate is red (format, lint, tests, coverage), when finding the least-covered files, or when raising coverage thresholds.
+description: Run HealthTracker's quality gate (scripts/quality) and act on its result. Use when checking whether a task is done, when a gate or CI check is red (format, lint, tests, coverage), when finding the least-covered files, or when raising coverage thresholds.
 ---
 
 # Quality gate
@@ -68,3 +68,33 @@ scripts/quality --fast --update-baseline
 ```
 
 It raises `DOMAIN_UNIT_MIN` / `DATA_UNIT_MIN` in `scripts/quality-thresholds.env` to the measured value (rounded down to one decimal) and keeps any threshold the measurement doesn't beat. Commit the changed thresholds file with the tests that earned it.
+
+## 6. CI
+
+CI (`.github/workflows/ci.yml`) runs the same gate. CI installs the pinned tools with `scripts/ci/install-tools.sh` and selects the pinned Xcode with `scripts/ci/select-xcode.sh`. A local pass only counts when `scripts/doctor` reports the same versions as `scripts/tool-versions.env`.
+
+Read a red run:
+
+```bash
+gh pr checks <n>                  # which job is red: lint (Linux) or test (macOS)
+gh run view <run-id> --log-failed # the failing step's log
+```
+
+The run's job summary shows the same gate table as `build/quality.json`. When `test` fails, the run uploads `build/*.xcresult` and `build/xcodebuild.log` as artifact `xcresult-<run-id>`:
+
+```bash
+gh run download <run-id> -n xcresult-<run-id> -D build/ci
+```
+
+Run the section 4 `xccov` commands on `build/ci/Test.xcresult`.
+
+A red run on `main` (push or weekly): reproduce on `main` with `scripts/quality --fast` (push) or `--full` (weekly), then fix it on a branch through a PR, or report it to the user.
+
+A red `test` on a ready PR spends a ready run (~11 macOS min; at most two per PR without the user's go-ahead):
+
+1. `gh pr ready <n> --undo` first, so further pushes run only `lint`.
+2. Reproduce locally with `scripts/quality --full`.
+3. Reproduced: fix the gate as in section 3 until `--full` is green, push, and mark the PR ready once more (after the push's run starts, as in `AGENTS.md`).
+4. Stop and report to the user (run link, failing step, suspected cause) when the failure does not reproduce locally (runner image, missing pinned Xcode or tool, a test flaky only on the runner), or when the second ready run is red too.
+
+**Done when:** `gh pr checks <n>` shows every check green, or the user has the report from step 4.

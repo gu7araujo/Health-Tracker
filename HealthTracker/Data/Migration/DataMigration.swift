@@ -212,39 +212,4 @@ struct DataMigration {
 
         flags.markDone(Self.workoutIntensityMigrationKey)
     }
-
-    #if DEBUG
-        /// Creates test data with old enum values (0-6) for migration testing.
-        /// ⚠️ This will reset the migration flag and create workouts with values 0-6.
-        /// Use this to test that the migration correctly converts to actual minutes.
-        static func createMigrationTestData() {
-            let logger = LoggerFactory.dataLogger(category: "Data.Migration")
-            // Reset migration flag to allow re-running
-            UserDefaults.standard.set(false, forKey: durationMigrationKey)
-
-            let dataSource = ICloudDriveDataSource()
-            let testDays = [
-                DayData(
-                    date: Date(),
-                    meals: [],
-                    workouts: [
-                        Workout(description: "Test 0→15min", duration: Workout.Duration(minutes: 0)),
-                        Workout(description: "Test 1→30min", duration: Workout.Duration(minutes: 1)),
-                        Workout(description: "Test 2→60min", duration: Workout.Duration(minutes: 2)),
-                        Workout(description: "Test 3→90min", duration: Workout.Duration(minutes: 3)),
-                        Workout(description: "Test 4→10min", duration: Workout.Duration(minutes: 4)),
-                        Workout(description: "Test 5→40min", duration: Workout.Duration(minutes: 5)),
-                        Workout(description: "Test 6→120min", duration: Workout.Duration(minutes: 6))
-                    ],
-                    water: nil,
-                    mood: nil
-                )
-            ]
-            let recordedDays = testDays.compactMap(RecordedDayData.init)
-            dataSource.save(recordedDays)
-
-            logger.debug("Created test data with old enum values (0-6)")
-            logger.debug("Next app launch will migrate these to actual minutes")
-        }
-    #endif
 }

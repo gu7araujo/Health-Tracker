@@ -13,6 +13,7 @@ This README is the human guide to building, testing and the **quality gate**. AI
 - [Coverage thresholds and the ratchet](#coverage-thresholds-and-the-ratchet)
 - [Git hooks](#git-hooks)
 - [Xcode build phase](#xcode-build-phase)
+- [Continuous integration](#continuous-integration)
 - [Working with AI agents](#working-with-ai-agents)
 - [Script reference](#script-reference)
 - [Troubleshooting](#troubleshooting)
@@ -75,9 +76,9 @@ Lint                                 0  <= 0       ✓
 Unit tests                           0  <= 0       ✓
 UI tests                             0  <= 0       ✓
 Domain unit line coverage       97.09%  >= 97.0%   ✓
-Data unit line coverage         78.46%  >= 78.4%   ✓
-App line coverage               95.27%  >= 90.0%   ✓
-Per-file floor                  87.83%  >= 80.0%   ✓
+Data unit line coverage         85.84%  >= 85.8%   ✓
+App line coverage               95.60%  >= 95.0%   ✓
+Per-file floor                  87.83%  >= 85.0%   ✓
 
 8/8 gates passed.
 ```
@@ -92,8 +93,8 @@ Per-file floor                  87.83%  >= 80.0%   ✓
 | UI tests | `--full` | `HealthTrackerUITests` has 0 failures |
 | Domain unit line coverage | both | Unit-test coverage of `HealthTracker/Domain/` ≥ `DOMAIN_UNIT_MIN` |
 | Data unit line coverage | both | Unit-test coverage of `HealthTracker/Data/` ≥ `DATA_UNIT_MIN` |
-| App line coverage | `--full` | Unit + UI coverage of the whole app ≥ `APP_LINE_MIN` (90%) |
-| Per-file floor | `--full` | The least-covered file is ≥ `FILE_FLOOR` (80%). Files under `Presentation/Views/` and those listed in `scripts/coverage-exceptions.txt` don't count |
+| App line coverage | `--full` | Unit + UI coverage of the whole app ≥ `APP_LINE_MIN` (95%) |
+| Per-file floor | `--full` | The least-covered file is ≥ `FILE_FLOOR` (85%). Files under `Presentation/Views/` and those listed in `scripts/coverage-exceptions.txt` don't count |
 
 Why two kinds of coverage:
 - UI tests run a lot of code without checking much of it, so app-wide coverage can look high while the business rules go untested. The Domain and Data gates count **unit tests only**, which keeps the rules in those layers covered on their own. To measure that, `--full` runs the unit tests and the UI tests as two separate runs, then merges them into `build/Test.xcresult` for the app-wide numbers.
@@ -154,8 +155,8 @@ The thresholds live in `scripts/quality-thresholds.env`:
 
 | Threshold | Value | Meaning |
 |---|---|---|
-| `APP_LINE_MIN` | 90.0 | App-wide unit + UI coverage |
-| `FILE_FLOOR` | 80.0 | Minimum coverage for any one file (Views excluded) |
+| `APP_LINE_MIN` | 95.0 | App-wide unit + UI coverage |
+| `FILE_FLOOR` | 85.0 | Minimum coverage for any one file (Views excluded) |
 | `DOMAIN_UNIT_MIN` | ratchet | Domain unit-test coverage. Started at today's measured value, aiming for 95+ |
 | `DATA_UNIT_MIN` | ratchet | Data unit-test coverage. Started at today's measured value, aiming for 95 |
 
@@ -183,11 +184,54 @@ Enabled by `scripts/bootstrap`. They live in `.githooks/`.
 - refuses to push to `main`;
 - runs `scripts/quality --fast`, and blocks the push if a gate is red.
 
-Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). Use it rarely, and run `--full` before marking the PR ready.
+Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). CI still runs the gate once the PR is ready (draft PRs run only lint). Use it rarely, and run `--full` before marking the PR ready.
 
 ## Xcode build phase
 
 The app target's **SwiftLint** build phase runs `swiftlint lint --quiet`, so violations appear as warnings in Xcode's issue navigator. It **never** rewrites your files; formatting happens in the pre-commit hook. The phase is skipped when `CI=true`.
+
+## Continuous integration
+
+GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a pass doesn't depend on one Mac's setup.
+
+| Trigger | `lint` (Linux) | `test` (macOS) |
+|---|---|---|
+| Draft PR | ✅ | skipped |
+| Ready PR (opened, pushed, or marked ready) | ✅ | `scripts/quality --full` |
+| Push to `main` (a merge) | ✅ | `scripts/quality --fast` |
+| Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full` |
+| Manual (**Run workflow** in the Actions tab) | ✅ (`ci.yml`) | `scripts/quality --full` |
+
+**`lint`** runs on `ubuntu-24.04` (~1 min). It installs the pinned SwiftLint and SwiftFormat (`scripts/ci/install-tools.sh`), checks formatting, and lints. SwiftLint violations show inline on the PR diff; SwiftFormat failures show in the step log. Linux SwiftLint skips the rules that need SourceKit (`custom_rules`, `statement_position`), so this job is a fast pre-filter: the full lint runs again in `test`. It also runs ShellCheck on the scripts and hooks and actionlint on the workflows.
+
+**`test`** runs only after `lint` passes, on `runs-on: xcode-27` (macOS 26). It selects the pinned Xcode (`scripts/ci/select-xcode.sh`) and installs the pinned tools. Then it runs the scripts' own tests (`scripts/tests/run`) and `scripts/quality` with `CI=true`, so `scripts/doctor` fails on any version drift and compiler warnings fail the build (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `GCC_TREAT_WARNINGS_AS_ERRORS`; locally they stay warnings). The gate table appears in the run's summary. Compile errors and test failures are rendered as GitHub annotations (`xcbeautify --renderer github-actions`).
+
+**Cost.** The repo is private on GitHub Free: about 200 macOS minutes a month (macOS minutes count 10× against the 2,000-minute allowance). To stay inside it:
+
+- the macOS job waits for the Linux `lint` job;
+- draft PRs run only `lint`;
+- a new push to a PR cancels the run it replaces (runs on `main` are never cancelled);
+- changes that only touch Markdown, `.agents/`, `.claude/skills/` or `.codex/` skip CI;
+- pushes to `main` run `--fast`, since the PR already ran `--full`;
+- Dependabot PRs run only `lint`.
+
+Cost per item: a ready PR's `--full` run takes ~11 min (measured on the first run), and agents get at most two ready runs per PR without your go-ahead; a merge to `main` (`--fast`) is estimated at ~5 min; the **weekly** `--full` is ~47 min a month, about a quarter of the budget.
+
+Check usage under **Settings → Billing → Usage**. If it passes about 80% of the allowance, upgrade to GitHub Pro (3,000 minutes, and branch rulesets so the checks become required).
+
+**Reading a failure:**
+
+```bash
+gh pr checks <n>                                            # which job failed
+gh run view <run-id> --log-failed                           # the failing step's log
+gh run download <run-id> -n xcresult-<run-id> -D build/ci   # test results and xcodebuild.log
+```
+
+The artifact is uploaded only when `test` fails, and kept for 7 days. Open `build/ci/Test.xcresult` in Xcode, or reproduce locally with `scripts/quality --full`. If CI and your Mac disagree, run `scripts/doctor` first: CI uses exactly the versions in `scripts/tool-versions.env`.
+
+GitHub does not enforce the checks on the Free plan. Look at them before you approve and merge.
+
+**Dependabot** (`.github/dependabot.yml`) opens one grouped PR a month that bumps the GitHub Actions; it runs only the `lint` job. Actions are pinned by commit SHA, with the version in a comment. Review and merge these like any other PR.
 
 ## Working with AI agents
 
@@ -200,7 +244,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
   - pushes to `main` and force-pushes;
   - `gh pr merge`.
 - A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately. If SwiftFormat or SwiftLint can't run, the hook reports that as an error instead of passing.
-- Agents open PRs as **draft** and stop at "ready for review". You review and merge.
+- Agents open PRs as **draft**, run `scripts/quality --full` locally, mark the PR ready (which starts the macOS job) and wait for the checks. If `test` goes red, the agent moves the PR back to draft, fixes and verifies locally, and marks it ready one more time; a failure it can't reproduce locally, or a second red ready run, comes to you as a report instead. At most two ready runs per PR without your go-ahead. You review and merge.
 
 ## Script reference
 
@@ -214,6 +258,8 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `scripts/coverage-exceptions.txt` | Files grandfathered below the per-file floor |
 | `scripts/lib/` | Pieces used by `scripts/quality` (coverage math, simulator picking, report table). Each has tests |
 | `scripts/tests/run` | Runs every `scripts/tests/test-*.sh` (the scripts' own tests, no simulator needed) |
+| `scripts/ci/` | CI helpers: `install-tools.sh` (pinned SwiftLint/SwiftFormat), `select-xcode.sh` (pinned Xcode), `summary.sh` (gate table for the job summary) |
+| `.github/workflows/` | `ci.yml` (PRs, pushes to `main`) and `weekly.yml` (schedule) |
 | `.githooks/` | pre-commit and pre-push hooks |
 | `.claude/hooks/format-swift.sh` | Claude Code hook that formats and lints each edited Swift file |
 
