@@ -60,7 +60,7 @@ One command decides whether the code is good enough. It prints a pass/fail table
 ```bash
 scripts/quality            # same as --fast
 scripts/quality --fast     # format, lint, unit tests, Domain/Data unit coverage
-scripts/quality --full     # format, lint, unit + UI tests, app coverage, per-file floor
+scripts/quality --full     # everything in --fast, plus UI tests, app coverage, per-file floor
 scripts/quality --full --json            # also writes build/quality.json
 scripts/quality --simulator <udid>       # test on a specific simulator
 scripts/quality --fast --update-baseline # raise the coverage ratchets (see below)
@@ -74,10 +74,12 @@ Format                               0  <= 0       ✓
 Lint                                 0  <= 0       ✓
 Unit tests                           0  <= 0       ✓
 UI tests                             0  <= 0       ✓
-App line coverage               94.17%  >= 90.0%   ✓
-Per-file floor                  88.36%  >= 80.0%   ✓
+Domain unit line coverage       97.09%  >= 97.0%   ✓
+Data unit line coverage         78.46%  >= 78.4%   ✓
+App line coverage               95.27%  >= 90.0%   ✓
+Per-file floor                  87.83%  >= 80.0%   ✓
 
-6/6 gates passed.
+8/8 gates passed.
 ```
 
 ### What each gate checks
@@ -88,13 +90,13 @@ Per-file floor                  88.36%  >= 80.0%   ✓
 | Lint | both | `swiftlint lint --strict` reports 0 violations (warnings count) |
 | Unit tests | both | `HealthTrackerTests` has 0 failures |
 | UI tests | `--full` | `HealthTrackerUITests` has 0 failures |
-| Domain unit line coverage | `--fast` | Unit-test coverage of `HealthTracker/Domain/` ≥ `DOMAIN_UNIT_MIN` |
-| Data unit line coverage | `--fast` | Unit-test coverage of `HealthTracker/Data/` ≥ `DATA_UNIT_MIN` |
+| Domain unit line coverage | both | Unit-test coverage of `HealthTracker/Domain/` ≥ `DOMAIN_UNIT_MIN` |
+| Data unit line coverage | both | Unit-test coverage of `HealthTracker/Data/` ≥ `DATA_UNIT_MIN` |
 | App line coverage | `--full` | Unit + UI coverage of the whole app ≥ `APP_LINE_MIN` (90%) |
 | Per-file floor | `--full` | The least-covered file is ≥ `FILE_FLOOR` (80%). Files under `Presentation/Views/` and those listed in `scripts/coverage-exceptions.txt` don't count |
 
 Why two kinds of coverage:
-- UI tests run a lot of code without checking much of it, so app-wide coverage can look high while the business rules go untested. The `--fast` coverage gates count **unit tests only**, which keeps the rules in Domain and Data covered on their own.
+- UI tests run a lot of code without checking much of it, so app-wide coverage can look high while the business rules go untested. The Domain and Data gates count **unit tests only**, which keeps the rules in those layers covered on their own. To measure that, `--full` runs the unit tests and the UI tests as two separate runs, then merges them into `build/Test.xcresult` for the app-wide numbers.
 - The per-file floor stops one well-tested file from hiding a new untested one.
 
 A value of `n/a` in the table means the gate couldn't measure anything: the build failed, or a test bundle crashed. The full log is in `build/xcodebuild.log`.
@@ -197,7 +199,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
   - `SKIP_QUALITY=`;
   - pushes to `main` and force-pushes;
   - `gh pr merge`.
-- A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately.
+- A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately. If SwiftFormat or SwiftLint can't run, the hook reports that as an error instead of passing.
 - Agents open PRs as **draft** and stop at "ready for review". You review and merge.
 
 ## Script reference

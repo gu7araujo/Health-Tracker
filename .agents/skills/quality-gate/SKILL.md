@@ -11,7 +11,7 @@ description: Run HealthTracker's quality gate (scripts/quality) and act on its r
 
 ```bash
 scripts/quality --fast --json   # iterate: format, lint, unit tests, Domain/Data unit coverage (~2 min)
-scripts/quality --full --json   # done: adds UI tests, app coverage, per-file floor (~8 min)
+scripts/quality --full --json   # done: everything in --fast, plus UI tests, app coverage, per-file floor (~8 min)
 ```
 
 It tests on `--simulator <udid>` when given; otherwise it reuses or clones a simulator named `HT-<branch>`, so parallel worktrees stay isolated. An exported `SIMULATOR_ID` is ignored on purpose. Delete the clone when the branch is done: `xcrun simctl delete "HT-<branch with / replaced by ->"`.

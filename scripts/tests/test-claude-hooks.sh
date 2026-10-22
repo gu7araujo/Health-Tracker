@@ -50,4 +50,34 @@ diff -q "$WORK/notes.txt" "$FIXTURES/Unformatted.swift.fixture" >/dev/null || fa
 run_hook "$WORK/Missing.swift"
 [ "$code" -eq 0 ] || fail "missing file should exit 0 (got $code): $out"
 
+# The hook must never pass silently when its tools can't run.
+# bin/ holds jq plus the tool stubs; PATH keeps only system dirs besides it.
+mkdir -p "$WORK/bin"
+ln -s "$(command -v jq)" "$WORK/bin/jq"
+ln -s "$(command -v swiftformat)" "$WORK/bin/swiftformat"
+cp "$FIXTURES/Formatted.swift.fixture" "$WORK/Tool.swift"
+
+# SwiftLint missing.
+out="$(jq -n --arg path "$WORK/Tool.swift" '{tool_input: {file_path: $path}}' | PATH="$WORK/bin:/usr/bin:/bin" "$HOOK" 2>&1 >/dev/null)"
+code=$?
+[ "$code" -eq 2 ] || fail "missing swiftlint should exit 2 (got $code): $out"
+[[ "$out" == *swiftlint* ]] || fail "missing swiftlint should be reported: $out"
+
+# SwiftLint crashing with no violations on stdout.
+printf '#!/bin/sh\necho "fatal: could not load config" >&2\nexit 1\n' >"$WORK/bin/swiftlint"
+chmod +x "$WORK/bin/swiftlint"
+out="$(jq -n --arg path "$WORK/Tool.swift" '{tool_input: {file_path: $path}}' | PATH="$WORK/bin:/usr/bin:/bin" "$HOOK" 2>&1 >/dev/null)"
+code=$?
+[ "$code" -eq 2 ] || fail "crashing swiftlint should exit 2 (got $code): $out"
+[[ "$out" == *"could not load config"* ]] || fail "swiftlint's error should be shown: $out"
+
+# SwiftFormat failing.
+rm "$WORK/bin/swiftformat"
+printf '#!/bin/sh\necho "error: unsupported option" >&2\nexit 70\n' >"$WORK/bin/swiftformat"
+chmod +x "$WORK/bin/swiftformat"
+out="$(jq -n --arg path "$WORK/Tool.swift" '{tool_input: {file_path: $path}}' | PATH="$WORK/bin:/usr/bin:/bin" "$HOOK" 2>&1 >/dev/null)"
+code=$?
+[ "$code" -eq 2 ] || fail "failing swiftformat should exit 2 (got $code): $out"
+[[ "$out" == *"unsupported option"* ]] || fail "swiftformat's error should be shown: $out"
+
 [ "$failures" -eq 0 ]
