@@ -73,7 +73,9 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
 - Fix a red gate in code or tests. Lowering a threshold, editing `scripts/coverage-exceptions.txt`, or adding a `swiftlint:disable` is a decision for the user: call each one out explicitly in the report and PR.
 - Each `.swift` file you edit or write is formatted in place and linted by a Claude Code hook; fix the violations it reports.
 - The git hooks refuse commits and pushes to `main` and run `--fast` before every push. Let them run: no `--no-verify`, no `SKIP_QUALITY`. The push takes ~2 min, past the Bash tool's 120 s default, so run `git push` with a 600000 ms timeout.
-- Open PRs as **draft** and stop at PR-ready with the link: the user approves and merges every PR.
+- Open PRs as **draft**, run `scripts/quality --full` locally, then `gh pr ready <n>` and watch `gh pr checks <n> --watch` until green. Stop there with the link: the user approves and merges every PR.
+
+**CI** (GitHub Actions, ~200 macOS min/month on the Free plan). The Linux `lint` job runs format, lint, ShellCheck and actionlint on every PR and push that touches more than docs or agent config. Draft and Dependabot PRs run only `lint`. Ready PRs also run `test` (`scripts/quality --full` on `runs-on: xcode-27`), pushes to `main` run `--fast`, and the weekly schedule runs `--full`. A red check is read and reproduced through the `quality-gate` skill's CI section.
 
 ## Data Migrations
 

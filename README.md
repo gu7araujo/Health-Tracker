@@ -13,6 +13,7 @@ This README is the human guide to building, testing and the **quality gate**. AI
 - [Coverage thresholds and the ratchet](#coverage-thresholds-and-the-ratchet)
 - [Git hooks](#git-hooks)
 - [Xcode build phase](#xcode-build-phase)
+- [Continuous integration](#continuous-integration)
 - [Working with AI agents](#working-with-ai-agents)
 - [Script reference](#script-reference)
 - [Troubleshooting](#troubleshooting)
@@ -183,11 +184,54 @@ Enabled by `scripts/bootstrap`. They live in `.githooks/`.
 - refuses to push to `main`;
 - runs `scripts/quality --fast`, and blocks the push if a gate is red.
 
-Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). Use it rarely, and run `--full` before marking the PR ready.
+Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). CI still runs the gate once the PR is ready (draft PRs run only lint). Use it rarely, and run `--full` before marking the PR ready.
 
 ## Xcode build phase
 
 The app target's **SwiftLint** build phase runs `swiftlint lint --quiet`, so violations appear as warnings in Xcode's issue navigator. It **never** rewrites your files; formatting happens in the pre-commit hook. The phase is skipped when `CI=true`.
+
+## Continuous integration
+
+GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a pass doesn't depend on one Mac's setup.
+
+| Trigger | `lint` (Linux) | `test` (macOS) |
+|---|---|---|
+| Draft PR | ✅ | skipped |
+| Ready PR (opened, pushed, or marked ready) | ✅ | `scripts/quality --full` |
+| Push to `main` (a merge) | ✅ | `scripts/quality --fast` |
+| Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full` |
+| Manual (**Run workflow** in the Actions tab) | ✅ (`ci.yml`) | `scripts/quality --full` |
+
+**`lint`** runs on `ubuntu-24.04` (~1 min). It installs the pinned SwiftLint and SwiftFormat (`scripts/ci/install-tools.sh`), checks formatting, and lints. SwiftLint violations show inline on the PR diff; SwiftFormat failures show in the step log. It also runs ShellCheck on the scripts and hooks and actionlint on the workflows.
+
+**`test`** runs only after `lint` passes, on `runs-on: xcode-27` (macOS 26). It selects the pinned Xcode (`scripts/ci/select-xcode.sh`) and installs the pinned tools. Then it runs the scripts' own tests (`scripts/tests/run`) and `scripts/quality` with `CI=true`, so `scripts/doctor` fails on any version drift. The gate table appears in the run's summary. Compile errors and test failures are rendered as GitHub annotations (`xcbeautify --renderer github-actions`).
+
+**Cost.** The repo is private on GitHub Free: about 200 macOS minutes a month (macOS minutes count 10× against the 2,000-minute allowance). To stay inside it:
+
+- the macOS job waits for the Linux `lint` job;
+- draft PRs run only `lint`;
+- a new push to a PR cancels the run it replaces (runs on `main` are never cancelled);
+- changes that only touch Markdown, `.agents/`, `.claude/skills/` or `.codex/` skip CI;
+- pushes to `main` run `--fast`, since the PR already ran `--full`;
+- Dependabot PRs run only `lint`.
+
+Rough cost per item (estimates until the first runs are measured): a ready PR's `--full` run ~15–22 min, and the same again for each further push while ready; a merge to `main` ~6–9 min; the **weekly** `--full` ~65–95 min a month. The weekly run alone is a third to a half of the budget.
+
+Check usage under **Settings → Billing → Usage**. If it passes about 80% of the allowance, upgrade to GitHub Pro (3,000 minutes, and branch rulesets so the checks become required).
+
+**Reading a failure:**
+
+```bash
+gh pr checks <n>                                            # which job failed
+gh run view <run-id> --log-failed                           # the failing step's log
+gh run download <run-id> -n xcresult-<run-id> -D build/ci   # test results and xcodebuild.log
+```
+
+The artifact is uploaded only when `test` fails, and kept for 7 days. Open `build/ci/Test.xcresult` in Xcode, or reproduce locally with `scripts/quality --full`. If CI and your Mac disagree, run `scripts/doctor` first: CI uses exactly the versions in `scripts/tool-versions.env`.
+
+GitHub does not enforce the checks on the Free plan. Look at them before you approve and merge.
+
+**Dependabot** (`.github/dependabot.yml`) opens one grouped PR a month that bumps the GitHub Actions; it runs only the `lint` job. Actions are pinned by commit SHA, with the version in a comment. Review and merge these like any other PR.
 
 ## Working with AI agents
 
@@ -200,7 +244,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
   - pushes to `main` and force-pushes;
   - `gh pr merge`.
 - A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately. If SwiftFormat or SwiftLint can't run, the hook reports that as an error instead of passing.
-- Agents open PRs as **draft** and stop at "ready for review". You review and merge.
+- Agents open PRs as **draft**, run `scripts/quality --full` locally, mark the PR ready (which starts the macOS job) and wait for the checks. You review and merge.
 
 ## Script reference
 
@@ -214,6 +258,8 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `scripts/coverage-exceptions.txt` | Files grandfathered below the per-file floor |
 | `scripts/lib/` | Pieces used by `scripts/quality` (coverage math, simulator picking, report table). Each has tests |
 | `scripts/tests/run` | Runs every `scripts/tests/test-*.sh` (the scripts' own tests, no simulator needed) |
+| `scripts/ci/` | CI helpers: `install-tools.sh` (pinned SwiftLint/SwiftFormat), `select-xcode.sh` (pinned Xcode), `summary.sh` (gate table for the job summary) |
+| `.github/workflows/` | `ci.yml` (PRs, pushes to `main`) and `weekly.yml` (schedule) |
 | `.githooks/` | pre-commit and pre-push hooks |
 | `.claude/hooks/format-swift.sh` | Claude Code hook that formats and lints each edited Swift file |
 

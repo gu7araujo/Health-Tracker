@@ -11,7 +11,7 @@ while read -r _local_ref _local_sha remote_ref _remote_sha; do
 done
 
 if [ "${SKIP_QUALITY:-}" = "1" ]; then
-  echo "pre-push: ⚠️  SKIP_QUALITY=1, skipping the quality gate: nothing else checks this branch until CI exists." >&2
+  echo "pre-push: ⚠️  SKIP_QUALITY=1, skipping the quality gate: CI re-runs the gate on the PR (draft PRs run lint only)." >&2
   exit 0
 fi
 

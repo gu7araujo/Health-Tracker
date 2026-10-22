@@ -96,6 +96,9 @@ if [ "$MODE" = "full" ]; then
 fi
 
 echo "Tests: ${bundles[*]} on simulator $SIMULATOR (full log: build/xcodebuild.log)"
+# On GitHub Actions, compile errors and test failures become inline PR annotations.
+beautify=(xcbeautify --quieter --disable-logging)
+[ "${GITHUB_ACTIONS:-}" = "true" ] && beautify+=(--renderer github-actions)
 rm -rf "$RESULT" build/Unit.xcresult build/UI.xcresult
 : >build/xcodebuild.log
 # Boot and wait first: launching on a still-booting clone fails every test with "Application failed preflight checks".
@@ -113,7 +116,7 @@ for bundle in "${bundles[@]}"; do
     "-only-testing:$bundle" \
     -parallel-testing-enabled NO \
     -enableCodeCoverage YES \
-    -resultBundlePath "$bundle_result" 2>&1 | tee -a build/xcodebuild.log | xcbeautify --quieter --disable-logging
+    -resultBundlePath "$bundle_result" 2>&1 | tee -a build/xcodebuild.log | "${beautify[@]}"
   xcrun xcresulttool get test-results tests --path "$bundle_result" >build/test-results.json 2>/dev/null
   count_row "$name" "$("$LIB/test-failures.sh" build/test-results.json "$bundle")"
 done

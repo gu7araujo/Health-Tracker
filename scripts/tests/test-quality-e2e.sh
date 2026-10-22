@@ -39,16 +39,19 @@ case "\$1 \$2" in
 esac
 EOF
 printf '#!/bin/sh\necho "$*" >>"%s"\n' "$TMP/xcodebuild.calls" >"$TMP/bin/xcodebuild"
-printf '#!/bin/sh\ncat >/dev/null\n' >"$TMP/bin/xcbeautify"
+printf '#!/bin/sh\necho "$*" >>"%s"\ncat >/dev/null\n' "$TMP/xcbeautify.calls" >"$TMP/bin/xcbeautify"
 printf '#!/bin/sh\necho "0/1 files require formatting."\n' >"$TMP/bin/swiftformat"
 chmod +x "$TMP/bin/"*
 
-# run_quality <lint json> [args...] -> sets out, code
+# run_quality <lint json> [args...] -> sets out, code. CI is cleared (the stubs are not the pinned
+# versions, so doctor would fail) and GITHUB_ACTIONS comes from $GHA, so the test behaves the same
+# inside a GitHub Actions job.
 run_quality() {
   printf '#!/bin/sh\necho %s\n' "'$1'" >"$TMP/bin/swiftlint"
   chmod +x "$TMP/bin/swiftlint"
   shift
-  out="$(cd "$REPO" && PATH="$TMP/bin:$PATH" SIMULATOR_ID=SHARED-UDID "$REPO/scripts/quality" "$@" 2>&1)"
+  out="$(cd "$REPO" && PATH="$TMP/bin:$PATH" SIMULATOR_ID=SHARED-UDID CI='' GITHUB_ACTIONS="${GHA:-}" \
+    "$REPO/scripts/quality" "$@" 2>&1)"
   code=$?
 }
 
@@ -79,5 +82,15 @@ done
   [ "$(grep -c -- '-only-testing:HealthTrackerUITests' "$TMP/xcodebuild.calls")" -eq 1 ] &&
   ! grep -q -- '-only-testing:HealthTrackerTests.*-only-testing:HealthTrackerUITests' "$TMP/xcodebuild.calls" ||
   fail "--full should run unit and UI tests as separate xcodebuild runs, got: $(cat "$TMP/xcodebuild.calls")"
+
+# Locally xcbeautify keeps its terminal renderer; on GitHub Actions it emits inline PR annotations.
+: >"$TMP/xcbeautify.calls"
+run_quality '[]' --fast
+[ "$(cat "$TMP/xcbeautify.calls")" = "--quieter --disable-logging" ] ||
+  fail "locally xcbeautify should run with --quieter only, got: $(cat "$TMP/xcbeautify.calls")"
+: >"$TMP/xcbeautify.calls"
+GHA=true run_quality '[]' --fast
+[ "$(cat "$TMP/xcbeautify.calls")" = "--quieter --disable-logging --renderer github-actions" ] ||
+  fail "on GitHub Actions xcbeautify should use the github-actions renderer, got: $(cat "$TMP/xcbeautify.calls")"
 
 [ "$failures" -eq 0 ]

@@ -154,9 +154,9 @@ test_skip_quality_skips_the_gate_with_a_warning() {
   local out
   out="$(SKIP_QUALITY=1 QUALITY_CMD="$WORK/quality" git push -q origin feat/skip 2>&1)" || { echo "push failed: $out"; return 1; }
   [ ! -e "$WORK/quality-ran" ] || { echo "quality ran"; return 1; }
-  [[ "$out" == *"SKIP_QUALITY"*"nothing else checks"* ]] || { echo "missing warning: $out"; return 1; }
-  # No CI exists yet, so the warning must not promise one.
-  [[ "$out" != *"CI still"* ]] || { echo "warning promises CI: $out"; return 1; }
+  [[ "$out" == *"SKIP_QUALITY"*"CI re-runs the gate on the PR"*"draft PRs run lint only"* ]] ||
+    { echo "missing warning: $out"; return 1; }
+  [[ "$out" != *"until CI exists"* ]] || { echo "warning says CI does not exist: $out"; return 1; }
 }
 
 failures=0
