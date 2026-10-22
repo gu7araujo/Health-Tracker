@@ -8,4 +8,3 @@ HealthTracker/Data/Services/UserNotificationCentering.swift  # 0.00%
 # To burn down with unit tests:
 HealthTracker/Data/Services/NotificationPermissionManager.swift  # 19.05%
 HealthTracker/Extensions/View+Extensions.swift  # 72.00%
-HealthTracker/Data/Migration/DataMigration.swift  # 78.11% (migrations protect users' data: cover first)
