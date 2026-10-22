@@ -11,6 +11,7 @@ This README is the human guide to building, testing and the **quality gate**. AI
 - [The quality gate (`scripts/quality`)](#the-quality-gate-scriptsquality)
 - [Fixing a red gate](#fixing-a-red-gate)
 - [Coverage thresholds and the ratchet](#coverage-thresholds-and-the-ratchet)
+- [Lint rules](#lint-rules)
 - [Git hooks](#git-hooks)
 - [Xcode build phase](#xcode-build-phase)
 - [Continuous integration](#continuous-integration)
@@ -88,7 +89,7 @@ Per-file floor                  87.83%  >= 85.0%   ✓
 | Gate | Mode | Passes when |
 |---|---|---|
 | Format | both | `swiftformat --lint` finds no file that needs formatting |
-| Lint | both | `swiftlint lint --strict` reports 0 violations (warnings count) |
+| Lint | both | `swiftlint lint --strict` reports 0 violations outside the [baseline](#lint-rules) (warnings count) |
 | Unit tests | both | `HealthTrackerTests` has 0 failures |
 | UI tests | `--full` | `HealthTrackerUITests` has 0 failures |
 | Domain unit line coverage | both | Unit-test coverage of `HealthTracker/Domain/` ≥ `DOMAIN_UNIT_MIN` |
@@ -131,7 +132,7 @@ Fix the code or the tests, never the threshold.
 | Red gate | Fix |
 |---|---|
 | Format | `swiftformat . --swift-version 6` |
-| Lint | Fix each violation printed above the table. `swiftlint --fix` handles the autocorrectable ones |
+| Lint | Fix each violation printed above the table. `swiftlint --fix` handles the autocorrectable ones. The rules and the baseline: [Lint rules](#lint-rules) |
 | Unit / UI tests | Read the failures in `build/xcodebuild.log` or open `build/Test.xcresult` in Xcode. Re-run one test with `xcodebuild test ... -only-testing:HealthTrackerTests/DayDataTests` (see the `cli-test` skill) |
 | Coverage | Add tests for the least-covered files (below) |
 
@@ -170,6 +171,60 @@ It raises the `*_UNIT_MIN` values to the newly measured coverage, rounded down t
 
 **Exceptions:** `scripts/coverage-exceptions.txt` lists files that were already below the per-file floor when the gate was introduced. Each line is a path plus a comment with its coverage. Remove a file from the list once it's covered. Adding a file to the list, or lowering a threshold, is a deliberate decision: call it out in the PR.
 
+## Lint rules
+
+All SwiftLint rules live in the root `.swiftlint.yml`. The Lint gate runs with `--strict`, so a warning fails it too.
+
+**Size and complexity limits** (warning / error):
+
+| Rule | Limit |
+|---|---|
+| `cyclomatic_complexity` | 8 / 12 |
+| `function_body_length` | 40 / 60 lines |
+| `closure_body_length` | 30 / 50 lines (forces SwiftUI subview extraction) |
+| `type_body_length` | 250 / 350 lines |
+| `file_length` | 400 / 500 lines, comment-only lines ignored |
+| `function_parameter_count` | 5 / 7 |
+
+Also opted in: `force_unwrapping`, `implicitly_unwrapped_optional`, `fatal_error_message`, `first_where`, `contains_over_filter_count`, `empty_count`. `HealthTrackerTests/` and `HealthTrackerUITests/` each have a nested `.swiftlint.yml` that turns off `force_unwrapping` and `implicitly_unwrapped_optional`.
+
+**Architecture rules** (`custom_rules`, severity error, scoped by path). Each message names the `AGENTS.md` rule it enforces:
+
+| Rule | Scope | Fails on | Enforces |
+|---|---|---|---|
+| `domain_no_ui_frameworks` | `HealthTracker/Domain/` | `import SwiftUI`, `UIKit`, `UserNotifications` or `CloudKit`. `DayStatus.swift` and `Mood.swift` are allowlisted for their `color`/`localizedName` affordances | `Domain/AGENTS.md` rule_3 |
+| `presentation_no_data_layer` | `HealthTracker/Presentation/` | Constructing `HealthDataRepository`, `ICloudDriveDataSource`, `UserDefaultsDataSource` or `NotificationService`. The `MainViewModel` convenience init (the composition root) opts out with `swiftlint:disable:next` | `Presentation/AGENTS.md` data flow |
+| `no_hardcoded_locale` | `HealthTracker/` | `Locale(identifier:` or `TimeZone(identifier:` | `Presentation/AGENTS.md` localization |
+| `unit_tests_use_swift_testing` | `HealthTrackerTests/` | `import XCTest` | `HealthTrackerTests/AGENTS.md` rule_1 |
+| `ui_tests_no_testable_import` | `HealthTrackerUITests/` | `@testable import` | `HealthTrackerUITests/AGENTS.md` rule_1 |
+| `ui_tests_no_sleep` | `HealthTrackerUITests/` | `sleep(`, `usleep(`, `Thread.sleep(` | `HealthTrackerUITests/AGENTS.md` rule_3 |
+| `no_print` | everywhere | `print(` (warning) | use the logger |
+
+Custom rules need SourceKit, which Linux SwiftLint lacks, so the Linux `lint` CI job skips them. The macOS `test` job enforces them through `scripts/quality`, as do the pre-commit hook, the Claude Code hook and the Xcode build phase.
+
+**The baseline.** `.swiftlint-baseline.json` freezes the violations that existed when the limits were introduced, so only new violations fail. SwiftLint matches an entry by file, rule, the line's text and the message, not by line number: code moving around a baselined violation is fine, but making the baselined closure or function longer or more complex brings the violation back.
+
+The backlog to burn down (12 violations):
+
+| File | Line(s) | Rule |
+|---|---|---|
+| `HealthTracker/Domain/Entities/Workout.swift` | 103 | `cyclomatic_complexity` (9 > 8) |
+| `HealthTracker/Presentation/Views/AddEditModal.swift` | 69, 70, 145 | `closure_body_length` |
+| `HealthTracker/Presentation/Views/Components/CalendarStrip.swift` | 30, 31 | `closure_body_length` |
+| `HealthTracker/Presentation/Views/MainView.swift` | 18 | `closure_body_length` |
+| `HealthTracker/Presentation/Views/MealsSectionView.swift` | 15, 23 | `closure_body_length` |
+| `HealthTracker/Presentation/Views/WaterSectionView.swift` | 14 | `closure_body_length` |
+| `HealthTracker/Presentation/Views/WorkoutsSectionView.swift` | 15, 23 | `closure_body_length` |
+
+To burn one down, fix it (refactor `Workout.swift:103`, extract SwiftUI subviews), then regenerate the baseline from the repo root and commit both together. The `jq` step strips the absolute `file://` prefix SwiftLint writes, so the baseline also matches in CI's checkout:
+
+```bash
+swiftlint lint --quiet --write-baseline .swiftlint-baseline.json
+tmp=$(mktemp) && jq --arg p "file://$PWD/" 'map(.violation.location.file |= ltrimstr($p))' .swiftlint-baseline.json > "$tmp" && mv "$tmp" .swiftlint-baseline.json
+```
+
+Regenerating the baseline to make a new violation pass is a deliberate decision, like lowering a threshold: call it out in the PR. When the backlog is empty, delete the file and the `baseline:` line in `.swiftlint.yml`.
+
 ## Git hooks
 
 Enabled by `scripts/bootstrap`. They live in `.githooks/`.
@@ -188,7 +243,7 @@ Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gat
 
 ## Xcode build phase
 
-The app target's **SwiftLint** build phase runs `swiftlint lint --quiet`, so violations appear as warnings in Xcode's issue navigator. It **never** rewrites your files; formatting happens in the pre-commit hook. The phase is skipped when `CI=true`.
+The app target's **SwiftLint** build phase runs `swiftlint lint --quiet`, so violations appear in Xcode's issue navigator: error-severity violations (the architecture rules, and metrics past their error limit) fail the build; the rest show as warnings. It **never** rewrites your files; formatting happens in the pre-commit hook. The phase is skipped when `CI=true`.
 
 ## Continuous integration
 

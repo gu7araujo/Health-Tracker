@@ -65,7 +65,10 @@ final class MainViewModel {
 
     /// Convenience initializer with default dependencies.
     convenience init(
+        // The production composition root: the one place Presentation builds Data types.
+        // swiftlint:disable:next presentation_no_data_layer
         repository: HealthDataRepositoryProtocol = HealthDataRepository(),
+        // swiftlint:disable:next presentation_no_data_layer
         notificationService: NotificationServiceProtocol = NotificationService()
     ) {
         self.init(

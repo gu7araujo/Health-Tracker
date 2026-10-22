@@ -1,0 +1,182 @@
+[
+  {
+    "violation": {
+      "ruleDescription": "Complexity of function bodies should be limited.",
+      "ruleName": "Cyclomatic Complexity",
+      "ruleIdentifier": "cyclomatic_complexity",
+      "location": {
+        "character": 5,
+        "file": "HealthTracker/Domain/Entities/Workout.swift",
+        "line": 103
+      },
+      "reason": "Function should have complexity 8 or less; currently complexity is 9",
+      "severity": "warning"
+    },
+    "text": "    init(from decoder: Decoder) throws {"
+  },
+  {
+    "violation": {
+      "ruleIdentifier": "closure_body_length",
+      "severity": "error",
+      "location": {
+        "character": 25,
+        "line": 69,
+        "file": "HealthTracker/Presentation/Views/AddEditModal.swift"
+      },
+      "ruleName": "Closure Body Length",
+      "reason": "Closure body should span 50 lines or less excluding comments and whitespace: currently spans 57 lines",
+      "ruleDescription": "Closure bodies should not span too many lines"
+    },
+    "text": "        NavigationStack {"
+  },
+  {
+    "violation": {
+      "ruleDescription": "Closure bodies should not span too many lines",
+      "location": {
+        "line": 70,
+        "character": 18,
+        "file": "HealthTracker/Presentation/Views/AddEditModal.swift"
+      },
+      "ruleIdentifier": "closure_body_length",
+      "reason": "Closure body should span 30 lines or less excluding comments and whitespace: currently spans 31 lines",
+      "ruleName": "Closure Body Length",
+      "severity": "warning"
+    },
+    "text": "            List {"
+  },
+  {
+    "violation": {
+      "severity": "warning",
+      "location": {
+        "line": 145,
+        "file": "HealthTracker/Presentation/Views/AddEditModal.swift",
+        "character": 15
+      },
+      "ruleDescription": "Closure bodies should not span too many lines",
+      "reason": "Closure body should span 30 lines or less excluding comments and whitespace: currently spans 33 lines",
+      "ruleIdentifier": "closure_body_length",
+      "ruleName": "Closure Body Length"
+    },
+    "text": "        Group {"
+  },
+  {
+    "violation": {
+      "ruleName": "Closure Body Length",
+      "ruleIdentifier": "closure_body_length",
+      "severity": "warning",
+      "location": {
+        "line": 30,
+        "file": "HealthTracker/Presentation/Views/Components/CalendarStrip.swift",
+        "character": 24
+      },
+      "reason": "Closure body should span 30 lines or less excluding comments and whitespace: currently spans 44 lines",
+      "ruleDescription": "Closure bodies should not span too many lines"
+    },
+    "text": "        GeometryReader { outerGeometry in"
+  },
+  {
+    "violation": {
+      "ruleDescription": "Closure bodies should not span too many lines",
+      "ruleName": "Closure Body Length",
+      "ruleIdentifier": "closure_body_length",
+      "location": {
+        "line": 31,
+        "character": 30,
+        "file": "HealthTracker/Presentation/Views/Components/CalendarStrip.swift"
+      },
+      "reason": "Closure body should span 30 lines or less excluding comments and whitespace: currently spans 42 lines",
+      "severity": "warning"
+    },
+    "text": "            ScrollViewReader { proxy in"
+  },
+  {
+    "violation": {
+      "location": {
+        "file": "HealthTracker/Presentation/Views/MainView.swift",
+        "character": 25,
+        "line": 18
+      },
+      "reason": "Closure body should span 30 lines or less excluding comments and whitespace: currently spans 43 lines",
+      "severity": "warning",
+      "ruleIdentifier": "closure_body_length",
+      "ruleDescription": "Closure bodies should not span too many lines",
+      "ruleName": "Closure Body Length"
+    },
+    "text": "        NavigationStack {"
+  },
+  {
+    "violation": {
+      "location": {
+        "file": "HealthTracker/Presentation/Views/MealsSectionView.swift",
+        "line": 15,
+        "character": 15
+      },
+      "ruleIdentifier": "closure_body_length",
+      "ruleName": "Closure Body Length",
+      "severity": "error",
+      "reason": "Closure body should span 50 lines or less excluding comments and whitespace: currently spans 60 lines",
+      "ruleDescription": "Closure bodies should not span too many lines"
+    },
+    "text": "        Group {"
+  },
+  {
+    "violation": {
+      "location": {
+        "character": 70,
+        "file": "HealthTracker/Presentation/Views/MealsSectionView.swift",
+        "line": 23
+      },
+      "ruleDescription": "Closure bodies should not span too many lines",
+      "severity": "warning",
+      "reason": "Closure body should span 30 lines or less excluding comments and whitespace: currently spans 46 lines",
+      "ruleName": "Closure Body Length",
+      "ruleIdentifier": "closure_body_length"
+    },
+    "text": "                ForEach(Array(meals.enumerated()), id: \\.element.id) { index, meal in"
+  },
+  {
+    "violation": {
+      "ruleDescription": "Closure bodies should not span too many lines",
+      "ruleIdentifier": "closure_body_length",
+      "location": {
+        "character": 15,
+        "file": "HealthTracker/Presentation/Views/WaterSectionView.swift",
+        "line": 14
+      },
+      "reason": "Closure body should span 30 lines or less excluding comments and whitespace: currently spans 33 lines",
+      "ruleName": "Closure Body Length",
+      "severity": "warning"
+    },
+    "text": "        Group {"
+  },
+  {
+    "violation": {
+      "reason": "Closure body should span 50 lines or less excluding comments and whitespace: currently spans 60 lines",
+      "location": {
+        "file": "HealthTracker/Presentation/Views/WorkoutsSectionView.swift",
+        "line": 15,
+        "character": 15
+      },
+      "ruleDescription": "Closure bodies should not span too many lines",
+      "ruleName": "Closure Body Length",
+      "severity": "error",
+      "ruleIdentifier": "closure_body_length"
+    },
+    "text": "        Group {"
+  },
+  {
+    "violation": {
+      "severity": "warning",
+      "location": {
+        "line": 23,
+        "file": "HealthTracker/Presentation/Views/WorkoutsSectionView.swift",
+        "character": 73
+      },
+      "ruleIdentifier": "closure_body_length",
+      "reason": "Closure body should span 30 lines or less excluding comments and whitespace: currently spans 46 lines",
+      "ruleDescription": "Closure bodies should not span too many lines",
+      "ruleName": "Closure Body Length"
+    },
+    "text": "                ForEach(Array(workouts.enumerated()), id: \\.element.id) { index, workout in"
+  }
+]

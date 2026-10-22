@@ -1,5 +1,38 @@
+# Existing violations, frozen so only new ones fail. Burn them down, then delete it.
+# Its paths are repo-relative: strip the checkout prefix after --write-baseline.
+baseline: .swiftlint-baseline.json
+
 disabled_rules:
   - opening_brace
+
+opt_in_rules:
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - closure_body_length
+  - fatal_error_message
+  - first_where
+  - contains_over_filter_count
+  - empty_count
+
+cyclomatic_complexity:
+  warning: 8
+  error: 12
+function_body_length:
+  warning: 40
+  error: 60
+closure_body_length:
+  warning: 30
+  error: 50
+type_body_length:
+  warning: 250
+  error: 350
+file_length:
+  warning: 400
+  error: 500
+  ignore_comment_only_lines: true
+function_parameter_count:
+  warning: 5
+  error: 7
 
 custom_rules:
   no_print:
@@ -7,6 +40,52 @@ custom_rules:
     regex: "print\\("
     message: "Use logger instead of print() for consistent logging"
     severity: warning
+  # Architecture rules, scoped by path. Custom rules need SourceKit, so the Linux
+  # CI lint skips them; the macOS scripts/quality lint enforces them.
+  domain_no_ui_frameworks:
+    name: "Domain Owns No UI Frameworks"
+    included: "/HealthTracker/Domain/"
+    # The documented color/localizedName affordance (Domain/AGENTS.md intro).
+    excluded: "/HealthTracker/Domain/Entities/(DayStatus|Mood)\\.swift$"
+    regex: "^\\s*import\\s+(SwiftUI|UIKit|UserNotifications|CloudKit)\\b"
+    match_kinds: [keyword, identifier]
+    message: "Domain/AGENTS.md: no SwiftUI or framework leaks into Domain; move it to Presentation or Data"
+    severity: error
+  presentation_no_data_layer:
+    name: "Presentation Reaches Data Only Through Use Cases"
+    included: "/HealthTracker/Presentation/"
+    regex: "\\b(HealthDataRepository|ICloudDriveDataSource|UserDefaultsDataSource|NotificationService)\\("
+    match_kinds: [identifier]
+    message: "Presentation/AGENTS.md: reach the domain solely through use cases, never a repository or data source"
+    severity: error
+  no_hardcoded_locale:
+    name: "No Hardcoded Locale"
+    included: "/HealthTracker/"
+    regex: "\\b(Locale|TimeZone)\\(identifier:"
+    match_kinds: [identifier]
+    message: "Presentation/AGENTS.md localization: use Locale.current / TimeZone.current, never a fixed identifier"
+    severity: error
+  unit_tests_use_swift_testing:
+    name: "Unit Tests Use Swift Testing"
+    included: "/HealthTrackerTests/"
+    regex: "^\\s*import\\s+XCTest\\b"
+    match_kinds: [keyword, identifier]
+    message: "HealthTrackerTests/AGENTS.md rule_1: import Testing, not XCTest"
+    severity: error
+  ui_tests_no_testable_import:
+    name: "UI Tests Are Black Box"
+    included: "/HealthTrackerUITests/"
+    regex: "@testable\\s+import"
+    match_kinds: [attribute.builtin, keyword]
+    message: "HealthTrackerUITests/AGENTS.md rule_1: no @testable import; reach the app through accessibility identifiers"
+    severity: error
+  ui_tests_no_sleep:
+    name: "UI Tests Wait, Never Sleep"
+    included: "/HealthTrackerUITests/"
+    regex: "\\bu?sleep\\("
+    match_kinds: [identifier]
+    message: "HealthTrackerUITests/AGENTS.md rule_3: wait with assertExists/assertNotExists/assertSelected, never sleep"
+    severity: error
 
 excluded:
   - Pods
