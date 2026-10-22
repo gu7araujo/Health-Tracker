@@ -215,7 +215,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 - pushes to `main` run `--fast`, since the PR already ran `--full`;
 - Dependabot PRs run only `lint`.
 
-Rough cost per item (estimates until the first runs are measured): a ready PR's `--full` run ~15–22 min, and the same again for each further push while ready; a merge to `main` ~6–9 min; the **weekly** `--full` ~65–95 min a month. The weekly run alone is a third to a half of the budget.
+Cost per item: a ready PR's `--full` run takes ~11 min (measured on the first run), and agents get at most two ready runs per PR without your go-ahead; a merge to `main` (`--fast`) is estimated at ~5 min; the **weekly** `--full` is ~47 min a month, about a quarter of the budget.
 
 Check usage under **Settings → Billing → Usage**. If it passes about 80% of the allowance, upgrade to GitHub Pro (3,000 minutes, and branch rulesets so the checks become required).
 
@@ -244,7 +244,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
   - pushes to `main` and force-pushes;
   - `gh pr merge`.
 - A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately. If SwiftFormat or SwiftLint can't run, the hook reports that as an error instead of passing.
-- Agents open PRs as **draft**, run `scripts/quality --full` locally, mark the PR ready (which starts the macOS job) and wait for the checks. You review and merge.
+- Agents open PRs as **draft**, run `scripts/quality --full` locally, mark the PR ready (which starts the macOS job) and wait for the checks. If `test` goes red, the agent moves the PR back to draft, fixes and verifies locally, and marks it ready one more time; a failure it can't reproduce locally, or a second red ready run, comes to you as a report instead. At most two ready runs per PR without your go-ahead. You review and merge.
 
 ## Script reference
 

@@ -88,6 +88,13 @@ gh run download <run-id> -n xcresult-<run-id> -D build/ci
 
 Run the section 4 `xccov` commands on `build/ci/Test.xcresult`.
 
-Reproduce locally with `scripts/quality --full` (or `--fast` for a push to `main`), fix the gate as in section 3, and push.
+A red run on `main` (push or weekly): reproduce on `main` with `scripts/quality --fast` (push) or `--full` (weekly), then fix it on a branch through a PR, or report it to the user.
 
-**Done when:** `gh pr checks <n>` shows every check green.
+A red `test` on a ready PR spends a ready run (~11 macOS min; at most two per PR without the user's go-ahead):
+
+1. `gh pr ready <n> --undo` first, so further pushes run only `lint`.
+2. Reproduce locally with `scripts/quality --full`.
+3. Reproduced: fix the gate as in section 3 until `--full` is green, push, and mark the PR ready once more (after the push's run starts, as in `AGENTS.md`).
+4. Stop and report to the user (run link, failing step, suspected cause) when the failure does not reproduce locally (runner image, missing pinned Xcode or tool, a test flaky only on the runner), or when the second ready run is red too.
+
+**Done when:** `gh pr checks <n>` shows every check green, or the user has the report from step 4.
