@@ -76,9 +76,9 @@ Lint                                 0  <= 0       ✓
 Unit tests                           0  <= 0       ✓
 UI tests                             0  <= 0       ✓
 Domain unit line coverage       97.09%  >= 97.0%   ✓
-Data unit line coverage         78.46%  >= 78.4%   ✓
-App line coverage               95.27%  >= 90.0%   ✓
-Per-file floor                  87.83%  >= 80.0%   ✓
+Data unit line coverage         85.84%  >= 85.8%   ✓
+App line coverage               95.60%  >= 95.0%   ✓
+Per-file floor                  87.83%  >= 85.0%   ✓
 
 8/8 gates passed.
 ```
@@ -93,8 +93,8 @@ Per-file floor                  87.83%  >= 80.0%   ✓
 | UI tests | `--full` | `HealthTrackerUITests` has 0 failures |
 | Domain unit line coverage | both | Unit-test coverage of `HealthTracker/Domain/` ≥ `DOMAIN_UNIT_MIN` |
 | Data unit line coverage | both | Unit-test coverage of `HealthTracker/Data/` ≥ `DATA_UNIT_MIN` |
-| App line coverage | `--full` | Unit + UI coverage of the whole app ≥ `APP_LINE_MIN` (90%) |
-| Per-file floor | `--full` | The least-covered file is ≥ `FILE_FLOOR` (80%). Files under `Presentation/Views/` and those listed in `scripts/coverage-exceptions.txt` don't count |
+| App line coverage | `--full` | Unit + UI coverage of the whole app ≥ `APP_LINE_MIN` (95%) |
+| Per-file floor | `--full` | The least-covered file is ≥ `FILE_FLOOR` (85%). Files under `Presentation/Views/` and those listed in `scripts/coverage-exceptions.txt` don't count |
 
 Why two kinds of coverage:
 - UI tests run a lot of code without checking much of it, so app-wide coverage can look high while the business rules go untested. The Domain and Data gates count **unit tests only**, which keeps the rules in those layers covered on their own. To measure that, `--full` runs the unit tests and the UI tests as two separate runs, then merges them into `build/Test.xcresult` for the app-wide numbers.
@@ -155,8 +155,8 @@ The thresholds live in `scripts/quality-thresholds.env`:
 
 | Threshold | Value | Meaning |
 |---|---|---|
-| `APP_LINE_MIN` | 90.0 | App-wide unit + UI coverage |
-| `FILE_FLOOR` | 80.0 | Minimum coverage for any one file (Views excluded) |
+| `APP_LINE_MIN` | 95.0 | App-wide unit + UI coverage |
+| `FILE_FLOOR` | 85.0 | Minimum coverage for any one file (Views excluded) |
 | `DOMAIN_UNIT_MIN` | ratchet | Domain unit-test coverage. Started at today's measured value, aiming for 95+ |
 | `DATA_UNIT_MIN` | ratchet | Data unit-test coverage. Started at today's measured value, aiming for 95 |
 
