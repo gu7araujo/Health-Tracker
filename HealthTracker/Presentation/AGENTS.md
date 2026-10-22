@@ -1,6 +1,6 @@
 # Presentation Layer
 
-The SwiftUI UI: an `@Observable` ViewModel that owns the screen's mutable state, stateless section views that render it, and reusable Liquid Glass components. The only layer that touches SwiftUI. It reaches the domain solely through use cases — never a repository or data source directly.
+The SwiftUI UI: an `@Observable` ViewModel that owns the screen's mutable state, stateless section views that render it, and reusable Liquid Glass components. The only layer that touches SwiftUI. It reaches the domain solely through use cases — never a repository or data source directly. Constructing a repository or data source here fails SwiftLint rule `presentation_no_data_layer`; the production convenience init (below) is the composition root and carries its `swiftlint:disable:next`.
 
 ## State & Data Flow
 
@@ -38,7 +38,7 @@ formatter.locale   = Locale.current               // ✅ respects device setting
 formatter.timeZone = TimeZone.current             // (never Locale(identifier: "pt_BR"))
 ```
 
-This covers `DateFormatter`, `Calendar`, and any other locale/timezone-sensitive API (see `CalendarStrip`). Canonical references: `Mood.localizedName`, `Meal.Quantity.localizedName`.
+This covers `DateFormatter`, `Calendar`, and any other locale/timezone-sensitive API (see `CalendarStrip`). Canonical references: `Mood.localizedName`, `Meal.Quantity.localizedName`. Fixed identifiers are enforced app-wide by SwiftLint rule `no_hardcoded_locale`.
 
 Group keys by feature area with snake_case prefixes:
 

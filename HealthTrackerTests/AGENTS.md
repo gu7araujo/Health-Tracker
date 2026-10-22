@@ -14,7 +14,7 @@ The two pieces of shared machinery every test leans on:
 Deterministic and isolated — every test is fast, repeatable, and free of real I/O.
 
 <rule_1>
-**SWIFT TESTING, NOT XCTEST** — `import Testing`; `@Test` functions with `#expect` / `#require` assertions, and `@Test(arguments:)` for table-driven cases (see `MoodTests`). `@testable import HealthTracker` for internal access. `await` async code directly — there is no `XCTestExpectation`.
+**SWIFT TESTING, NOT XCTEST** — `import Testing`; `@Test` functions with `#expect` / `#require` assertions, and `@Test(arguments:)` for table-driven cases (see `MoodTests`). `@testable import HealthTracker` for internal access. `await` async code directly — there is no `XCTestExpectation`. Enforced by SwiftLint rule `unit_tests_use_swift_testing`.
 </rule_1>
 
 <rule_2>

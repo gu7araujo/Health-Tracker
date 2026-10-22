@@ -1,0 +1,4 @@
+# Tests may force-unwrap: a crash is a failing test, not a user-facing bug.
+disabled_rules:
+  - force_unwrapping
+  - implicitly_unwrapped_optional

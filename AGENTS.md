@@ -71,6 +71,12 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
 - Iterate with `scripts/quality --fast` (format, lint, unit tests, Domain/Data coverage).
 - A task is **done** when `scripts/quality --full` exits 0. Paste its gate table in your final report and PR.
 - Fix a red gate in code or tests. Lowering a threshold, editing `scripts/coverage-exceptions.txt`, or adding a `swiftlint:disable` is a decision for the user: call each one out explicitly in the report and PR.
+- Lint enforces size/complexity limits and the layer rules as SwiftLint rules (all in `.swiftlint.yml`). `.swiftlint-baseline.json` freezes the pre-existing violations, so only new ones fail. Regenerating the baseline to absorb a new violation is the user's call, like lowering a threshold. Burning one down is fixing it and regenerating the baseline in the same commit, from the repo root (the `jq` keeps paths repo-relative):
+
+  ```bash
+  swiftlint lint --quiet --write-baseline .swiftlint-baseline.json
+  tmp=$(mktemp) && jq --arg p "file://$PWD/" 'map(.violation.location.file |= ltrimstr($p))' .swiftlint-baseline.json > "$tmp" && mv "$tmp" .swiftlint-baseline.json
+  ```
 - Each `.swift` file you edit or write is formatted in place and linted by a Claude Code hook; fix the violations it reports.
 - The git hooks refuse commits and pushes to `main` and run `--fast` before every push. Let them run: no `--no-verify`, no `SKIP_QUALITY`. The push takes ~2 min, past the Bash tool's 120 s default, so run `git push` with a 600000 ms timeout.
 - Open PRs as **draft**. Mark one ready only after a green local `scripts/quality --full`: push, wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run (a push and `gh pr ready` in the same second cancelled the ready run once; a PR touching only docs or agent config gets no run, so stop with the link), then `gh pr ready <n>` and `gh pr checks <n> --watch`. Green: stop there with the link; the user approves and merges every PR. Red: follow the `quality-gate` skill's CI section. Each ready run costs ~11 macOS min, so a PR gets at most **two ready runs** without the user's go-ahead.

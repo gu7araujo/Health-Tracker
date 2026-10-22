@@ -32,7 +32,7 @@ Type-Driven Design — encode invariants in types so they hold by construction (
 </rule_2>
 
 <rule_3>
-**DOMAIN OWNS NO FRAMEWORKS** — depend on the `Protocols/` abstractions, not concrete services. Keep framework types (UserNotifications, persistence) behind those protocols; where the domain needs a platform concept, model a plain domain mirror (as the notification types do) rather than importing the framework.
+**DOMAIN OWNS NO FRAMEWORKS** — depend on the `Protocols/` abstractions, not concrete services. Keep framework types (UserNotifications, persistence) behind those protocols; where the domain needs a platform concept, model a plain domain mirror (as the notification types do) rather than importing the framework. Enforced by SwiftLint rule `domain_no_ui_frameworks`; only `DayStatus.swift` and `Mood.swift` are allowlisted for the UI affordances.
 </rule_3>
 
 <rule_4>

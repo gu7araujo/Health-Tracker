@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-cp "$ROOT/.swiftlint.yml" "$TMP/"
+cp "$ROOT/.swiftlint.yml" "$ROOT/.swiftlint-baseline.json" "$TMP/"
 for dir in .claude/worktrees/other .worktrees/other build; do
   mkdir -p "$TMP/$dir"
   printf 'let value = thing as! String;\n' >"$TMP/$dir/Bad.swift"

@@ -35,11 +35,14 @@ The gate also prints details on stderr: format and lint violations with file and
 Every gate turns green through code or tests:
 
 - **Format**: run `swiftformat . --swift-version 6`.
-- **Lint**: fix each reported violation (`swiftlint --fix` handles the autocorrectable ones).
+- **Lint**: fix each reported violation (`swiftlint --fix` handles the autocorrectable ones). Every rule, its limits and its path scope live in the root `.swiftlint.yml`; test targets relax a few rules in their nested `.swiftlint.yml`.
+  - A **custom rule** (`domain_no_ui_frameworks`, `presentation_no_data_layer`, ...) is an architecture rule: its message names the `AGENTS.md` rule it enforces. Read that rule and restructure the code to follow it.
+  - A **metrics** violation (`closure_body_length`, `cyclomatic_complexity`, `function_body_length`, ...) means split the code: extract a SwiftUI subview, a helper, or a type.
+  - `.swiftlint-baseline.json` freezes the pre-existing violations, matched by file, rule, line text and message, so editing a baselined closure or function can resurface its violation. Fix it then, and regenerate the baseline in the same commit with the command in `AGENTS.md` (Quality Gates).
 - **Unit tests / UI tests**: the failures are in `build/xcodebuild.log`; reproduce one with the `cli-test` skill's single-test command.
 - **Coverage**: add tests for the least-covered files (section 4) until the measured value clears the threshold.
 
-Lowering a threshold, adding a path to `scripts/coverage-exceptions.txt`, or adding a `swiftlint:disable` is the user's call. When one is genuinely warranted, make it a separate, explicit line in the report and PR description with the reason.
+Lowering a threshold, adding a path to `scripts/coverage-exceptions.txt`, adding a `swiftlint:disable`, or regenerating the lint baseline to absorb a new violation is the user's call. When one is genuinely warranted, make it a separate, explicit line in the report and PR description with the reason.
 
 ## 4. Find the least-covered files
 
