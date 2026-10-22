@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Compares installed tools with the pins in scripts/tool-versions.env.
+# Warns locally (exit 0); fails (exit 1) when CI=true.
+set -uo pipefail
+
+# shellcheck source=tool-versions.env
+source "$(dirname "$0")/tool-versions.env"
+
+level="warning"
+[ "${CI:-}" = "true" ] && level="error"
+problems=0
+
+report() {
+  printf '%s: %s\n  fix: %s\n' "$level" "$1" "$2" >&2
+  problems=$((problems + 1))
+}
+
+# check <label> <command> <pinned> <installed> <fix>
+check() {
+  if ! command -v "$2" >/dev/null; then
+    report "$1 not installed (pinned $3)" "$5"
+  elif [ "$4" != "$3" ]; then
+    report "$1 $4 installed, pinned $3" "$5"
+  fi
+}
+
+check SwiftLint swiftlint "$SWIFTLINT_VERSION" "$(swiftlint version 2>/dev/null)" \
+  "brew install swiftlint, or https://github.com/realm/SwiftLint/releases/tag/$SWIFTLINT_VERSION"
+check SwiftFormat swiftformat "$SWIFTFORMAT_VERSION" "$(swiftformat --version 2>/dev/null)" \
+  "brew install swiftformat, or https://github.com/nicklockwood/SwiftFormat/releases/tag/$SWIFTFORMAT_VERSION"
+check Xcode xcodebuild "$XCODE_VERSION" "$(xcodebuild -version 2>/dev/null | awk 'NR == 1 { print $2 }')" \
+  "sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app"
+
+for tool in xcbeautify jq; do
+  command -v "$tool" >/dev/null || report "$tool not installed" "brew install $tool"
+done
+
+if [ "$problems" -gt 0 ] && [ "$level" = "error" ]; then
+  exit 1
+fi
+exit 0

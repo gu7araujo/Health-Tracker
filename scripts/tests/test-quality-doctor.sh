@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Tests scripts/doctor against stubbed tool binaries.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+DOCTOR="$ROOT/scripts/doctor"
+# shellcheck source=../tool-versions.env
+source "$ROOT/scripts/tool-versions.env"
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+failures=0
+
+fail() {
+  printf '  FAIL: %s\n' "$1"
+  failures=$((failures + 1))
+}
+
+# stub <dir> <swiftlint version> <swiftformat version> <xcode version>
+stub() {
+  mkdir -p "$1"
+  printf '#!/bin/sh\necho %s\n' "$2" >"$1/swiftlint"
+  printf '#!/bin/sh\necho %s\n' "$3" >"$1/swiftformat"
+  printf '#!/bin/sh\necho "Xcode %s"\necho "Build version X"\n' "$4" >"$1/xcodebuild"
+  printf '#!/bin/sh\n' >"$1/xcbeautify"
+  printf '#!/bin/sh\n' >"$1/jq"
+  chmod +x "$1"/*
+}
+
+# run_doctor <stub dir> [CI value] -> sets out, code
+run_doctor() {
+  out="$(PATH="$1:/usr/bin:/bin" CI="${2:-}" "$DOCTOR" 2>&1)"
+  code=$?
+}
+
+stub "$TMP/ok" "$SWIFTLINT_VERSION" "$SWIFTFORMAT_VERSION" "$XCODE_VERSION"
+stub "$TMP/drift" "0.1.0" "0.2.0" "1.0"
+
+# Matching versions: silent success, locally and in CI.
+run_doctor "$TMP/ok"
+[ "$code" -eq 0 ] || fail "matching versions should exit 0 (got $code)"
+[[ "$out" != *warning* ]] || fail "matching versions should not warn: $out"
+run_doctor "$TMP/ok" true
+[ "$code" -eq 0 ] || fail "matching versions in CI should exit 0 (got $code)"
+
+# Drift locally: warn with a fix command, exit 0.
+run_doctor "$TMP/drift"
+[ "$code" -eq 0 ] || fail "drift locally should exit 0 (got $code)"
+[[ "$out" == *"SwiftLint 0.1.0"*"$SWIFTLINT_VERSION"* ]] || fail "should report SwiftLint drift: $out"
+[[ "$out" == *"SwiftFormat 0.2.0"*"$SWIFTFORMAT_VERSION"* ]] || fail "should report SwiftFormat drift: $out"
+[[ "$out" == *"Xcode 1.0"*"$XCODE_VERSION"* ]] || fail "should report Xcode drift: $out"
+[[ "$out" == *"fix:"* ]] || fail "should print a fix command: $out"
+
+# Drift in CI: error, exit 1.
+run_doctor "$TMP/drift" true
+[ "$code" -eq 1 ] || fail "drift in CI should exit 1 (got $code)"
+[[ "$out" == *error* ]] || fail "drift in CI should print error: $out"
+
+# Missing tool: reported as missing.
+rm "$TMP/ok/swiftlint"
+run_doctor "$TMP/ok"
+[ "$code" -eq 0 ] || fail "missing tool locally should exit 0 (got $code)"
+[[ "$out" == *"SwiftLint"*"not installed"* ]] || fail "should report missing SwiftLint: $out"
+run_doctor "$TMP/ok" true
+[ "$code" -eq 1 ] || fail "missing tool in CI should exit 1 (got $code)"
+
+[ "$failures" -eq 0 ]

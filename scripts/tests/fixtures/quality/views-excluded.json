@@ -1,0 +1,38 @@
+{
+  "lineCoverage": 0,
+  "targets": [
+    {
+      "name": "HealthTracker.app",
+      "lineCoverage": 0,
+      "files": [
+        {
+          "name": "A.swift",
+          "path": "/repo/HealthTracker/Domain/A.swift",
+          "coveredLines": 1000,
+          "executableLines": 1000,
+          "lineCoverage": 0
+        },
+        {
+          "name": "V.swift",
+          "path": "/repo/HealthTracker/Presentation/Views/Components/V.swift",
+          "coveredLines": 10,
+          "executableLines": 100,
+          "lineCoverage": 0
+        }
+      ]
+    },
+    {
+      "name": "HealthTrackerTests.xctest",
+      "lineCoverage": 0,
+      "files": [
+        {
+          "name": "FooTests.swift",
+          "path": "/repo/HealthTrackerTests/Domain/FooTests.swift",
+          "coveredLines": 1,
+          "executableLines": 100,
+          "lineCoverage": 0
+        }
+      ]
+    }
+  ]
+}

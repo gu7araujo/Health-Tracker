@@ -1,0 +1,10 @@
+{
+  "devices": {
+    "com.apple.CoreSimulator.SimRuntime.iOS-26-2": [
+      { "name": "HT-feature-x", "udid": "EXISTING", "state": "Shutdown", "isAvailable": true }
+    ],
+    "com.apple.CoreSimulator.SimRuntime.iOS-26-5": [
+      { "name": "iPhone 17", "udid": "SOURCE", "state": "Shutdown", "isAvailable": true }
+    ]
+  }
+}

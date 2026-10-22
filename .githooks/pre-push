@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Refuses pushes to main, then runs the quality gate (scripts/quality --fast,
+# or $QUALITY_CMD). SKIP_QUALITY=1 skips the gate.
+set -euo pipefail
+
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "pre-push: refusing to push to main. Push a branch and open a pull request." >&2
+    exit 1
+  fi
+done
+
+if [ "${SKIP_QUALITY:-}" = "1" ]; then
+  echo "pre-push: ⚠️  SKIP_QUALITY=1, skipping the quality gate: nothing else checks this branch until CI exists." >&2
+  exit 0
+fi
+
+cd "$(git rev-parse --show-toplevel)"
+eval "${QUALITY_CMD:-scripts/quality --fast}"

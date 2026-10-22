@@ -1,0 +1,55 @@
+{
+  "testNodes": [
+    {
+      "name": "HealthTracker",
+      "nodeType": "Test Plan",
+      "result": "Failed",
+      "children": [
+        {
+          "name": "HealthTrackerTests",
+          "nodeType": "Unit test bundle",
+          "result": "Passed",
+          "children": [
+            {
+              "name": "DayDataTests",
+              "nodeType": "Test Suite",
+              "result": "Passed",
+              "children": [
+                { "name": "status()", "nodeType": "Test Case", "result": "Passed" },
+                {
+                  "name": "parameterized(_:)",
+                  "nodeType": "Test Case",
+                  "result": "Passed",
+                  "children": [{ "name": "1", "nodeType": "Arguments", "result": "Passed" }]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "HealthTrackerUITests",
+          "nodeType": "UI test bundle",
+          "result": "Failed",
+          "children": [
+            {
+              "name": "MainViewUITests",
+              "nodeType": "Test Suite",
+              "result": "Failed",
+              "children": [
+                { "name": "testAddMeal()", "nodeType": "Test Case", "result": "Failed" },
+                { "name": "testAddWater()", "nodeType": "Test Case", "result": "Failed" },
+                { "name": "testMood()", "nodeType": "Test Case", "result": "Passed" }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "CrashedTests",
+          "nodeType": "Unit test bundle",
+          "result": "Failed",
+          "children": []
+        }
+      ]
+    }
+  ]
+}

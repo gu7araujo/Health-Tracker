@@ -1,0 +1,5 @@
+struct Greeter {
+    func greet(name: String) -> String {
+        "Hi " + name
+    }
+}

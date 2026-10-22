@@ -1,6 +1,6 @@
 ---
 name: cli-test
-description: Run HealthTracker's unit and/or UI tests from the command line with xcodebuild and read the coverage report. Use when the Xcode MCP test tools are unavailable or failing and you need to validate changes or find the least-covered files.
+description: Run HealthTracker's unit and/or UI tests from the command line with xcodebuild. Use when the Xcode MCP test tools are unavailable or failing and you need to validate changes or run a single test.
 ---
 
 # Run HealthTracker tests from the CLI
@@ -42,21 +42,8 @@ xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<s
 xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerUITests/CalendarUITests/testTodaySelectedOnLaunchAndEmptyStates | xcbeautify
 ```
 
-**Done when:** the run reports `Test Succeeded` with zero failures. That's the bar for a task being done.
+**Done when:** the run reports `Test Succeeded` with zero failures. The bar for a task being done is `scripts/quality --full` exiting 0 (`quality-gate` skill).
 
 ## 3. Coverage report (when you need it)
 
-`xcodebuild` errors out if `-resultBundlePath` already exists, so delete `build/` first:
-```bash
-rm -rf build && xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -enableCodeCoverage YES -resultBundlePath build/Test.xcresult | xcbeautify
-```
-
-Then view it:
-```bash
-# Per-file line-coverage table (human-readable)
-xcrun xccov view --report build/Test.xcresult
-
-# Machine-readable JSON (per-target/per-file, for scripting)
-xcrun xccov view --report --json build/Test.xcresult
-```
-The JSON exposes each target's `lineCoverage`, `coveredLines`, and `executableLines`, plus a per-file `files` array — sort by `lineCoverage` to find the least-covered files.
+`scripts/quality` measures coverage and gates it against the thresholds: `--fast` for unit-only Domain/Data coverage, `--full` for unit + UI. Each run leaves `build/Test.xcresult` behind; finding the least-covered files and their uncovered lines from it is in the `quality-gate` skill.

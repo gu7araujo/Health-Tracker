@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# One-time setup: enables the repo's git hooks and checks tool versions.
+# Safe to re-run.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+previous="$(git config --get core.hooksPath || true)"
+if [ -n "$previous" ] && [ "$previous" != ".githooks" ]; then
+  echo "Note: replaced core.hooksPath=$previous (shared by every worktree of this clone)."
+fi
+# Relative, so every worktree uses its own .githooks.
+git config core.hooksPath .githooks
+echo "Git hooks enabled (core.hooksPath=.githooks)."
+
+if [ -x scripts/doctor ]; then
+  scripts/doctor
+fi
+
+printf '\nNext steps:\n'
+printf '  scripts/quality --fast   # build + unit tests + coverage (also run by pre-push)\n'
+printf '  scripts/quality --full   # everything CI runs\n'
