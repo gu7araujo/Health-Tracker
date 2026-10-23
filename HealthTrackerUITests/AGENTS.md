@@ -15,7 +15,7 @@ The shared machinery every suite leans on, all on `HealthTrackerUITestCase`:
 Black-box and isolated — each test drives the shipping app through its accessibility surface, nothing else.
 
 <rule_1>
-**XCUITEST, NOT SWIFT TESTING** — `import XCTest`; subclass `HealthTrackerUITestCase`; name cases `func testSubjectExpectation()` with `XCTAssert` checks. No `@testable import` — reach the app only through `app` and accessibility identifiers, never its internal types. Enforced by SwiftLint rule `ui_tests_no_testable_import`.
+**XCUITEST, NOT SWIFT TESTING** — `import XCTest`; subclass `HealthTrackerUITestCase`; name cases `func testSubjectExpectation()` with `XCTAssert` checks. No `@testable import` — reach the app only through `app` and accessibility identifiers, never its internal types. Enforced by SwiftLint rule `ui_tests_no_testable_import`. The target builds in Swift 6 mode and `XCUIApplication` / `XCUIElement` are main-actor API, so `HealthTrackerUITestCase` is `@MainActor` (suites inherit it) and launches in `override func setUp() async throws`; keep new overrides and helpers on the main actor.
 </rule_1>
 
 <rule_2>
