@@ -71,10 +71,15 @@ expect_row "App line coverage" 91.82 ">=" 90.0 true
 expect_row "Per-file floor" 100.00 ">=" 80.0 true
 
 # --update-baseline: raises *_UNIT_MIN (rounded down to 0.1), never lowers, touches nothing else.
+# The region ratchets take the measured Domain/Data region coverage as arguments.
 cp "$FIX/baseline-thresholds.env" "$TMP/t.env"
-"$UPDATE" "$FIX/unit-baseline.json" /repo "$TMP/t.env" >/dev/null
+"$UPDATE" "$FIX/unit-baseline.json" /repo "$TMP/t.env" 95.89 65.5 >/dev/null
 grep -qx 'DOMAIN_UNIT_MIN=97.0' "$TMP/t.env" || fail "Domain ratchet should rise 96.0 -> 97.0: $(cat "$TMP/t.env")"
 grep -qx 'DATA_UNIT_MIN=80.0' "$TMP/t.env" || fail "Data ratchet should stay 80.0 (measured 78.46): $(cat "$TMP/t.env")"
+grep -qx 'DOMAIN_REGION_UNIT_MIN=95.8' "$TMP/t.env" ||
+  fail "Domain region ratchet should rise 95.0 -> 95.8 (measured 95.89): $(cat "$TMP/t.env")"
+grep -qx 'DATA_REGION_UNIT_MIN=70.0' "$TMP/t.env" ||
+  fail "Data region ratchet should stay 70.0 (measured 65.5): $(cat "$TMP/t.env")"
 diff <(grep -v UNIT_MIN "$FIX/baseline-thresholds.env") <(grep -v UNIT_MIN "$TMP/t.env") >/dev/null ||
   fail "update-baseline should not touch other lines"
 

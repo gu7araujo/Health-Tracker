@@ -1,0 +1,10 @@
+{"data":[{"files":[
+  {"filename":"/dd/Build/Intermediates.noindex/HealthTracker.build/DerivedSources/GeneratedAssetSymbols.swift","summary":{"branches":{"count":0,"covered":0,"notcovered":0,"percent":0},"lines":{"count":42,"covered":0,"percent":0},"regions":{"count":26,"covered":0,"notcovered":26,"percent":0}}},
+  {"filename":"/repo/HealthTracker/Data/Services/A.swift","summary":{"branches":{"count":0,"covered":0,"notcovered":0,"percent":0},"lines":{"count":40,"covered":30,"percent":75},"regions":{"count":14,"covered":7,"notcovered":7,"percent":50}}},
+  {"filename":"/repo/HealthTracker/Data/Services/B.swift","summary":{"branches":{"count":0,"covered":0,"notcovered":0,"percent":0},"lines":{"count":10,"covered":10,"percent":100},"regions":{"count":6,"covered":6,"notcovered":0,"percent":100}}},
+  {"filename":"/repo/HealthTracker/Domain/Entities/C.swift","summary":{"branches":{"count":0,"covered":0,"notcovered":0,"percent":0},"lines":{"count":90,"covered":88,"percent":97.77},"regions":{"count":30,"covered":29,"notcovered":1,"percent":96.66}}},
+  {"filename":"/repo/HealthTracker/Domain/UseCases/D.swift","summary":{"branches":{"count":0,"covered":0,"notcovered":0,"percent":0},"lines":{"count":20,"covered":15,"percent":75},"regions":{"count":10,"covered":9,"notcovered":1,"percent":90}}},
+  {"filename":"/repo/HealthTracker/Presentation/Views/E.swift","summary":{"branches":{"count":0,"covered":0,"notcovered":0,"percent":0},"lines":{"count":50,"covered":0,"percent":0},"regions":{"count":20,"covered":0,"notcovered":20,"percent":0}}},
+  {"filename":"/other/HealthTracker/Domain/F.swift","summary":{"branches":{"count":0,"covered":0,"notcovered":0,"percent":0},"lines":{"count":10,"covered":0,"percent":0},"regions":{"count":10,"covered":0,"notcovered":10,"percent":0}}}
+],"totals":{"regions":{"count":116,"covered":51,"notcovered":65,"percent":43.96}}}],
+"type":"llvm.coverage.json.export","version":"3.0.1"}

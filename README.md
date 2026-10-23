@@ -69,7 +69,7 @@ One command decides whether the code is good enough. It prints a pass/fail table
 
 ```bash
 scripts/quality            # same as --fast
-scripts/quality --fast     # format, lint, fitness checks, unit tests, unused code, Domain/Data unit coverage
+scripts/quality --fast     # format, lint, fitness checks, unit tests, unused code, Domain/Data unit line + region coverage
 scripts/quality --full     # everything in --fast, plus UI tests, app coverage, per-file floor
 scripts/quality --full --json            # also writes build/quality.json
 scripts/quality --simulator <udid>       # test on a specific simulator
@@ -77,21 +77,20 @@ scripts/quality --fast --update-baseline # raise the coverage ratchets (see belo
 scripts/quality --help
 ```
 
-Example `--full` output:
+Example `--fast` output (`--full` adds the UI tests, App line coverage and Per-file floor rows, 12 in all):
 
 ```
 Format                               0  <= 0       ✓
 Lint                                 0  <= 0       ✓
 Fitness                              0  <= 0       ✓
 Unit tests                           0  <= 0       ✓
-UI tests                             0  <= 0       ✓
 Unused code                          0  <= 0       ✓
-Domain unit line coverage       97.60%  >= 97.6%   ✓
+Domain unit line coverage       97.95%  >= 97.9%   ✓
 Data unit line coverage         96.44%  >= 96.4%   ✓
-App line coverage               97.73%  >= 95.0%   ✓
-Per-file floor                  87.83%  >= 85.0%   ✓
+Domain unit region coverage     96.96%  >= 96.9%   ✓
+Data unit region coverage       94.21%  >= 94.2%   ✓
 
-10/10 gates passed.
+9/9 gates passed.
 ```
 
 ### What each gate checks
@@ -106,12 +105,16 @@ Per-file floor                  87.83%  >= 85.0%   ✓
 | Unused code | both | `periphery scan` reports 0 unused declarations (see [Unused code](#unused-code)) |
 | Domain unit line coverage | both | Unit-test coverage of `HealthTracker/Domain/` ≥ `DOMAIN_UNIT_MIN` |
 | Data unit line coverage | both | Unit-test coverage of `HealthTracker/Data/` ≥ `DATA_UNIT_MIN` |
+| Domain unit region coverage | both | Unit-test region coverage of `HealthTracker/Domain/` ≥ `DOMAIN_REGION_UNIT_MIN` |
+| Data unit region coverage | both | Unit-test region coverage of `HealthTracker/Data/` ≥ `DATA_REGION_UNIT_MIN` |
 | App line coverage | `--full` | Unit + UI coverage of the whole app ≥ `APP_LINE_MIN` (95%) |
 | Per-file floor | `--full` | The least-covered file is ≥ `FILE_FLOOR` (85%). Files under `Presentation/Views/` and those listed in `scripts/coverage-exceptions.txt` don't count |
 
 Why two kinds of coverage:
 - UI tests run a lot of code without checking much of it, so app-wide coverage can look high while the business rules go untested. The Domain and Data gates count **unit tests only**, which keeps the rules in those layers covered on their own. To measure that, `--full` runs the unit tests and the UI tests as two separate runs, then merges them into `build/Test.xcresult` for the app-wide numbers.
 - The per-file floor stops one well-tested file from hiding a new untested one.
+
+Line vs region coverage: a line counts as covered once any part of it runs. A **region** is a single code path, and one line can hold several: in `let amount = water ?? 0` the `?? 0` default is its own region, and so is each side of `&&` or `?:`. A test that only ever passes a non-nil `water` covers the line but leaves the default region at 0. The region rows catch those gaps. `scripts/lib/region-coverage.sh` reads them with `xcrun llvm-cov export` from the unit run's `Coverage.profdata`, before the UI run replaces it. (Swift reports no branch coverage, so regions are the finest measure available.)
 
 A value of `n/a` in the table means the gate couldn't measure anything: the build failed, or a test bundle crashed. The full log is in `build/xcodebuild.log`.
 
@@ -164,6 +167,8 @@ List the uncovered lines of one file (execution count `0`):
 xcrun xccov view --archive --file "$PWD/HealthTracker/Data/Migration/DataMigration.swift" build/Test.xcresult | grep -E ': 0$'
 ```
 
+For a red region row, the `llvm-cov report` / `llvm-cov show` commands that list each file's missed regions are in the `quality-gate` skill (`.agents/skills/quality-gate/SKILL.md`, section 4).
+
 ## Coverage thresholds and the ratchet
 
 The thresholds live in `scripts/quality-thresholds.env`:
@@ -174,14 +179,16 @@ The thresholds live in `scripts/quality-thresholds.env`:
 | `FILE_FLOOR` | 85.0 | Minimum coverage for any one file (Views excluded) |
 | `DOMAIN_UNIT_MIN` | ratchet | Domain unit-test coverage. Started at today's measured value, aiming for 95+ |
 | `DATA_UNIT_MIN` | ratchet | Data unit-test coverage. Started at today's measured value, aiming for 95 |
+| `DOMAIN_REGION_UNIT_MIN` | ratchet | Domain unit-test region coverage. Started at the measured value (2026-10-23) |
+| `DATA_REGION_UNIT_MIN` | ratchet | Data unit-test region coverage. Started at the measured value (2026-10-23) |
 
-**The ratchet:** after you raise Domain or Data unit coverage, lock in the gain:
+**The ratchet:** after you raise Domain or Data unit line or region coverage, lock in the gain:
 
 ```bash
 scripts/quality --fast --update-baseline
 ```
 
-It raises the `*_UNIT_MIN` values to the newly measured coverage, rounded down to one decimal. It never lowers a threshold, and it only runs when every gate is green. Commit the changed `scripts/quality-thresholds.env` together with the tests that earned it.
+It raises the four `*_UNIT_MIN` values (line and region) to the newly measured coverage, rounded down to one decimal. It never lowers a threshold, and it only runs when every gate is green. Commit the changed `scripts/quality-thresholds.env` together with the tests that earned it.
 
 **Exceptions:** `scripts/coverage-exceptions.txt` lists files that were already below the per-file floor when the gate was introduced. Each line is a path plus a comment with its coverage. Remove a file from the list once it's covered. Adding a file to the list, or lowering a threshold, is a deliberate decision: call it out in the PR.
 
