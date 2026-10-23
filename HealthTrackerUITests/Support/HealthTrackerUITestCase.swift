@@ -12,11 +12,12 @@ import XCTest
 /// Locale note: `en_GB` is used instead of `en_US` because it keeps English
 /// labels while using a 24-hour clock, so the workout duration wheel exposes
 /// hours 0-23 exactly as the app's duration model expects.
+@MainActor
 class HealthTrackerUITestCase: XCTestCase {
     var app: XCUIApplication!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchArguments += ["-uiTesting", "-AppleLanguages", "(en)", "-AppleLocale", "en_GB"]
