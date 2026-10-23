@@ -10,7 +10,7 @@ description: Run HealthTracker's quality gate (scripts/quality) and act on its r
 ## 1. Run it
 
 ```bash
-scripts/quality --fast --json   # iterate: format, lint, fitness, unit tests, unused code, Domain/Data unit coverage (~2 min)
+scripts/quality --fast --json   # iterate: format, lint, fitness, unit tests, unused code, Domain/Data unit line + region coverage (~2 min)
 scripts/quality --full --json   # done: everything in --fast, plus UI tests, app coverage, per-file floor (~8 min)
 ```
 
@@ -26,7 +26,7 @@ It tests on `--simulator <udid>` when given; otherwise it reuses or clones a sim
 jq -r '.gates[] | select(.passed | not) | "\(.name): \(.value) (needs \(.comparator) \(.threshold))"' build/quality.json
 ```
 
-A `null` value (`n/a` in the table) means the metric could not be measured: the build failed or a test bundle crashed. Read `build/xcodebuild.log`.
+A `null` value (`n/a` in the table) means the metric could not be measured: the build failed or a test bundle crashed. Read `build/xcodebuild.log`. A region row alone at `n/a` means the unit run left no `Coverage.profdata` or app binary at the section 4 paths, or `llvm-cov` failed.
 
 The gate also prints details on stderr: format and lint violations with file and line, and `below floor: <path> <pct>%` for each file under the per-file floor.
 
@@ -71,17 +71,28 @@ Then list a file's uncovered lines (execution count `0`; `*` is not executable):
 xcrun xccov view --archive --file "$PWD/<repo-relative path>" build/Test.xcresult | grep -E ': 0$'
 ```
 
+A red **region** row (`Domain unit region coverage`, `Data unit region coverage`) means some region never ran. Regions are finer than lines: they also catch a path inside a line that line coverage counts as covered, such as the default of `?? 0` or one side of `&&` / `?:`. List them from the unit run's profile (a `--full` run replaces it with the UI run's, so read it after `--fast`):
+
+```bash
+profdata=$(ls build/DerivedData/Build/ProfileData/*/Coverage.profdata)
+binary=build/DerivedData/Build/Products/Debug-iphonesimulator/HealthTracker.app/HealthTracker.debug.dylib
+xcrun llvm-cov report -instr-profile "$profdata" "$binary" "$PWD/HealthTracker/Domain" "$PWD/HealthTracker/Data"
+xcrun llvm-cov show -show-line-counts-or-regions -instr-profile "$profdata" "$binary" "$PWD/<repo-relative path>" | grep -B1 -E '\| +0\||\^0'
+```
+
+`report` gives each file's `Missed Regions`. In `show`, a line with count `0` never ran at all, and a `^0` marker under a run line points at the column of the region inside it that never ran. Write a unit test that takes each path. A region no input can reach (a `?? 0` behind an earlier check that already returned) is dead code; report it to the user instead of testing it.
+
 The Domain/Data ratchets count only unit tests, so cover `HealthTracker/Domain/` and `HealthTracker/Data/` with unit tests; UI tests don't move them.
 
 ## 5. Ratchet the baseline
 
-After raising Domain or Data unit coverage, lock the gain in:
+After raising Domain or Data unit line or region coverage, lock the gain in:
 
 ```bash
 scripts/quality --fast --update-baseline
 ```
 
-It raises `DOMAIN_UNIT_MIN` / `DATA_UNIT_MIN` in `scripts/quality-thresholds.env` to the measured value (rounded down to one decimal) and keeps any threshold the measurement doesn't beat. Commit the changed thresholds file with the tests that earned it.
+It raises `DOMAIN_UNIT_MIN` / `DATA_UNIT_MIN` and `DOMAIN_REGION_UNIT_MIN` / `DATA_REGION_UNIT_MIN` in `scripts/quality-thresholds.env` to the measured value (rounded down to one decimal) and keeps any threshold the measurement doesn't beat. Commit the changed thresholds file with the tests that earned it.
 
 ## 6. CI
 

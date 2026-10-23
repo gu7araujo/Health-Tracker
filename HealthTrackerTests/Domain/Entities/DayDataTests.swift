@@ -289,6 +289,16 @@ struct DayDataTests {
         #expect(dayData.status == .optimal) // 1 medium meal is allowed for optimal
     }
 
+    @Test("Missing water counts as below 1.0L and wins over a moderate signal")
+    func status_isPoor_whenWaterNilAndOtherwiseModerate() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(makeSmallMeal("A"))
+        dayData.addWorkout(Workout(description: "Stretch", duration: Workout.Duration(minutes: 10)))
+        dayData.mood = .good
+
+        #expect(dayData.status == .poor)
+    }
+
     @Test("Any large meal triggers poor status")
     func status_isPoor_withAnyLargeMeal() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
@@ -709,6 +719,18 @@ struct DayDataTests {
 
         #expect(dayData.status == .poor)
         #expect(dayData.statusExplanation?.contains(reason("day_status_reason.mood_sad")) == true)
+    }
+
+    @Test("Missing water counts as none and surfaces the water-none reason under the poor header")
+    func statusExplanation_poor_waterNil_includesWaterNone() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(makeSmallMeal("A"))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
+        dayData.mood = .good
+
+        #expect(dayData.status == .poor)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_explanation.poor")) == true)
+        #expect(dayData.statusExplanation?.contains(reason("day_status_reason.water_none")) == true)
     }
 
     @Test("A poor fallback day with no specific reasons ends with just the header and a period")

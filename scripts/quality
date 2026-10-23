@@ -7,7 +7,7 @@ usage() {
 Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-baseline]
 
   --fast             Format, lint, fitness checks, unit tests, unused code (Periphery), Domain/Data
-                     unit coverage ratchets (default).
+                     unit line and region coverage ratchets (default).
   --full             Everything in --fast, plus UI tests, app coverage and per-file floor.
   --json             Also write build/quality.json.
   --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
@@ -74,6 +74,15 @@ count_row() {
   fi
 }
 
+# percent_row <name> <percent or empty> <threshold>: a ">= threshold" gate; empty is reported as n/a.
+percent_row() {
+  if [ -z "$2" ]; then
+    row "$1" "n/a" ">=" "$3" false
+  else
+    row "$1" "$(printf '%.2f' "$2")" ">=" "$3" "$(awk -v v="$2" -v t="$3" 'BEGIN { print (v >= t) ? "true" : "false" }')"
+  fi
+}
+
 echo "Format: swiftformat --lint"
 format_out="$(swiftformat . --lint --swift-version 6 2>&1)"
 grep 'error:' <<<"$format_out" >&2
@@ -110,7 +119,9 @@ beautify=(xcbeautify --quieter --disable-logging)
 # CI fails the build on compiler warnings; locally they stay warnings so work in progress still builds.
 build_settings=(-enableCodeCoverage YES)
 [ "${CI:-}" = "true" ] && build_settings+=(SWIFT_TREAT_WARNINGS_AS_ERRORS=YES GCC_TREAT_WARNINGS_AS_ERRORS=YES)
-rm -rf "$RESULT" build/Unit.xcresult build/UI.xcresult
+# Every test run replaces the coverage profile; clearing it first means a stale one never counts.
+PROFILE_DATA="build/DerivedData/Build/ProfileData"
+rm -rf "$RESULT" build/Unit.xcresult build/UI.xcresult "$PROFILE_DATA"
 : >build/xcodebuild.log
 # Boot and wait first: launching on a still-booting clone fails every test with "Application failed preflight checks".
 xcrun simctl bootstatus "$SIMULATOR" -b >/dev/null
@@ -131,6 +142,18 @@ for bundle in "${bundles[@]}"; do
     -resultBundlePath "$bundle_result" 2>&1 | tee -a build/xcodebuild.log | "${beautify[@]}"
   xcrun xcresulttool get test-results tests --path "$bundle_result" >build/test-results.json 2>/dev/null
   count_row "$name" "$("$LIB/test-failures.sh" build/test-results.json "$bundle")"
+  # Region coverage is unit-only like the line ratchets: read the profile before the UI run replaces it.
+  if [ "$bundle" = "HealthTrackerTests" ]; then
+    app="build/DerivedData/Build/Products/Debug-iphonesimulator/HealthTracker.app"
+    binary="$app/HealthTracker.debug.dylib"
+    [ -f "$binary" ] || binary="$app/HealthTracker"
+    profiles=("$PROFILE_DATA"/*/Coverage.profdata)
+    # Two lines, Domain then Data; no output (n/a) leaves both empty.
+    {
+      read -r domain_regions
+      read -r data_regions
+    } < <("$LIB/region-coverage.sh" "${profiles[0]}" "$binary" "$ROOT")
+  fi
 done
 
 # Unused code: Periphery reads the index store the test build just wrote (.periphery.yml: strict).
@@ -160,6 +183,8 @@ else
   row "Domain unit line coverage" "n/a" ">=" "$DOMAIN_UNIT_MIN" false
   row "Data unit line coverage" "n/a" ">=" "$DATA_UNIT_MIN" false
 fi
+percent_row "Domain unit region coverage" "$domain_regions" "$DOMAIN_REGION_UNIT_MIN"
+percent_row "Data unit region coverage" "$data_regions" "$DATA_REGION_UNIT_MIN"
 
 if [ "$MODE" = "full" ]; then
   if xcrun xcresulttool merge --output-path "$RESULT" "$UNIT_RESULT" build/UI.xcresult >/dev/null 2>&1 &&
@@ -174,7 +199,8 @@ fi
 
 # Only a green run may raise the ratchets.
 if [ -n "$UPDATE_BASELINE" ] && ! grep -q $'\tfalse$' <<<"$rows"; then
-  "$LIB/update-baseline.sh" build/unit-coverage.json "$ROOT" scripts/quality-thresholds.env
+  "$LIB/update-baseline.sh" build/unit-coverage.json "$ROOT" scripts/quality-thresholds.env \
+    "$domain_regions" "$data_regions"
 fi
 
 "$LIB/report.sh" "$MODE" ${JSON:+"$JSON"} <<<"${rows%$'\n'}"

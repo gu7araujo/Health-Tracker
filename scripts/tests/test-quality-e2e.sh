@@ -19,8 +19,14 @@ REPO="$TMP/repo"
 git init -q -b feat/x "$REPO"
 git -C "$REPO" -c user.name=t -c user.email=t@example.com -c commit.gpgsign=false commit -q --allow-empty -m init
 cp -R "$ROOT/scripts" "$REPO/scripts"
-printf 'APP_LINE_MIN=90.0\nFILE_FLOOR=80.0\nDOMAIN_UNIT_MIN=96.0\nDATA_UNIT_MIN=70.0\n' >"$REPO/scripts/quality-thresholds.env"
+# thresholds [data-region-min]: the region-export fixture measures Domain 95% and Data 65%.
+thresholds() {
+  printf 'APP_LINE_MIN=90.0\nFILE_FLOOR=80.0\nDOMAIN_UNIT_MIN=96.0\nDATA_UNIT_MIN=70.0\n' >"$REPO/scripts/quality-thresholds.env"
+  printf 'DOMAIN_REGION_UNIT_MIN=90.0\nDATA_REGION_UNIT_MIN=%s\n' "${1:-60.0}" >>"$REPO/scripts/quality-thresholds.env"
+}
+thresholds
 sed "s|/repo/|$REPO/|g" "$FIX/unit-baseline.json" >"$TMP/coverage.json"
+sed "s|/repo/|$REPO/|g" "$FIX/region-export.json" >"$TMP/regions.json"
 cat >"$TMP/simulators.json" <<'EOF'
 {"devices":{"com.apple.CoreSimulator.SimRuntime.iOS-26-5":[
   {"name":"HT-feat-x","udid":"WORKTREE-UDID","state":"Shutdown"},
@@ -34,11 +40,25 @@ cat >"$TMP/bin/xcrun" <<EOF
 case "\$1 \$2" in
   "simctl list") cat "$TMP/simulators.json" ;;
   "xccov view") cat "$TMP/coverage.json" ;;
+  "llvm-cov export") echo "\$*" >>"$TMP/llvm-cov.calls" && cat "$TMP/regions.json" ;;
   "xcresulttool get") cat "$TMP/tests.json" ;;
   *) exit 0 ;;
 esac
 EOF
-printf '#!/bin/sh\necho "$*" >>"%s"\n' "$TMP/xcodebuild.calls" >"$TMP/bin/xcodebuild"
+# xcodebuild: the unit run writes the profile and the app binary ($APP_BINARY, unless $NO_PROFILE);
+# the UI run replaces the profile, so the region rows must read it in between.
+cat >"$TMP/bin/xcodebuild" <<EOF
+#!/bin/sh
+echo "\$*" >>"$TMP/xcodebuild.calls"
+app=build/DerivedData/Build/Products/Debug-iphonesimulator/HealthTracker.app
+case "\$*" in
+  *-only-testing:HealthTrackerTests*)
+    [ -n "\$NO_PROFILE" ] && exit 0
+    rm -rf "\$app" && mkdir -p build/DerivedData/Build/ProfileData/RUN "\$app"
+    touch build/DerivedData/Build/ProfileData/RUN/Coverage.profdata "\$app/\${APP_BINARY:-HealthTracker.debug.dylib}" ;;
+  *-only-testing:HealthTrackerUITests*) rm -rf build/DerivedData/Build/ProfileData ;;
+esac
+EOF
 printf '#!/bin/sh\necho "$*" >>"%s"\ncat >/dev/null\n' "$TMP/xcbeautify.calls" >"$TMP/bin/xcbeautify"
 printf '#!/bin/sh\necho "0/1 files require formatting."\n' >"$TMP/bin/swiftformat"
 chmod +x "$TMP/bin/"*
@@ -89,6 +109,10 @@ run_quality '[{"file":"A.swift","line":1,"severity":"Error","reason":"r","rule_i
 
 run_quality '[]' --fast --update-baseline
 [ "$(cat "$REPO/scripts/quality-thresholds.env")" != "$before" ] || fail "--update-baseline should raise thresholds on a green run: $out"
+grep -qx 'DOMAIN_REGION_UNIT_MIN=95.0' "$REPO/scripts/quality-thresholds.env" &&
+  grep -qx 'DATA_REGION_UNIT_MIN=65.0' "$REPO/scripts/quality-thresholds.env" ||
+  fail "--update-baseline should raise the region ratchets: $(cat "$REPO/scripts/quality-thresholds.env")"
+thresholds
 
 # Fitness: a "<= 0" gate on the cross-file checks' violation count, right after Lint, whose
 # violations go to the terminal like lint's.
@@ -113,7 +137,8 @@ fitness_stub 0 '0 violation(s)'
 # unit-only run, beside the app coverage and per-file floor measured on the merged runs.
 : >"$TMP/xcodebuild.calls"
 run_quality '[]' --full
-for gate in "Fitness" "Unit tests" "UI tests" "Domain unit line coverage" "Data unit line coverage" "App line coverage" "Per-file floor"; do
+for gate in "Fitness" "Unit tests" "UI tests" "Domain unit line coverage" "Data unit line coverage" \
+  "Domain unit region coverage" "Data unit region coverage" "App line coverage" "Per-file floor"; do
   [[ "$out" == *"$gate "* ]] || fail "--full should report '$gate', got: $out"
 done
 [ "$(grep -c -- '-only-testing:HealthTrackerTests' "$TMP/xcodebuild.calls")" -eq 1 ] &&
@@ -203,5 +228,44 @@ PATH="${nopath%:}" run_quality '[]' --fast
 grep -qE '^Unused code +0  <= 0 +✓$' <<<"$out" || fail "build/tools/bin/periphery should pass the row, got: $out"
 rm -rf "${REPO:?}/build/tools"
 periphery_stub 0
+
+# Region coverage: Domain/Data region ratchets on the unit run's profile (llvm-cov), read before the
+# UI run replaces it, in --fast and --full. A stale profile from an earlier run never counts.
+mkdir -p "$REPO/build/DerivedData/Build/ProfileData/AAA-STALE"
+touch "$REPO/build/DerivedData/Build/ProfileData/AAA-STALE/Coverage.profdata"
+: >"$TMP/llvm-cov.calls"
+run_quality '[]' --fast
+[ "$code" -eq 0 ] || fail "region coverage above its ratchets should pass the gate (got $code): $out"
+grep -qE '^Domain unit region coverage +95.00%  >= 90.0% +✓$' <<<"$out" &&
+  grep -qE '^Data unit region coverage +65.00%  >= 60.0% +✓$' <<<"$out" ||
+  fail "--fast should report passing region rows, got: $out"
+app=build/DerivedData/Build/Products/Debug-iphonesimulator/HealthTracker.app
+[ "$(cat "$TMP/llvm-cov.calls")" = "llvm-cov export -summary-only -instr-profile \
+build/DerivedData/Build/ProfileData/RUN/Coverage.profdata $app/HealthTracker.debug.dylib" ] ||
+  fail "llvm-cov should read this run's profile and the app's debug dylib, got: $(cat "$TMP/llvm-cov.calls")"
+# The stub UI run deletes the profile, so passing rows prove they were read after the unit run.
+run_quality '[]' --full
+grep -qE '^Domain unit region coverage +95.00%  >= 90.0% +✓$' <<<"$out" &&
+  grep -qE '^Data unit region coverage +65.00%  >= 60.0% +✓$' <<<"$out" ||
+  fail "--full should report region rows from the unit run, got: $out"
+
+# Without a debug dylib (ENABLE_DEBUG_DYLIB=NO) the code lives in the app executable.
+: >"$TMP/llvm-cov.calls"
+APP_BINARY=HealthTracker run_quality '[]' --fast
+[ "$(cat "$TMP/llvm-cov.calls")" = "llvm-cov export -summary-only -instr-profile \
+build/DerivedData/Build/ProfileData/RUN/Coverage.profdata $app/HealthTracker" ] ||
+  fail "llvm-cov should fall back to the app executable, got: $(cat "$TMP/llvm-cov.calls")"
+
+thresholds 70.0
+run_quality '[]' --fast
+[ "$code" -eq 1 ] || fail "region coverage below its ratchet should fail the gate (got $code)"
+grep -qE '^Data unit region coverage +65.00%  >= 70.0% +✗$' <<<"$out" || fail "should report a failing Data region row, got: $out"
+thresholds
+
+NO_PROFILE=1 run_quality '[]' --fast
+[ "$code" -eq 1 ] || fail "a run without a profile should fail the gate (got $code)"
+grep -qE '^Domain unit region coverage +n/a  >= 90.0% +✗$' <<<"$out" &&
+  grep -qE '^Data unit region coverage +n/a  >= 60.0% +✗$' <<<"$out" ||
+  fail "a run without a profile should report n/a region rows, got: $out"
 
 [ "$failures" -eq 0 ]
