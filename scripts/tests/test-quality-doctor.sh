@@ -16,11 +16,12 @@ fail() {
   failures=$((failures + 1))
 }
 
-# stub <dir> <swiftlint version> <swiftformat version> <xcode version>
+# stub <dir> <swiftlint version> <swiftformat version> <xcode version> <periphery version>
 stub() {
   mkdir -p "$1"
   printf '#!/bin/sh\necho %s\n' "$2" >"$1/swiftlint"
   printf '#!/bin/sh\necho %s\n' "$3" >"$1/swiftformat"
+  printf '#!/bin/sh\n[ "$1" = version ] && echo %s\n' "$5" >"$1/periphery"
   printf '#!/bin/sh\necho "Xcode %s"\necho "Build version X"\n' "$4" >"$1/xcodebuild"
   printf '#!/bin/sh\n' >"$1/xcbeautify"
   printf '#!/bin/sh\n' >"$1/jq"
@@ -33,8 +34,8 @@ run_doctor() {
   code=$?
 }
 
-stub "$TMP/ok" "$SWIFTLINT_VERSION" "$SWIFTFORMAT_VERSION" "$XCODE_VERSION"
-stub "$TMP/drift" "0.1.0" "0.2.0" "1.0"
+stub "$TMP/ok" "$SWIFTLINT_VERSION" "$SWIFTFORMAT_VERSION" "$XCODE_VERSION" "$PERIPHERY_VERSION"
+stub "$TMP/drift" "0.1.0" "0.2.0" "1.0" "0.3.0"
 
 # Matching versions: silent success, locally and in CI.
 run_doctor "$TMP/ok"
@@ -49,6 +50,7 @@ run_doctor "$TMP/drift"
 [[ "$out" == *"SwiftLint 0.1.0"*"$SWIFTLINT_VERSION"* ]] || fail "should report SwiftLint drift: $out"
 [[ "$out" == *"SwiftFormat 0.2.0"*"$SWIFTFORMAT_VERSION"* ]] || fail "should report SwiftFormat drift: $out"
 [[ "$out" == *"Xcode 1.0"*"$XCODE_VERSION"* ]] || fail "should report Xcode drift: $out"
+[[ "$out" == *"Periphery 0.3.0"*"$PERIPHERY_VERSION"* ]] || fail "should report Periphery drift: $out"
 [[ "$out" == *"fix:"* ]] || fail "should print a fix command: $out"
 
 # Drift in CI: error, exit 1.
@@ -63,5 +65,11 @@ run_doctor "$TMP/ok"
 [[ "$out" == *"SwiftLint"*"not installed"* ]] || fail "should report missing SwiftLint: $out"
 run_doctor "$TMP/ok" true
 [ "$code" -eq 1 ] || fail "missing tool in CI should exit 1 (got $code)"
+
+# Missing periphery: the fix points at the local install into build/tools/bin (no Homebrew).
+rm "$TMP/ok/periphery"
+run_doctor "$TMP/ok"
+[[ "$out" == *"Periphery not installed"*"scripts/ci/install-tools.sh build/tools/bin"* ]] ||
+  fail "should report missing Periphery with the local install command: $out"
 
 [ "$failures" -eq 0 ]

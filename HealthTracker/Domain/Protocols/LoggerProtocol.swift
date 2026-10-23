@@ -44,32 +44,4 @@ protocol LoggerProtocol: Sendable {
     ///
     /// - Parameter message: The message to log
     func error(_ message: String)
-
-    /// Log a debug message with structured metadata.
-    ///
-    /// - Parameters:
-    ///   - message: The message to log
-    ///   - metadata: Additional context as key-value pairs
-    func debug(_ message: String, metadata: [String: Any])
-
-    /// Log an informational message with structured metadata.
-    ///
-    /// - Parameters:
-    ///   - message: The message to log
-    ///   - metadata: Additional context as key-value pairs
-    func info(_ message: String, metadata: [String: Any])
-
-    /// Log a warning message with structured metadata.
-    ///
-    /// - Parameters:
-    ///   - message: The message to log
-    ///   - metadata: Additional context as key-value pairs
-    func warning(_ message: String, metadata: [String: Any])
-
-    /// Log an error message with structured metadata.
-    ///
-    /// - Parameters:
-    ///   - message: The message to log
-    ///   - metadata: Additional context as key-value pairs
-    func error(_ message: String, metadata: [String: Any])
 }

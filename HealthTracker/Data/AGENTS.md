@@ -35,7 +35,7 @@ Type-Driven Design — encode business rules and guarantees in the type system.
 <rule_4>
 **PERSISTENCE & TRANSFORMATION TESTS** — every non-trivial data-layer behaviour earns a focused unit test.
 - Each `DataSource`: happy-path load, happy-path save, missing-file/empty-store default, and ≥1 error path (corrupt data, permission denied).
-- `HealthDataRepository`: `loadAllDays`, `save`, `dayData(for:)`, `saveDayData`, `loadDaysInRange`, plus edges (empty store, unknown date, overlapping ranges).
+- `HealthDataRepository`: `loadAllDays`, `save`, `dayData(for:)`, `saveDayData`, plus edges (empty store, unknown date).
 - Each migration (`migrateToICloudDrive`, `migrateWorkoutDurations`): already-migrated no-op, successful migration, source-absent.
 - Back tests with in-memory fakes of `LocalDataSourceProtocol` — never real `UserDefaults`/files — so they stay fast and parallel-safe.
 - `await` async persistence in `async` tests; no `XCTestExpectation`.

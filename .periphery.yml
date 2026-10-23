@@ -1,0 +1,8 @@
+# Periphery (unused code). scripts/quality runs it with --skip-build on the index store of its own
+# test build (build/DerivedData); keep // periphery:ignore comments for false positives.
+project: HealthTracker.xcodeproj
+schemes:
+  - HealthTracker
+strict: true
+relative_results: true
+disable_update_check: true

@@ -1,3 +1,4 @@
 --swiftversion 6.0
 --trailingcommas never
 --minversion 0.61.1
+--exclude build

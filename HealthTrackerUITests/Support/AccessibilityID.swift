@@ -5,6 +5,8 @@
 //  Keep in sync with HealthTracker/Presentation/AccessibilityID.swift
 //
 
+// periphery:ignore:all - hand-mirrored catalog, kept complete
+
 import Foundation
 
 /// Accessibility identifiers mirrored from the app target (UI tests cannot import app types).

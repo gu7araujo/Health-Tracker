@@ -2,7 +2,7 @@
 //  OSLogLoggerTests.swift
 //  HealthTrackerTests
 //
-//  Tests for OSLogLogger covering every log level and metadata overload in both
+//  Tests for OSLogLogger covering every log level in both
 //  debug and release privacy modes. os.Logger produces no return value or
 //  observable output to assert on, so these drive every branch and verify the
 //  bridge constructs and logs without crashing.
@@ -15,20 +15,13 @@ import Testing
 @MainActor
 struct OSLogLoggerTests {
     private func exerciseAllMethods(_ logger: OSLogLogger) {
-        let metadata: [String: Any] = ["key": "value", "count": 42]
-
         logger.debug("debug message")
         logger.info("info message")
         logger.warning("warning message")
         logger.error("error message")
-
-        logger.debug("debug message", metadata: metadata)
-        logger.info("info message", metadata: metadata)
-        logger.warning("warning message", metadata: metadata)
-        logger.error("error message", metadata: metadata)
     }
 
-    @Test("Debug builds log every level and metadata overload (public privacy) without crashing")
+    @Test("Debug builds log every level (public privacy) without crashing")
     func allMethods_debugBuild() {
         let logger = OSLogLogger(
             subsystem: "com.healthtracker.tests",
@@ -38,7 +31,7 @@ struct OSLogLoggerTests {
         exerciseAllMethods(logger)
     }
 
-    @Test("Release builds log every level and metadata overload (private privacy) without crashing")
+    @Test("Release builds log every level (private privacy) without crashing")
     func allMethods_releaseBuild() {
         let logger = OSLogLogger(
             subsystem: "com.healthtracker.tests",

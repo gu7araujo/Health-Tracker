@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs scripts/quality end to end in a throwaway repo copy, with stubbed
-# swiftformat/swiftlint/xcrun/xcodebuild on PATH (no simulator, no real build).
+# swiftformat/swiftlint/periphery/xcrun/xcodebuild on PATH (no simulator, no real build).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -52,6 +52,15 @@ fitness_stub() {
   chmod +x "$REPO/scripts/fitness/run"
 }
 fitness_stub 0 '0 violation(s)'
+
+# periphery_stub <exit> [lines...]: periphery logs its args, prints the lines and exits <exit>.
+periphery_stub() {
+  printf '%s\n' "${@:2}" >"$TMP/periphery.out"
+  printf '#!/bin/sh\necho "$*" >>"%s"\ncat "%s"\nexit %s\n' "$TMP/periphery.calls" "$TMP/periphery.out" "$1" \
+    >"$TMP/bin/periphery"
+  chmod +x "$TMP/bin/periphery"
+}
+periphery_stub 0
 
 # run_quality <lint json> [args...] -> sets out, code. CI comes from $CI_ENV (cleared by default: the
 # stubs are not the pinned versions, so doctor would fail) and GITHUB_ACTIONS from $GHA, so the test
@@ -132,5 +141,67 @@ printf '#!/bin/sh\nexit 0\n' >"$REPO/scripts/doctor" # strict doctor would rejec
 CI_ENV=true run_quality '[]' --fast
 grep -q -- 'SWIFT_TREAT_WARNINGS_AS_ERRORS=YES GCC_TREAT_WARNINGS_AS_ERRORS=YES' "$TMP/xcodebuild.calls" ||
   fail "with CI=true xcodebuild should treat warnings as errors, got: $(cat "$TMP/xcodebuild.calls")"
+
+# The gate builds into its own DerivedData, never the IDE's, so the index store Periphery reads
+# is the one this run just wrote: build/DerivedData/Index.noindex/DataStore.
+: >"$TMP/xcodebuild.calls"
+run_quality '[]' --full
+[ "$(grep -c -- '-derivedDataPath build/DerivedData' "$TMP/xcodebuild.calls")" -eq 2 ] ||
+  fail "every xcodebuild test run should pass -derivedDataPath build/DerivedData, got: $(cat "$TMP/xcodebuild.calls")"
+
+# Unused code: a "<= 0" gate on Periphery's findings, read from the index the unit-test run built,
+# right after the test rows, in --fast and --full.
+: >"$TMP/periphery.calls"
+run_quality '[]' --fast
+[ "$code" -eq 0 ] || fail "a clean periphery scan should pass the gate (got $code): $out"
+grep -qE '^Unused code +0  <= 0 +✓$' <<<"$out" || fail "--fast should report a passing Unused code row, got: $out"
+[ "$(grep -E '^(Unit tests|Unused code|Domain unit line coverage) ' <<<"$out" | cut -c1-11 | tr '\n' '|')" = \
+  "Unit tests |Unused code|Domain unit|" ] || fail "the Unused code row should come right after Unit tests, got: $out"
+[ "$(cat "$TMP/periphery.calls")" = "scan --skip-build --index-store-path build/DerivedData/Index.noindex/DataStore --quiet" ] ||
+  fail "periphery should scan the gate's index store, got: $(cat "$TMP/periphery.calls")"
+run_quality '[]' --full
+grep -qE '^Unused code +0  <= 0 +✓$' <<<"$out" || fail "--full should report the Unused code row, got: $out"
+
+periphery_stub 1 'Error: Found 2 issues.' \
+  "HealthTracker/A.swift:3:10: warning: Unused function 'a()'" \
+  "HealthTracker/B.swift:7:6: warning: Property 'b' is assigned, but never used"
+run_quality '[]' --fast
+[ "$code" -eq 1 ] || fail "unused code should fail the gate (got $code)"
+grep -qE '^Unused code +2  <= 0 +✗$' <<<"$out" || fail "--fast should report a failing Unused code row of 2, got: $out"
+[[ "$out" == *"A.swift:3:10: warning: Unused function"*"B.swift:7:6: warning: Property"* ]] ||
+  fail "periphery findings should be printed, got: $out"
+
+# On GitHub Actions the findings become inline PR annotations.
+periphery_stub 1 'Error: Found 1 issue.' '::warning file=HealthTracker/A.swift,line=3,col=10,title=unused::Unused function'
+: >"$TMP/periphery.calls"
+GHA=true run_quality '[]' --fast
+grep -q -- '--quiet --format github-actions$' "$TMP/periphery.calls" ||
+  fail "on GitHub Actions periphery should use --format github-actions, got: $(cat "$TMP/periphery.calls")"
+grep -qE '^Unused code +1  <= 0 +✗$' <<<"$out" || fail "a github-actions finding should count, got: $out"
+
+# A scan that fails without findings (e.g. no index store) cannot be measured.
+periphery_stub 1 'error: Index store path does not exist'
+run_quality '[]' --fast
+grep -qE '^Unused code +n/a  <= 0 +✗$' <<<"$out" || fail "a broken scan should report n/a, got: $out"
+[[ "$out" == *"Index store path does not exist"* ]] || fail "a broken scan should print its output, got: $out"
+
+# Missing periphery: n/a and a failed row (doctor has already said how to install it). Directories
+# holding a real periphery (CI puts one on PATH) are dropped from PATH.
+rm "$TMP/bin/periphery"
+nopath="$(tr ':' '\n' <<<"$PATH" | while read -r dir; do [ -x "$dir/periphery" ] || printf '%s:' "$dir"; done)"
+PATH="${nopath%:}" run_quality '[]' --fast
+grep -qE '^Unused code +n/a  <= 0 +✗$' <<<"$out" || fail "a missing periphery should report n/a, got: $out"
+[ "$code" -eq 1 ] || fail "a missing periphery should fail the gate (got $code)"
+
+# build/tools/bin (where `scripts/ci/install-tools.sh build/tools/bin` installs the pinned tools)
+# goes first on PATH, so a fresh clone needs no Homebrew.
+mkdir -p "$REPO/build/tools/bin"
+printf '#!/bin/sh\necho "$*" >>"%s"\n' "$TMP/local-periphery.calls" >"$REPO/build/tools/bin/periphery"
+chmod +x "$REPO/build/tools/bin/periphery"
+PATH="${nopath%:}" run_quality '[]' --fast
+[ -s "$TMP/local-periphery.calls" ] || fail "scripts/quality should run tools from build/tools/bin, got: $out"
+grep -qE '^Unused code +0  <= 0 +✓$' <<<"$out" || fail "build/tools/bin/periphery should pass the row, got: $out"
+rm -rf "${REPO:?}/build/tools"
+periphery_stub 0
 
 [ "$failures" -eq 0 ]

@@ -28,6 +28,8 @@ check SwiftLint swiftlint "$SWIFTLINT_VERSION" "$(swiftlint version 2>/dev/null)
   "brew install swiftlint, or https://github.com/realm/SwiftLint/releases/tag/$SWIFTLINT_VERSION"
 check SwiftFormat swiftformat "$SWIFTFORMAT_VERSION" "$(swiftformat --version 2>/dev/null)" \
   "brew install swiftformat, or https://github.com/nicklockwood/SwiftFormat/releases/tag/$SWIFTFORMAT_VERSION"
+check Periphery periphery "$PERIPHERY_VERSION" "$(periphery version 2>/dev/null)" \
+  "scripts/ci/install-tools.sh build/tools/bin (scripts/quality runs tools from there first)"
 check Xcode xcodebuild "$XCODE_VERSION" "$(xcodebuild -version 2>/dev/null | awk 'NR == 1 { print $2 }')" \
   "sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app"
 

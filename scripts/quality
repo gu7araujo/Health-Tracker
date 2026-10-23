@@ -6,14 +6,15 @@ usage() {
   cat <<'EOF'
 Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-baseline]
 
-  --fast             Format, lint, fitness checks, unit tests, Domain/Data unit coverage ratchets
-                     (default).
+  --fast             Format, lint, fitness checks, unit tests, unused code (Periphery), Domain/Data
+                     unit coverage ratchets (default).
   --full             Everything in --fast, plus UI tests, app coverage and per-file floor.
   --json             Also write build/quality.json.
   --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
                      (an exported SIMULATOR_ID is ignored so worktrees never share a device).
   --update-baseline  With --fast: raise the *_UNIT_MIN ratchets to the measured coverage.
 
+Tools in build/tools/bin (scripts/ci/install-tools.sh build/tools/bin) run before those on PATH.
 Thresholds: scripts/quality-thresholds.env. Per-file floor exceptions: scripts/coverage-exceptions.txt.
 Exit codes: 0 all gates passed, 1 a gate failed, 2 usage error.
 EOF
@@ -49,6 +50,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LIB="$ROOT/scripts/lib"
 RESULT="build/Test.xcresult"
 cd "$ROOT" || exit 1
+[ -d build/tools/bin ] && PATH="$ROOT/build/tools/bin:$PATH"
 # shellcheck source=quality-thresholds.env
 source scripts/quality-thresholds.env
 
@@ -124,11 +126,32 @@ for bundle in "${bundles[@]}"; do
     -destination "platform=iOS Simulator,id=$SIMULATOR" \
     "-only-testing:$bundle" \
     -parallel-testing-enabled NO \
+    -derivedDataPath build/DerivedData \
     "${build_settings[@]}" \
     -resultBundlePath "$bundle_result" 2>&1 | tee -a build/xcodebuild.log | "${beautify[@]}"
   xcrun xcresulttool get test-results tests --path "$bundle_result" >build/test-results.json 2>/dev/null
   count_row "$name" "$("$LIB/test-failures.sh" build/test-results.json "$bundle")"
 done
+
+# Unused code: Periphery reads the index store the test build just wrote (.periphery.yml: strict).
+echo "Unused code: periphery scan"
+periphery_args=(scan --skip-build --index-store-path build/DerivedData/Index.noindex/DataStore --quiet)
+[ "${GITHUB_ACTIONS:-}" = "true" ] && periphery_args+=(--format github-actions)
+unused=""
+if command -v periphery >/dev/null; then
+  periphery_out="$(periphery "${periphery_args[@]}" 2>&1)"
+  periphery_code=$?
+  findings="$(grep -E '^[^ ]+:[0-9]+:[0-9]+: warning: |^::warning ' <<<"$periphery_out")"
+  unused="$(grep -c . <<<"$findings")"
+  # A failed scan without findings (no index store, bad config) cannot be measured.
+  if [ "$periphery_code" -ne 0 ] && [ "$unused" -eq 0 ]; then
+    unused=""
+    echo "$periphery_out" >&2
+  else
+    [ -z "$findings" ] || echo "$findings" >&2
+  fi
+fi
+count_row "Unused code" "$unused"
 
 if xcrun xccov view --report --json "$UNIT_RESULT" >build/unit-coverage.json 2>/dev/null; then
   rows+="$("$LIB/evaluate-coverage.sh" fast build/unit-coverage.json "$ROOT" \

@@ -12,6 +12,8 @@ View → ViewModel → Use Case → Repository → DataSource
 
 SwiftUI re-renders on `@Observable` changes; views never mutate day data themselves.
 
+Periphery misreads an iOS 27 `@State` property used only through its `$binding` as unused (the `@State` macro hides the use): mark it `// periphery:ignore - used only via $binding (iOS 27 @State macro)`, as `MainView` does, and call the ignore out in the PR.
+
 - `selectedDate` drives `currentDayData` (the matching day, or an empty one). Setting it calls `ensureDayDataExists`, which fabricates an empty `DayData` **in memory only** — `persistChanges` parses each day to `RecordedDayData`, so empty days are never written (mirrors the Domain parse-don't-validate rule).
 - Every CRUD method delegates to `DayData`'s own ops, then `persistChanges`; saving also fire-and-forgets `CancelNotificationsUseCase`.
 

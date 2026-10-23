@@ -7,24 +7,6 @@
 
 import SwiftUI
 
-// MARK: - Conditional View Modifier
-
-extension View {
-    /// Conditionally applies a transformation to the view.
-    /// - Parameters:
-    ///   - condition: The condition to evaluate.
-    ///   - transform: The transformation to apply if condition is true.
-    /// - Returns: Either the transformed view or the original view.
-    @ViewBuilder
-    func `if`(_ condition: Bool, transform: (Self) -> some View) -> some View {
-        if condition {
-            transform(self)
-        } else {
-            self
-        }
-    }
-}
-
 // MARK: - First Appear Modifier
 
 extension View {

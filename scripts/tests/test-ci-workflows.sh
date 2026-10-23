@@ -44,4 +44,14 @@ grep -qE "^ *if: github.event_name == 'pull_request' *\$" <<<"$guard" ||
 grep -qE '^ *run: scripts/fitness/persisted-shape-guard.sh HEAD\^1 *$' <<<"$guard" ||
   fail "ci.yml lint job: 'Persisted shape' step must run the guard against HEAD^1 (the PR base)"
 
+# Every action is pinned by full commit SHA, with its version in a comment (Dependabot bumps both).
+while IFS= read -r line; do
+  fail "action not pinned by SHA with a '# v...' comment: $line"
+done < <(grep -HnE '^[^#]*uses: ' "$ROOT"/.github/workflows/*.yml |
+  grep -vE 'uses: [^@ ]+@[0-9a-f]{40} # v[0-9][^ ]* *$' | sed "s|^$ROOT/||")
+
+# The AI review costs per run: draft PRs skip it.
+grep -qxE "    if: github.event.pull_request.draft != true *" "$ROOT/.github/workflows/claude-code-review.yml" ||
+  fail "claude-code-review.yml: the job needs 'if: github.event.pull_request.draft != true'"
+
 [ "$failures" -eq 0 ]
