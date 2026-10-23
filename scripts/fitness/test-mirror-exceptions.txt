@@ -7,5 +7,4 @@
 HealthTracker/Data/Services/UserNotificationCentering.swift
 
 # To burn down with unit tests:
-HealthTracker/Data/Services/NotificationPermissionManager.swift  # untested (19% coverage, in coverage-exceptions.txt)
 HealthTracker/Domain/UseCases/RequestNotificationPermissionUseCase.swift  # tested by RequestNotifPermissionUseCaseTests.swift; rename it to mirror

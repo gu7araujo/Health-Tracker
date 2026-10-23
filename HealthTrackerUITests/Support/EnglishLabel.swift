@@ -7,6 +7,8 @@
 //  so these values must match HealthTracker/Resources/en.lproj/Localizable.strings.
 //
 
+// periphery:ignore:all - hand-mirrored catalog, kept complete
+
 enum EnglishLabel {
     // Add record alert
     static let mealOption = "Meal"

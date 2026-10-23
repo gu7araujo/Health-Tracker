@@ -10,7 +10,9 @@ import SwiftUI
 struct MainView: View {
     @State private var viewModel = MainViewModel(repository: UITestingSupport.makeRepository())
     @State private var addingSection: HealthSection?
+    // periphery:ignore - used only via $binding (iOS 27 @State macro)
     @State private var editingMealId: UUID?
+    // periphery:ignore - used only via $binding (iOS 27 @State macro)
     @State private var editingWorkoutId: UUID?
     @State private var showAddSelectionAlert = false
 

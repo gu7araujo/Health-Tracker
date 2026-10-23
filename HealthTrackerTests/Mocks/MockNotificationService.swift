@@ -42,9 +42,6 @@ final class MockNotificationService: NotificationServiceProtocol {
     /// Tracks whether authorizationStatus was called
     var authorizationStatusCalled = false
 
-    /// Tracks whether setDelegate was called
-    var setDelegateCalled = false
-
     // MARK: - Scheduling Methods
 
     /// Tracking properties for scheduling methods
@@ -54,6 +51,9 @@ final class MockNotificationService: NotificationServiceProtocol {
     var scheduleNotificationBodies: [String] = []
     var scheduleNotificationRepeats: [Bool] = []
     var scheduleNotificationDateComponents: [DateComponents] = []
+
+    /// Optional error to throw from scheduleNotification (after recording the call)
+    var scheduleNotificationError: Error?
 
     var cancelAllNotificationsCalled = false
 
@@ -82,10 +82,6 @@ final class MockNotificationService: NotificationServiceProtocol {
         return authorizationStatusResult
     }
 
-    func setDelegate(_: NotificationCenterDelegate?) {
-        setDelegateCalled = true
-    }
-
     func scheduleNotification(
         identifier: String,
         title: String,
@@ -99,6 +95,10 @@ final class MockNotificationService: NotificationServiceProtocol {
         scheduleNotificationBodies.append(body)
         scheduleNotificationRepeats.append(repeats)
         scheduleNotificationDateComponents.append(dateComponents)
+
+        if let error = scheduleNotificationError {
+            throw error
+        }
     }
 
     func cancelAllNotifications() {
@@ -113,13 +113,5 @@ final class MockNotificationService: NotificationServiceProtocol {
     func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
         removeDeliveredNotificationsCalled = true
         removeDeliveredNotificationsIdentifiers.append(identifiers)
-    }
-
-    /// Resets cancellation tracking state for fresh test assertions.
-    func resetCancellationTracking() {
-        cancelNotificationsCalled = false
-        cancelNotificationsIdentifiers = []
-        removeDeliveredNotificationsCalled = false
-        removeDeliveredNotificationsIdentifiers = []
     }
 }

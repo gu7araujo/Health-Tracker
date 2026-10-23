@@ -15,14 +15,12 @@ final class MockHealthDataRepository: HealthDataRepositoryProtocol {
 
     var loadAllDaysResult: [RecordedDayData] = []
     var dayDataForDateResult: [Date: RecordedDayData] = [:]
-    var loadDaysInRangeResult: [RecordedDayData] = []
 
     // MARK: - Call Tracking
 
     var saveCalledWithDays: [RecordedDayData]?
     var saveDayDataCalledWith: RecordedDayData?
     var dayDataForDateCalledWith: Date?
-    var loadDaysInRangeCalledWith: ClosedRange<Date>?
     var loadAllDaysCalled = false
 
     // MARK: - Protocol Implementation
@@ -53,12 +51,5 @@ final class MockHealthDataRepository: HealthDataRepositoryProtocol {
 
     func saveDayData(_ dayData: RecordedDayData) {
         saveDayDataCalledWith = dayData
-    }
-
-    func loadDaysInRange(_ range: ClosedRange<Date>) -> [RecordedDayData] {
-        loadDaysInRangeCalledWith = range
-        return loadDaysInRangeResult.filter { dayData in
-            range.contains(dayData.dayData.date)
-        }
     }
 }

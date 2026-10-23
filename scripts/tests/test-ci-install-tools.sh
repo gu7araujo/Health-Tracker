@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# scripts/ci/install-tools.sh with stubbed uname/curl/unzip on PATH (no network):
-# it must fetch the pinned release asset for the OS, install both binaries and extend GITHUB_PATH.
+# scripts/ci/install-tools.sh with stubbed uname/curl/unzip/shasum on PATH (no network):
+# it must fetch the pinned release asset for the OS, install the binaries (Periphery on macOS only,
+# sha256-verified) and extend GITHUB_PATH.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -51,8 +52,16 @@ case "\$(cat "\$zip")" in
   swiftlint_linux_amd64.zip) fake swiftlint dynamic; fake swiftlint-static "\${LINT_VERSION:-$SWIFTLINT_VERSION}" ;;
   swiftformat.zip) fake swiftformat "$SWIFTFORMAT_VERSION" ;;
   swiftformat_linux.zip) fake swiftformat_linux "$SWIFTFORMAT_VERSION" ;;
+  # The real zip holds periphery, the libIndexStore.dylib it loads from beside itself, and LICENSE.md.
+  periphery-$PERIPHERY_VERSION.zip) fake periphery "$PERIPHERY_VERSION"; echo dylib >"\$dir/libIndexStore.dylib"; echo license >"\$dir/LICENSE.md" ;;
   *) exit 9 ;;
 esac
+EOF
+# shasum prints the pinned sha256 for any file, or \$FAKE_SHA.
+cat >"$TMP/stubs/shasum" <<EOF
+#!/bin/sh
+for last in "\$@"; do :; done
+echo "\${FAKE_SHA:-$PERIPHERY_SHA256}  \$last"
 EOF
 chmod +x "$TMP/stubs/"*
 
@@ -77,6 +86,17 @@ grep -qx "$release/nicklockwood/SwiftFormat/releases/download/$SWIFTFORMAT_VERSI
 [ "$(cat "$TMP/github_path")" = "$TMP/bin" ] || fail "the bin dir should be appended to GITHUB_PATH, got: $(cat "$TMP/github_path")"
 [[ "$out" == *"SwiftLint $SWIFTLINT_VERSION"* && "$out" == *"SwiftFormat $SWIFTFORMAT_VERSION"* ]] ||
   fail "should print the installed versions, got: $out"
+grep -qx "$release/peripheryapp/periphery/releases/download/$PERIPHERY_VERSION/periphery-$PERIPHERY_VERSION.zip" "$TMP/curl.calls" ||
+  fail "macOS should fetch periphery-$PERIPHERY_VERSION.zip, got: $(cat "$TMP/curl.calls")"
+[ "$("$TMP/bin/periphery")" = "$PERIPHERY_VERSION" ] || fail "periphery should be installed in the bin dir"
+[ -f "$TMP/bin/libIndexStore.dylib" ] || fail "libIndexStore.dylib should be installed beside periphery"
+[[ "$out" == *"Periphery $PERIPHERY_VERSION"* ]] || fail "should print the installed Periphery version, got: $out"
+
+# A zip whose sha256 is not the pinned one is never installed.
+install Darwin arm64 FAKE_SHA=0000
+[ "$code" -ne 0 ] || fail "a periphery zip with the wrong sha256 should fail the install"
+[ ! -e "$TMP/bin/periphery" ] || fail "a periphery zip with the wrong sha256 should not be installed"
+[[ "$out" == *"sha256"* ]] || fail "a sha256 mismatch should say so, got: $out"
 
 install Linux x86_64
 [ "$code" -eq 0 ] || fail "Linux install should succeed (got $code): $out"
@@ -84,6 +104,7 @@ grep -q '/swiftlint_linux_amd64.zip$' "$TMP/curl.calls" && grep -q '/swiftformat
   fail "Linux should fetch the linux assets, got: $(cat "$TMP/curl.calls")"
 [ "$("$TMP/bin/swiftformat")" = "$SWIFTFORMAT_VERSION" ] || fail "swiftformat_linux should be installed as swiftformat"
 [ "$("$TMP/bin/swiftlint")" = "$SWIFTLINT_VERSION" ] || fail "swiftlint-static should be installed as swiftlint on Linux"
+! grep -q periphery "$TMP/curl.calls" || fail "Linux has no Periphery release; it should not fetch one"
 
 install Linux x86_64 LINT_VERSION=0.1.0
 [ "$code" -ne 0 ] || fail "a binary that is not the pinned version should fail the install"

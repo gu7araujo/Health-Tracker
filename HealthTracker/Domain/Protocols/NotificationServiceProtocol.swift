@@ -34,15 +34,6 @@ protocol NotificationServiceProtocol {
     /// - Returns: The current authorization status
     func authorizationStatus() async -> NotificationAuthorizationStatus
 
-    /// Sets the notification center delegate for handling notification events.
-    ///
-    /// The delegate will receive callbacks for notification-related events such as
-    /// when notifications are delivered while the app is in foreground, or when
-    /// the user interacts with a notification.
-    ///
-    /// - Parameter delegate: The delegate object, or nil to remove the current delegate
-    func setDelegate(_ delegate: NotificationCenterDelegate?)
-
     /// Schedules a notification with calendar-based trigger.
     ///
     /// This method creates a notification request with the specified content and timing.

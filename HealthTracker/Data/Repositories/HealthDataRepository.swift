@@ -42,17 +42,4 @@ final class HealthDataRepository: HealthDataRepositoryProtocol {
 
         dataSource.save(days)
     }
-
-    func loadDaysInRange(_ range: ClosedRange<Date>) -> [RecordedDayData] {
-        let allDays = dataSource.load()
-        let calendar = Calendar.current
-
-        let startDate = calendar.startOfDay(for: range.lowerBound)
-        let endDate = calendar.startOfDay(for: range.upperBound)
-
-        return allDays.filter { recordedDay in
-            let dayDate = calendar.startOfDay(for: recordedDay.dayData.date)
-            return dayDate >= startDate && dayDate <= endDate
-        }
-    }
 }

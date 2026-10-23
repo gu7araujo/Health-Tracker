@@ -28,9 +28,4 @@ protocol HealthDataRepositoryProtocol {
     /// Updates or creates recorded day data for a specific date.
     /// - Parameter dayData: The `RecordedDayData` to save or update.
     func saveDayData(_ dayData: RecordedDayData)
-
-    /// Loads recorded day data within a specific date range.
-    /// - Parameter range: The date range to filter by (inclusive).
-    /// - Returns: Array of `RecordedDayData` within the range, sorted by date.
-    func loadDaysInRange(_ range: ClosedRange<Date>) -> [RecordedDayData]
 }

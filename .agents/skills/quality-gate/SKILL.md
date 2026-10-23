@@ -1,6 +1,6 @@
 ---
 name: quality-gate
-description: Run HealthTracker's quality gate (scripts/quality) and act on its result. Use when checking whether a task is done, when a gate or CI check is red (format, lint, fitness, tests, coverage), when finding the least-covered files, or when raising coverage thresholds.
+description: Run HealthTracker's quality gate (scripts/quality) and act on its result. Use when checking whether a task is done, when a gate or CI check is red (format, lint, fitness, tests, unused code, coverage), when finding the least-covered files, or when raising coverage thresholds.
 ---
 
 # Quality gate
@@ -10,7 +10,7 @@ description: Run HealthTracker's quality gate (scripts/quality) and act on its r
 ## 1. Run it
 
 ```bash
-scripts/quality --fast --json   # iterate: format, lint, fitness, unit tests, Domain/Data unit coverage (~2 min)
+scripts/quality --fast --json   # iterate: format, lint, fitness, unit tests, unused code, Domain/Data unit coverage (~2 min)
 scripts/quality --full --json   # done: everything in --fast, plus UI tests, app coverage, per-file floor (~8 min)
 ```
 
@@ -44,11 +44,16 @@ Every gate turns green through code or tests:
   - `test-mirror`, `no HealthTrackerTests/**/<Name>Tests.swift`: write that test file for the Domain/Data type. `... is not a unique name`: put the test at the mirrored path the message names. `stale exception`: delete that line from `scripts/fitness/test-mirror-exceptions.txt`.
   - `accessibility-ids`, `"<id>" not declared in HealthTracker/Presentation/AccessibilityID.swift`: make the UI tests' `AccessibilityID` match the app's (rename or remove the stale ID, or add the identifier to the app).
 - **Unit tests / UI tests**: the failures are in `build/xcodebuild.log`; reproduce one with the `cli-test` skill's single-test command.
+- **Unused code**: Periphery prints each finding on stderr as `<file>:<line>:<col>: warning: <finding>` (e.g. `Unused function 'name()'`, `Assign-only property`).
+  - Delete the declaration, with any mock member or test that only exercises it. A protocol requirement goes from the protocol, its conformers and its mock together.
+  - Used only through something Periphery cannot see (a generated `$binding` of an iOS 27 `@State` property, reflection): put `// periphery:ignore - <reason>` on the line above it and call it out (end of this section).
+  - `n/a`: the scan failed (no index store, bad `.periphery.yml`) or `periphery` is missing; a failed scan prints its output above the table. Install the pinned binary with `scripts/ci/install-tools.sh build/tools/bin`; `scripts/quality` runs tools from there first.
+  - Re-scan alone with `periphery scan --skip-build --index-store-path build/DerivedData/Index.noindex/DataStore` (`.periphery.yml` supplies the rest). It reads the index of the last gate run, so it misses edits made since; the next `scripts/quality` run rebuilds it.
 - **Coverage**: add tests for the least-covered files (section 4) until the measured value clears the threshold.
 
 `persisted-shape-guard: ... warning: persisted shape changed` (pre-push, or a PR annotation) never fails a gate: add a migration (`AGENTS.md`, Data Migrations), or say in the PR why the change needs none.
 
-Lowering a threshold, adding a path to `scripts/coverage-exceptions.txt` or `scripts/fitness/test-mirror-exceptions.txt`, adding a `swiftlint:disable`, or regenerating the lint baseline to absorb a new violation is the user's call. When one is genuinely warranted, make it a separate, explicit line in the report and PR description with the reason.
+Lowering a threshold, adding a path to `scripts/coverage-exceptions.txt` or `scripts/fitness/test-mirror-exceptions.txt`, adding a `swiftlint:disable` or `// periphery:ignore`, or regenerating the lint baseline to absorb a new violation is the user's call. When one is genuinely warranted, make it a separate, explicit line in the report and PR description with the reason.
 
 ## 4. Find the least-covered files
 

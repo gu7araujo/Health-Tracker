@@ -11,6 +11,7 @@ This README is the human guide to building, testing and the **quality gate**. AI
 - [The quality gate (`scripts/quality`)](#the-quality-gate-scriptsquality)
 - [Fixing a red gate](#fixing-a-red-gate)
 - [Coverage thresholds and the ratchet](#coverage-thresholds-and-the-ratchet)
+- [Unused code](#unused-code)
 - [Lint rules](#lint-rules)
 - [Fitness functions](#fitness-functions)
 - [Git hooks](#git-hooks)
@@ -28,7 +29,13 @@ This README is the human guide to building, testing and the **quality gate**. AI
 brew install swiftlint swiftformat xcbeautify jq
 ```
 
-The versions are pinned in `scripts/tool-versions.env` (SwiftLint 0.65.0, SwiftFormat 0.61.1, Xcode 27.1). Pinning matters because formatter and linter rules change between releases: a different version can flag code that passes on another machine.
+and the pinned [Periphery](https://github.com/peripheryapp/periphery) binary for the Unused code gate. This installs it (sha256-checked), plus the pinned SwiftLint and SwiftFormat, into `build/tools/bin`, which only `scripts/quality` puts first on `PATH` (the hooks and a standalone `scripts/doctor` still use the Homebrew tools):
+
+```bash
+scripts/ci/install-tools.sh build/tools/bin
+```
+
+The versions are pinned in `scripts/tool-versions.env` (SwiftLint 0.65.0, SwiftFormat 0.61.1, Periphery 3.8.0, Xcode 27.1). Pinning matters because formatter and linter rules change between releases: a different version can flag code that passes on another machine.
 
 **2. Bootstrap the clone (once):**
 
@@ -62,7 +69,7 @@ One command decides whether the code is good enough. It prints a pass/fail table
 
 ```bash
 scripts/quality            # same as --fast
-scripts/quality --fast     # format, lint, fitness checks, unit tests, Domain/Data unit coverage
+scripts/quality --fast     # format, lint, fitness checks, unit tests, unused code, Domain/Data unit coverage
 scripts/quality --full     # everything in --fast, plus UI tests, app coverage, per-file floor
 scripts/quality --full --json            # also writes build/quality.json
 scripts/quality --simulator <udid>       # test on a specific simulator
@@ -78,12 +85,13 @@ Lint                                 0  <= 0       ✓
 Fitness                              0  <= 0       ✓
 Unit tests                           0  <= 0       ✓
 UI tests                             0  <= 0       ✓
-Domain unit line coverage       97.09%  >= 97.0%   ✓
-Data unit line coverage         90.85%  >= 90.8%   ✓
-App line coverage               96.57%  >= 95.0%   ✓
+Unused code                          0  <= 0       ✓
+Domain unit line coverage       97.60%  >= 97.6%   ✓
+Data unit line coverage         96.44%  >= 96.4%   ✓
+App line coverage               97.73%  >= 95.0%   ✓
 Per-file floor                  87.83%  >= 85.0%   ✓
 
-9/9 gates passed.
+10/10 gates passed.
 ```
 
 ### What each gate checks
@@ -95,6 +103,7 @@ Per-file floor                  87.83%  >= 85.0%   ✓
 | Fitness | both | `scripts/fitness/run` reports 0 [cross-file violations](#fitness-functions) |
 | Unit tests | both | `HealthTrackerTests` has 0 failures |
 | UI tests | `--full` | `HealthTrackerUITests` has 0 failures |
+| Unused code | both | `periphery scan` reports 0 unused declarations (see [Unused code](#unused-code)) |
 | Domain unit line coverage | both | Unit-test coverage of `HealthTracker/Domain/` ≥ `DOMAIN_UNIT_MIN` |
 | Data unit line coverage | both | Unit-test coverage of `HealthTracker/Data/` ≥ `DATA_UNIT_MIN` |
 | App line coverage | `--full` | Unit + UI coverage of the whole app ≥ `APP_LINE_MIN` (95%) |
@@ -138,6 +147,7 @@ Fix the code or the tests, never the threshold.
 | Lint | Fix each violation printed above the table. `swiftlint --fix` handles the autocorrectable ones. The rules and the baseline: [Lint rules](#lint-rules) |
 | Fitness | Fix each violation printed above the table: [Fitness functions](#fitness-functions) |
 | Unit / UI tests | Read the failures in `build/xcodebuild.log` or open `build/Test.xcresult` in Xcode. Re-run one test with `xcodebuild test ... -only-testing:HealthTrackerTests/DayDataTests` (see the `cli-test` skill) |
+| Unused code | Delete each declaration printed above the table (`<file>:<line>:<col>: warning: Unused ...`), with any mock member or test that only exercises it. See [Unused code](#unused-code) for false positives |
 | Coverage | Add tests for the least-covered files (below) |
 
 Find the least-covered files after any run:
@@ -174,6 +184,22 @@ scripts/quality --fast --update-baseline
 It raises the `*_UNIT_MIN` values to the newly measured coverage, rounded down to one decimal. It never lowers a threshold, and it only runs when every gate is green. Commit the changed `scripts/quality-thresholds.env` together with the tests that earned it.
 
 **Exceptions:** `scripts/coverage-exceptions.txt` lists files that were already below the per-file floor when the gate was introduced. Each line is a path plus a comment with its coverage. Remove a file from the list once it's covered. Adding a file to the list, or lowering a threshold, is a deliberate decision: call it out in the PR.
+
+## Unused code
+
+The Unused code gate runs [Periphery](https://github.com/peripheryapp/periphery) after the tests, so unused declarations (what AI agents tend to leave behind) fail the gate. `scripts/quality` builds into its own `build/DerivedData`, and Periphery scans that build's index store (`--skip-build`; Periphery's own build mode fails on Xcode 27.1). `.periphery.yml` sets `strict: true` and there is no baseline file: the count must be 0.
+
+Re-scan by hand after a gate run (it reads that run's index, so rebuild with `scripts/quality` after editing):
+
+```bash
+periphery scan --skip-build --index-store-path build/DerivedData/Index.noindex/DataStore
+```
+
+**False positives.** Periphery can't see a use that only generated code makes. The known case: an iOS 27 `@State` property used only through its `$binding` (the `@State` macro hides the use). Mark it `// periphery:ignore - <reason>` (see `MainView.swift`). The UI-test catalogs `AccessibilityID.swift` and `EnglishLabel.swift` are kept complete on purpose, with a file-level `// periphery:ignore:all`, which also hides any entry that goes dead later. Adding an ignore is a deliberate decision, like a `swiftlint:disable`: call it out in the PR.
+
+**Evaluated and skipped** (2026-10-23):
+- **Mutation testing (Muter):** no release since 2023; master inserts no mutants, and with the regression reverted it silently drops nested mutants and reports them as survivors. It would also cost ~25–35 macOS minutes a run. Revisit when upstream fixes it.
+- **Branch coverage:** Swift 6.4 emits no branch regions (`llvm-cov` reports 0/0 for every file), so there is nothing to measure. Region coverage is the planned replacement.
 
 ## Lint rules
 
@@ -333,14 +359,14 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `scripts/quality` | The quality gate (see above) |
 | `scripts/bootstrap` | One-time setup: enables `.githooks`, runs `doctor` |
 | `scripts/doctor` | Compares installed tools with the pins. Warns locally, fails when `CI=true` |
-| `scripts/tool-versions.env` | Pinned SwiftLint / SwiftFormat / Xcode versions |
+| `scripts/tool-versions.env` | Pinned SwiftLint / SwiftFormat / Periphery / Xcode versions |
 | `scripts/quality-thresholds.env` | Coverage thresholds and ratchets |
 | `scripts/coverage-exceptions.txt` | Files grandfathered below the per-file floor |
 | `scripts/fitness/` | [Fitness functions](#fitness-functions): the cross-file checks, `run`, and `test-mirror-exceptions.txt` |
 | `scripts/lib/` | Pieces used by `scripts/quality` (coverage math, simulator picking, report table). Each has tests |
 | `scripts/tests/run` | Runs every `scripts/tests/test-*.sh` (the scripts' own tests, no simulator needed) |
-| `scripts/ci/` | CI helpers: `install-tools.sh` (pinned SwiftLint/SwiftFormat), `select-xcode.sh` (pinned Xcode), `summary.sh` (gate table for the job summary) |
-| `.github/workflows/` | `ci.yml` (PRs, pushes to `main`) and `weekly.yml` (schedule) |
+| `scripts/ci/` | CI helpers: `install-tools.sh` (pinned SwiftLint/SwiftFormat, and Periphery on macOS), `select-xcode.sh` (pinned Xcode), `summary.sh` (gate table for the job summary) |
+| `.github/workflows/` | `ci.yml` (PRs, pushes to `main`), `weekly.yml` (schedule) and `claude-code-review.yml` (AI review of non-draft PRs, on Linux) |
 | `.githooks/` | pre-commit and pre-push hooks |
 | `.claude/hooks/format-swift.sh` | Claude Code hook that formats and lints each edited Swift file |
 
@@ -358,6 +384,7 @@ scripts/tests/run
 | Hooks don't run on commit or push | Run `scripts/bootstrap`, then check with `git config core.hooksPath` (should print `.githooks`) |
 | Commit refused: "unstaged changes" | A staged Swift file also has unstaged edits. `git add` it fully, or stash the extra edits |
 | A gate shows `n/a` | Nothing was measured: the build failed or a test bundle crashed. Read `build/xcodebuild.log` |
+| Unused code shows `n/a` | `periphery` is missing (run `scripts/ci/install-tools.sh build/tools/bin`) or the scan failed (its output is above the table) |
 | Push takes ~2 min | That's the pre-push `--fast` gate building and running the unit tests |
 | Too many `HT-*` simulators | `xcrun simctl list devices \| grep HT-`, then `xcrun simctl delete <name>` for branches you're done with |
 | Coverage gate red after deleting tests or code | Add tests for the least-covered files (see [Fixing a red gate](#fixing-a-red-gate)). Don't lower the threshold silently |

@@ -66,42 +66,6 @@ final class OSLogLogger: LoggerProtocol, Sendable {
             logger.error("\(message, privacy: .private)")
         }
     }
-
-    func debug(_ message: String, metadata: [String: Any]) {
-        if isDebugBuild {
-            logger.debug("\(message, privacy: .public) | metadata: \(String(describing: metadata), privacy: .public)")
-        } else {
-            logger.debug("\(message, privacy: .private) | metadata: \(String(describing: metadata), privacy: .private)")
-        }
-    }
-
-    func info(_ message: String, metadata: [String: Any]) {
-        if isDebugBuild {
-            logger.info("\(message, privacy: .public) | metadata: \(String(describing: metadata), privacy: .public)")
-        } else {
-            logger.info("\(message, privacy: .private) | metadata: \(String(describing: metadata), privacy: .private)")
-        }
-    }
-
-    func warning(_ message: String, metadata: [String: Any]) {
-        if isDebugBuild {
-            logger.warning(
-                "\(message, privacy: .public) | metadata: \(String(describing: metadata), privacy: .public)"
-            )
-        } else {
-            logger.warning(
-                "\(message, privacy: .private) | metadata: \(String(describing: metadata), privacy: .private)"
-            )
-        }
-    }
-
-    func error(_ message: String, metadata: [String: Any]) {
-        if isDebugBuild {
-            logger.error("\(message, privacy: .public) | metadata: \(String(describing: metadata), privacy: .public)")
-        } else {
-            logger.error("\(message, privacy: .private) | metadata: \(String(describing: metadata), privacy: .private)")
-        }
-    }
 }
 
 /// Helper function to detect debug build configuration.
