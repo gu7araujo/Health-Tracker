@@ -1,0 +1,11 @@
+# Domain/Data files exempt from scripts/fitness/test-mirror.sh (no HealthTrackerTests/**/<Name>Tests.swift).
+# One repo-relative path per line, then a comment with the reason.
+# Remove an entry once its file has a mirrored test; the check reports stale entries. Never add a file here silently.
+
+# Permanent: a protocol plus a 3-line bridge to the real UNUserNotificationCenter, which unit tests replace
+# with a fake (MockUserNotificationCenter); same reason as scripts/coverage-exceptions.txt.
+HealthTracker/Data/Services/UserNotificationCentering.swift
+
+# To burn down with unit tests:
+HealthTracker/Data/Services/NotificationPermissionManager.swift  # untested (19% coverage, in coverage-exceptions.txt)
+HealthTracker/Domain/UseCases/RequestNotificationPermissionUseCase.swift  # tested by RequestNotifPermissionUseCaseTests.swift; rename it to mirror

@@ -1,6 +1,6 @@
 ---
 name: quality-gate
-description: Run HealthTracker's quality gate (scripts/quality) and act on its result. Use when checking whether a task is done, when a gate or CI check is red (format, lint, tests, coverage), when finding the least-covered files, or when raising coverage thresholds.
+description: Run HealthTracker's quality gate (scripts/quality) and act on its result. Use when checking whether a task is done, when a gate or CI check is red (format, lint, fitness, tests, coverage), when finding the least-covered files, or when raising coverage thresholds.
 ---
 
 # Quality gate
@@ -10,7 +10,7 @@ description: Run HealthTracker's quality gate (scripts/quality) and act on its r
 ## 1. Run it
 
 ```bash
-scripts/quality --fast --json   # iterate: format, lint, unit tests, Domain/Data unit coverage (~2 min)
+scripts/quality --fast --json   # iterate: format, lint, fitness, unit tests, Domain/Data unit coverage (~2 min)
 scripts/quality --full --json   # done: everything in --fast, plus UI tests, app coverage, per-file floor (~8 min)
 ```
 
@@ -39,10 +39,16 @@ Every gate turns green through code or tests:
   - A **custom rule** (`domain_no_ui_frameworks`, `presentation_no_data_layer`, ...) is an architecture rule: its message names the `AGENTS.md` rule it enforces. Read that rule and restructure the code to follow it.
   - A **metrics** violation (`closure_body_length`, `cyclomatic_complexity`, `function_body_length`, ...) means split the code: extract a SwiftUI subview, a helper, or a type.
   - `.swiftlint-baseline.json` freezes the pre-existing violations, matched by file, rule, line text and message, so editing a baselined closure or function can resurface its violation. Fix it then, and regenerate the baseline in the same commit with the command in `AGENTS.md` (Quality Gates).
+- **Fitness**: `scripts/fitness/run` prints each violation as `<check>: <file>[:<line>]: <message>`:
+  - `localization-parity`, `missing key "k"` / `missing file`: add that key (or `.strings` file) to the named locale, translated.
+  - `test-mirror`, `no HealthTrackerTests/**/<Name>Tests.swift`: write that test file for the Domain/Data type. `... is not a unique name`: put the test at the mirrored path the message names. `stale exception`: delete that line from `scripts/fitness/test-mirror-exceptions.txt`.
+  - `accessibility-ids`, `"<id>" not declared in HealthTracker/Presentation/AccessibilityID.swift`: make the UI tests' `AccessibilityID` match the app's (rename or remove the stale ID, or add the identifier to the app).
 - **Unit tests / UI tests**: the failures are in `build/xcodebuild.log`; reproduce one with the `cli-test` skill's single-test command.
 - **Coverage**: add tests for the least-covered files (section 4) until the measured value clears the threshold.
 
-Lowering a threshold, adding a path to `scripts/coverage-exceptions.txt`, adding a `swiftlint:disable`, or regenerating the lint baseline to absorb a new violation is the user's call. When one is genuinely warranted, make it a separate, explicit line in the report and PR description with the reason.
+`persisted-shape-guard: ... warning: persisted shape changed` (pre-push, or a PR annotation) never fails a gate: add a migration (`AGENTS.md`, Data Migrations), or say in the PR why the change needs none.
+
+Lowering a threshold, adding a path to `scripts/coverage-exceptions.txt` or `scripts/fitness/test-mirror-exceptions.txt`, adding a `swiftlint:disable`, or regenerating the lint baseline to absorb a new violation is the user's call. When one is genuinely warranted, make it a separate, explicit line in the report and PR description with the reason.
 
 ## 4. Find the least-covered files
 

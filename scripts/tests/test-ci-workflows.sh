@@ -31,4 +31,17 @@ for workflow in "$ROOT"/.github/workflows/*.yml; do
     fail "$name: Summary step does not call summary.sh unconditionally:"$'\n'"$step"
 done
 
+# The Linux lint job runs the fitness checks, and on PRs the warn-only persisted-shape guard
+# against the merge commit's first parent (the PR base): checkout fetch-depth 2 brings that parent
+# (persist-credentials: false leaves no token for a later `git fetch` in this private repo).
+CI="$ROOT/.github/workflows/ci.yml"
+lint="$(awk '/^  lint:/ { found = 1; next } found && /^  [a-z]/ { exit } found { print }' "$CI")"
+grep -qE '^ *fetch-depth: 2 *$' <<<"$lint" || fail "ci.yml lint job: checkout needs fetch-depth: 2 for the merge commit's parent"
+grep -qE '^ *run: scripts/fitness/run *$' <<<"$lint" || fail "ci.yml lint job: no 'run: scripts/fitness/run' step"
+guard="$(awk '/^ *- name: Persisted shape *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$lint")"
+grep -qE "^ *if: github.event_name == 'pull_request' *\$" <<<"$guard" ||
+  fail "ci.yml lint job: 'Persisted shape' step must run on pull_request only"
+grep -qE '^ *run: scripts/fitness/persisted-shape-guard.sh HEAD\^1 *$' <<<"$guard" ||
+  fail "ci.yml lint job: 'Persisted shape' step must run the guard against HEAD^1 (the PR base)"
+
 [ "$failures" -eq 0 ]

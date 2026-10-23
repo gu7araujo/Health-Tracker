@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Refuses commits on main, formats staged Swift files with SwiftFormat and
-# re-stages them, then lints them with SwiftLint --strict.
+# re-stages them, then lints them with SwiftLint --strict. When a staged change
+# touches a .swift or .strings file, the cross-file fitness checks
+# (scripts/fitness/run) must pass too.
 set -euo pipefail
 
 if [ "$(git symbolic-ref --short -q HEAD || true)" = "main" ]; then
@@ -9,6 +11,21 @@ if [ "$(git symbolic-ref --short -q HEAD || true)" = "main" ]; then
 fi
 
 cd "$(git rev-parse --show-toplevel)"
+
+# Any staged .swift/.strings change, deletions and renames included, can break a cross-file
+# rule (key parity, test mirroring, accessibility IDs). The checks read the staged snapshot, so an
+# unstaged test or translation cannot make the commit look complete.
+if [ -x scripts/fitness/run ] && [ -n "$(git diff --cached --name-only -- '*.swift' '*.strings')" ]; then
+  staged="$(mktemp -d)"
+  trap 'rm -rf "$staged"' EXIT
+  # Export the tree the commit will record: checkout-index would also write intent-to-add
+  # (`git add -N`) entries as empty files, making an uncommitted test look present.
+  git archive "$(git write-tree)" | tar -x -C "$staged"
+  if ! scripts/fitness/run "$staged" >&2; then
+    echo "pre-commit: fitness checks failed; fix the violations above (scripts/fitness/run)" >&2
+    exit 1
+  fi
+fi
 
 files=()
 while IFS= read -r -d '' file; do

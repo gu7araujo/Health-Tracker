@@ -68,9 +68,10 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
 `scripts/quality` is the one gate: it prints a pass/fail table and exits 0 only when every gate passes. Reading its output, chasing coverage, and fixing a red gate: `quality-gate` skill.
 
 - Run `scripts/bootstrap` once per clone: it installs the git hooks and checks tool versions.
-- Iterate with `scripts/quality --fast` (format, lint, unit tests, Domain/Data coverage).
+- Iterate with `scripts/quality --fast` (format, lint, fitness, unit tests, Domain/Data coverage).
+- The Fitness gate (`scripts/fitness/run`) checks the cross-file rules linked from the layer `AGENTS.md` files (localization parity, test mirror, UI-test accessibility IDs); pre-commit and CI `lint` run it too.
 - A task is **done** when `scripts/quality --full` exits 0. Paste its gate table in your final report and PR.
-- Fix a red gate in code or tests. Lowering a threshold, editing `scripts/coverage-exceptions.txt`, or adding a `swiftlint:disable` is a decision for the user: call each one out explicitly in the report and PR.
+- Fix a red gate in code or tests. Lowering a threshold, editing `scripts/coverage-exceptions.txt` or `scripts/fitness/test-mirror-exceptions.txt`, or adding a `swiftlint:disable` is a decision for the user: call each one out explicitly in the report and PR.
 - Lint enforces size/complexity limits and the layer rules as SwiftLint rules (all in `.swiftlint.yml`). `.swiftlint-baseline.json` freezes the pre-existing violations, so only new ones fail. Regenerating the baseline to absorb a new violation is the user's call, like lowering a threshold. Burning one down is fixing it and regenerating the baseline in the same commit, from the repo root (the `jq` keeps paths repo-relative):
 
   ```bash
@@ -81,13 +82,14 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
 - The git hooks refuse commits and pushes to `main` and run `--fast` before every push. Let them run: no `--no-verify`, no `SKIP_QUALITY`. The push takes ~2 min, past the Bash tool's 120 s default, so run `git push` with a 600000 ms timeout.
 - Open PRs as **draft**. Mark one ready only after a green local `scripts/quality --full`: push, wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run (a push and `gh pr ready` in the same second cancelled the ready run once; a PR touching only docs or agent config gets no run, so stop with the link), then `gh pr ready <n>` and `gh pr checks <n> --watch`. Green: stop there with the link; the user approves and merges every PR. Red: follow the `quality-gate` skill's CI section. Each ready run costs ~11 macOS min, so a PR gets at most **two ready runs** without the user's go-ahead.
 
-**CI** (GitHub Actions, ~200 macOS min/month on the Free plan). The Linux `lint` job runs format, lint, ShellCheck and actionlint on every PR and push that touches more than docs or agent config. Draft and Dependabot PRs run only `lint`. Ready PRs also run `test` (`scripts/quality --full` on `runs-on: xcode-27`), pushes to `main` run `--fast`, and the weekly schedule runs `--full`. A red check is read and reproduced through the `quality-gate` skill's CI section.
+**CI** (GitHub Actions, ~200 macOS min/month on the Free plan). The Linux `lint` job runs format, lint, fitness, ShellCheck and actionlint on every PR and push that touches more than docs or agent config. Draft and Dependabot PRs run only `lint`. Ready PRs also run `test` (`scripts/quality --full` on `runs-on: xcode-27`), pushes to `main` run `--fast`, and the weekly schedule runs `--full`. A red check is read and reproduced through the `quality-gate` skill's CI section.
 
 ## Data Migrations
 
 - Any change that alters the persisted JSON structure (renaming/removing/retyping a field, changing an encoding format, restructuring `DayData`/`Meal`/`Workout`/`Mood` or `DayDataContainer`) must consider adding a migration in `HealthTracker/Data/Migration/DataMigration.swift`.
 - Follow the existing pattern: a private migration function guarded by its own `UserDefaults` completion flag, called from `migrateIfNeeded()`.
 - The goal is that existing users' JSON files on disk/iCloud upgrade cleanly without data loss or breaking the app on launch.
+- `scripts/fitness/persisted-shape-guard.sh` warns in pre-push and on PRs when a persisted type's shape changes without `Data/Migration/` or `DataMigrationTests` changing. Answer it with a migration, or say in the PR why none is needed.
 
 ## Committing
 

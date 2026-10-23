@@ -43,6 +43,16 @@ printf '#!/bin/sh\necho "$*" >>"%s"\ncat >/dev/null\n' "$TMP/xcbeautify.calls" >
 printf '#!/bin/sh\necho "0/1 files require formatting."\n' >"$TMP/bin/swiftformat"
 chmod +x "$TMP/bin/"*
 
+# fitness_stub <exit> [lines...]: scripts/fitness/run prints the lines and exits <exit>. The copied
+# repo has no app sources for the real checks to read, so every run_quality uses a stub.
+fitness_stub() {
+  local code="$1"
+  shift
+  { printf '#!/bin/sh\n'; printf "echo '%s'\n" "$@"; printf 'exit %s\n' "$code"; } >"$REPO/scripts/fitness/run"
+  chmod +x "$REPO/scripts/fitness/run"
+}
+fitness_stub 0 '0 violation(s)'
+
 # run_quality <lint json> [args...] -> sets out, code. CI comes from $CI_ENV (cleared by default: the
 # stubs are not the pinned versions, so doctor would fail) and GITHUB_ACTIONS from $GHA, so the test
 # behaves the same inside a GitHub Actions job.
@@ -71,11 +81,30 @@ run_quality '[{"file":"A.swift","line":1,"severity":"Error","reason":"r","rule_i
 run_quality '[]' --fast --update-baseline
 [ "$(cat "$REPO/scripts/quality-thresholds.env")" != "$before" ] || fail "--update-baseline should raise thresholds on a green run: $out"
 
+# Fitness: a "<= 0" gate on the cross-file checks' violation count, right after Lint, whose
+# violations go to the terminal like lint's.
+run_quality '[]' --fast
+[ "$code" -eq 0 ] || fail "a clean fitness run should pass the gate (got $code): $out"
+grep -qE '^Fitness +0  <= 0 +✓$' <<<"$out" || fail "--fast should report a passing Fitness row, got: $out"
+[ "$(grep -E '^(Lint|Fitness) ' <<<"$out" | cut -d' ' -f1 | tr '\n' ' ')" = "Lint Fitness " ] ||
+  fail "the Fitness row should come right after Lint, got: $out"
+fitness_stub 1 'localization-parity: pt-BR.lproj/Localizable.strings: missing key "k" (present in en.lproj)' \
+  'test-mirror: HealthTracker/Domain/A.swift: no HealthTrackerTests/**/ATests.swift' '2 violation(s)'
+run_quality '[]' --fast
+[ "$code" -eq 1 ] || fail "fitness violations should fail the gate (got $code)"
+grep -qE '^Fitness +2  <= 0 +✗$' <<<"$out" || fail "--fast should report a failing Fitness row of 2, got: $out"
+[[ "$out" == *'missing key "k"'*"no HealthTrackerTests/**/ATests.swift"* ]] ||
+  fail "fitness violations should be printed, got: $out"
+fitness_stub 2 'boom'
+run_quality '[]' --fast
+grep -qE '^Fitness +n/a  <= 0 +✗$' <<<"$out" || fail "a fitness run without a count should report n/a, got: $out"
+fitness_stub 0 '0 violation(s)'
+
 # --full is a superset of --fast: it also checks the Domain/Data unit ratchets, measured on a
 # unit-only run, beside the app coverage and per-file floor measured on the merged runs.
 : >"$TMP/xcodebuild.calls"
 run_quality '[]' --full
-for gate in "Unit tests" "UI tests" "Domain unit line coverage" "Data unit line coverage" "App line coverage" "Per-file floor"; do
+for gate in "Fitness" "Unit tests" "UI tests" "Domain unit line coverage" "Data unit line coverage" "App line coverage" "Per-file floor"; do
   [[ "$out" == *"$gate "* ]] || fail "--full should report '$gate', got: $out"
 done
 [ "$(grep -c -- '-only-testing:HealthTrackerTests' "$TMP/xcodebuild.calls")" -eq 1 ] &&

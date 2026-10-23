@@ -19,7 +19,7 @@ Black-box and isolated — each test drives the shipping app through its accessi
 </rule_1>
 
 <rule_2>
-**TARGET BY IDENTIFIER, ASSERT BY LABEL** — locate elements with `AccessibilityID` identifiers; assert on visible content via `element.label.contains(...)`. Alert buttons and menu picker options surface no identifier, so select and assert those through `EnglishLabel`. Both files are hand-mirrored — when the app adds or renames an identifier, update `AccessibilityID`; when a user-facing string changes, update `EnglishLabel` to match `en.lproj/Localizable.strings`.
+**TARGET BY IDENTIFIER, ASSERT BY LABEL** — locate elements with `AccessibilityID` identifiers; assert on visible content via `element.label.contains(...)`. Alert buttons and menu picker options surface no identifier, so select and assert those through `EnglishLabel`. Both files are hand-mirrored — when the app adds or renames an identifier, update `AccessibilityID` (`scripts/fitness/accessibility-ids.sh` fails on an ID the app doesn't declare); when a user-facing string changes, update `EnglishLabel` to match `en.lproj/Localizable.strings`.
 </rule_2>
 
 <rule_3>

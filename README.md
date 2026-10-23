@@ -12,6 +12,7 @@ This README is the human guide to building, testing and the **quality gate**. AI
 - [Fixing a red gate](#fixing-a-red-gate)
 - [Coverage thresholds and the ratchet](#coverage-thresholds-and-the-ratchet)
 - [Lint rules](#lint-rules)
+- [Fitness functions](#fitness-functions)
 - [Git hooks](#git-hooks)
 - [Xcode build phase](#xcode-build-phase)
 - [Continuous integration](#continuous-integration)
@@ -47,7 +48,7 @@ Running `scripts/bootstrap` again is safe.
 git switch -c feat/my-change            # 1. branch: committing on main is refused
 # ...edit code and tests (red → green)...
 scripts/quality --fast                  # 2. iterate: ~2 min
-git commit -m "..."                     # 3. pre-commit hook formats + lints staged Swift files
+git commit -m "..."                     # 3. pre-commit hook formats + lints staged Swift files, runs fitness checks
 scripts/quality --full                  # 4. done check: ~8 min, the same bar CI uses
 git push -u origin feat/my-change       # 5. pre-push hook re-runs --fast; pushing to main is refused
 gh pr create --draft                    # 6. open as draft, mark ready when --full is green
@@ -61,7 +62,7 @@ One command decides whether the code is good enough. It prints a pass/fail table
 
 ```bash
 scripts/quality            # same as --fast
-scripts/quality --fast     # format, lint, unit tests, Domain/Data unit coverage
+scripts/quality --fast     # format, lint, fitness checks, unit tests, Domain/Data unit coverage
 scripts/quality --full     # everything in --fast, plus UI tests, app coverage, per-file floor
 scripts/quality --full --json            # also writes build/quality.json
 scripts/quality --simulator <udid>       # test on a specific simulator
@@ -74,14 +75,15 @@ Example `--full` output:
 ```
 Format                               0  <= 0       ✓
 Lint                                 0  <= 0       ✓
+Fitness                              0  <= 0       ✓
 Unit tests                           0  <= 0       ✓
 UI tests                             0  <= 0       ✓
 Domain unit line coverage       97.09%  >= 97.0%   ✓
-Data unit line coverage         85.84%  >= 85.8%   ✓
-App line coverage               95.60%  >= 95.0%   ✓
+Data unit line coverage         90.85%  >= 90.8%   ✓
+App line coverage               96.57%  >= 95.0%   ✓
 Per-file floor                  87.83%  >= 85.0%   ✓
 
-8/8 gates passed.
+9/9 gates passed.
 ```
 
 ### What each gate checks
@@ -90,6 +92,7 @@ Per-file floor                  87.83%  >= 85.0%   ✓
 |---|---|---|
 | Format | both | `swiftformat --lint` finds no file that needs formatting |
 | Lint | both | `swiftlint lint --strict` reports 0 violations outside the [baseline](#lint-rules) (warnings count) |
+| Fitness | both | `scripts/fitness/run` reports 0 [cross-file violations](#fitness-functions) |
 | Unit tests | both | `HealthTrackerTests` has 0 failures |
 | UI tests | `--full` | `HealthTrackerUITests` has 0 failures |
 | Domain unit line coverage | both | Unit-test coverage of `HealthTracker/Domain/` ≥ `DOMAIN_UNIT_MIN` |
@@ -133,6 +136,7 @@ Fix the code or the tests, never the threshold.
 |---|---|
 | Format | `swiftformat . --swift-version 6` |
 | Lint | Fix each violation printed above the table. `swiftlint --fix` handles the autocorrectable ones. The rules and the baseline: [Lint rules](#lint-rules) |
+| Fitness | Fix each violation printed above the table: [Fitness functions](#fitness-functions) |
 | Unit / UI tests | Read the failures in `build/xcodebuild.log` or open `build/Test.xcresult` in Xcode. Re-run one test with `xcodebuild test ... -only-testing:HealthTrackerTests/DayDataTests` (see the `cli-test` skill) |
 | Coverage | Add tests for the least-covered files (below) |
 
@@ -225,6 +229,25 @@ tmp=$(mktemp) && jq --arg p "file://$PWD/" 'map(.violation.location.file |= ltri
 
 Regenerating the baseline to make a new violation pass is a deliberate decision, like lowering a threshold: call it out in the PR. When the backlog is empty, delete the file and the `baseline:` line in `.swiftlint.yml`.
 
+## Fitness functions
+
+Some rules span several files, which SwiftLint can't see. Small bash scripts in `scripts/fitness/` check them; each has fixture tests in `scripts/tests/test-fitness-*.sh`.
+
+| Check | Fails when | Enforces |
+|---|---|---|
+| `localization-parity.sh` | A `.strings` file, or a key in one, exists in `en.lproj` but not `pt-BR.lproj`, or the reverse | `Presentation/AGENTS.md` localization |
+| `test-mirror.sh` | A Domain/Data `.swift` file has no `HealthTrackerTests/**/<Name>Tests.swift`. Protocol-only files don't count. A name shared with another app file needs its test at the mirrored path, `HealthTrackerTests/<dirs>/<Name>Tests.swift` | `HealthTrackerTests/AGENTS.md` (mirrors the production tree) |
+| `accessibility-ids.sh` | An ID in `HealthTrackerUITests/Support/AccessibilityID.swift` isn't declared in `HealthTracker/Presentation/AccessibilityID.swift` | `HealthTrackerUITests/AGENTS.md` rule_2 |
+| `persisted-shape-guard.sh` (warns only) | A `Codable` member of `DayData`, `RecordedDayData`, `Meal`, `Workout`, `Mood` or `DayDataContainer` changed, but neither `HealthTracker/Data/Migration/` nor `DataMigrationTests` did | `AGENTS.md` Data Migrations |
+
+`scripts/fitness/run` runs the first three, prints one `<check>: <file>[:<line>]: <message>` line per violation and then `N violation(s)`, and exits 1 if N > 0.
+
+**Exceptions:** `scripts/fitness/test-mirror-exceptions.txt` lists the Domain/Data files allowed to have no mirrored test, one path per line with a reason. The check reports an entry as stale once its file has a test or is gone. Adding an entry is a deliberate decision, like adding a coverage exception: call it out in the PR.
+
+**Where they run:**
+- `scripts/fitness/run`: the Fitness gate of `scripts/quality` (both modes), the pre-commit hook (when a `.swift` or `.strings` file is staged), and the CI `lint` job.
+- `persisted-shape-guard.sh <base-ref>`: the pre-push hook (against `origin/main`) and the CI `lint` job on PRs (against the PR's base, as `::warning` annotations). It never blocks. Answer a warning with a migration, or explain in the PR why none is needed.
+
 ## Git hooks
 
 Enabled by `scripts/bootstrap`. They live in `.githooks/`.
@@ -233,10 +256,12 @@ Enabled by `scripts/bootstrap`. They live in `.githooks/`.
 - refuses to commit on `main`;
 - refuses when a staged `.swift` file also has unstaged changes, because re-staging after formatting would sweep those changes into the commit (stage or stash them first);
 - formats the staged `.swift` files with SwiftFormat and re-stages them;
-- lints them with `swiftlint --strict`, and fails on any violation.
+- lints them with `swiftlint --strict`, and fails on any violation;
+- when a `.swift` or `.strings` file is staged, runs `scripts/fitness/run` on the staged snapshot (unstaged or `git add -N` tests and translations don't count), and fails on any violation.
 
 **pre-push** (~2 min):
 - refuses to push to `main`;
+- runs `scripts/fitness/persisted-shape-guard.sh origin/main`, which only warns (also with `SKIP_QUALITY=1`);
 - runs `scripts/quality --fast`, and blocks the push if a gate is red.
 
 Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). CI still runs the gate once the PR is ready (draft PRs run only lint). Use it rarely, and run `--full` before marking the PR ready.
@@ -257,7 +282,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 | Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full` |
 | Manual (**Run workflow** in the Actions tab) | ✅ (`ci.yml`) | `scripts/quality --full` |
 
-**`lint`** runs on `ubuntu-24.04` (~1 min). It installs the pinned SwiftLint and SwiftFormat (`scripts/ci/install-tools.sh`), checks formatting, and lints. SwiftLint violations show inline on the PR diff; SwiftFormat failures show in the step log. Linux SwiftLint skips the rules that need SourceKit (`custom_rules`, `statement_position`), so this job is a fast pre-filter: the full lint runs again in `test`. It also runs ShellCheck on the scripts and hooks and actionlint on the workflows.
+**`lint`** runs on `ubuntu-24.04` (~1 min). It installs the pinned SwiftLint and SwiftFormat (`scripts/ci/install-tools.sh`), checks formatting, lints, and runs the [fitness checks](#fitness-functions) (on PRs also the persisted-shape guard, which only warns). SwiftLint violations show inline on the PR diff; SwiftFormat failures show in the step log. Linux SwiftLint skips the rules that need SourceKit (`custom_rules`, `statement_position`), so this job is a fast pre-filter: the full lint runs again in `test`. It also runs ShellCheck on the scripts and hooks and actionlint on the workflows.
 
 **`test`** runs only after `lint` passes, on `runs-on: xcode-27` (macOS 26). It selects the pinned Xcode (`scripts/ci/select-xcode.sh`) and installs the pinned tools. Then it runs the scripts' own tests (`scripts/tests/run`) and `scripts/quality` with `CI=true`, so `scripts/doctor` fails on any version drift and compiler warnings fail the build (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `GCC_TREAT_WARNINGS_AS_ERRORS`; locally they stay warnings). The gate table appears in the run's summary. Compile errors and test failures are rendered as GitHub annotations (`xcbeautify --renderer github-actions`).
 
@@ -311,6 +336,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `scripts/tool-versions.env` | Pinned SwiftLint / SwiftFormat / Xcode versions |
 | `scripts/quality-thresholds.env` | Coverage thresholds and ratchets |
 | `scripts/coverage-exceptions.txt` | Files grandfathered below the per-file floor |
+| `scripts/fitness/` | [Fitness functions](#fitness-functions): the cross-file checks, `run`, and `test-mirror-exceptions.txt` |
 | `scripts/lib/` | Pieces used by `scripts/quality` (coverage math, simulator picking, report table). Each has tests |
 | `scripts/tests/run` | Runs every `scripts/tests/test-*.sh` (the scripts' own tests, no simulator needed) |
 | `scripts/ci/` | CI helpers: `install-tools.sh` (pinned SwiftLint/SwiftFormat), `select-xcode.sh` (pinned Xcode), `summary.sh` (gate table for the job summary) |
