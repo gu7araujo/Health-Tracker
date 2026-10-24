@@ -16,7 +16,7 @@ For current, version-accurate Apple API docs (especially fast-moving iOS 26 APIs
 
 ## Workflow
 
-The core loop is **red → green**: write a failing test, then make it pass. Follow it always: TDD skill.
+The core loop is **red → green**: write a failing test, then make it pass. Follow it always: tdd skill.
 
 1. Before coding, state how you'll verify the change — which unit/UI test, which bash command, screenshot, skill, or tool, etc.
 2. Write that test first and watch it fail (**red**).

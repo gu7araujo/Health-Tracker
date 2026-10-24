@@ -1,38 +1,54 @@
 ---
 name: tdd
-description: Test-driven development. Use when the user wants to build features or fix bugs test-first, mentions "red-green-refactor", or wants integration tests.
+description: Test-driven development, the red → green loop. Use when writing or changing production code (a feature or a bug fix) or when asked to work test-first.
 ---
 
 # Test-Driven Development
 
-TDD is the red → green loop. This skill is the reference that makes that loop produce tests worth keeping: what a good test is, where tests go, the anti-patterns, and the rules of the loop. Every section applies on every cycle: consult them before and during the loop, not after.
-
-When exploring the codebase, read `CONTEXT.md` (if it exists) so test names and interface vocabulary match the project's domain language, and respect ADRs in the area you're touching.
-
-## What a good test is
-
-Tests verify behavior through public interfaces, not implementation details. Code can change entirely; tests shouldn't. A good test reads like a specification: "user can checkout with valid cart" tells you exactly what capability exists, and it survives refactors because it doesn't care about internal structure.
-
-See [tests.md](tests.md) for examples and [mocking.md](mocking.md) for mocking guidelines.
-
-## Seams: where tests go
-
-A **seam** is the public boundary you test at: the interface where you observe behavior without reaching inside. Tests live at seams, never against internals.
-
-**Test only at pre-agreed seams.** Before writing any test, write down the seams under test and confirm them with the user. No test is written at an unconfirmed seam. You can't test everything, so agreeing the seams up front is how testing effort lands on the critical paths and complex logic instead of every edge case.
-
-Ask: "What's the public interface, and which seams should we test?"
-
-When the shape of that interface is itself in question (how deep the module is, where the seam belongs, what the interface should expose), call the Skill tool with "codebase-design" for the vocabulary. It is the shared source of the module, interface, depth, seam, adapter, leverage and locality terms, and it is a reference to consult, not a session to run.
-
-## Anti-patterns
-
-- **Implementation-coupled**: mocks internal collaborators, tests private methods, or verifies through a side channel (querying the database instead of using the interface). The tell: the test breaks when you refactor but behavior hasn't changed.
-- **Tautological**: the assertion recomputes the expected value the way the code does (`expect(add(a, b)).toBe(a + b)`, a snapshot derived by hand the same way, a constant asserted equal to itself), so it passes by construction and can never disagree with the code. Expected values must come from an independent source of truth: a known-good literal, a worked example, the spec.
-- **Horizontal slicing**: writing all tests first, then all implementation. Bulk tests verify _imagined_ behavior: you test the _shape_ of things rather than user-facing behavior, the tests go insensitive to real changes, and you commit to test structure before understanding the implementation. Work in **vertical slices** instead: one test → one implementation → repeat, each test a **tracer bullet** that responds to what the last cycle taught you.
+TDD is the red → green loop from the root `AGENTS.md` **Workflow**. This skill is the reference that makes each cycle produce tests worth keeping. Every section applies on every cycle; consult it before and during the loop. The test suite's mechanics (Swift Testing, `Mocks/` knobs, `TestDataBuilder`, `subject_expectation` names, `@MainActor`) live in `HealthTrackerTests/AGENTS.md`; follow them.
 
 ## Rules of the loop
 
-- **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
-- **One slice at a time.** One seam, one test, one minimal implementation per cycle.
-- **Refactoring is not part of the loop.** It belongs to the review stage (see the `code-review` skill), not the red → green implementation cycle.
+- **Red before green.** Write the test, run it, and watch it fail for the reason you expect. Then write only enough code to pass it. A bug fix starts red: a regression test that reproduces the bug.
+- **One slice at a time.** One behaviour, one test, one minimal implementation per cycle. Each test is a **tracer bullet** through the real path, so the next cycle responds to what this one taught you.
+- **Green ends the cycle.** Cleanup is a separate step after green (the `simplify` skill), with the tests already guarding it.
+
+## What a good test is
+
+A good test exercises a type's **public interface** (what callers use, reached through `@testable import`) and states a behaviour as a specification: `status_isIncomplete_whenOnlyOneCategoryFilled` says what capability exists. It survives refactors because it never depends on internal structure.
+
+```swift
+@Test func updateWater_zeroRemovesWater() {
+    let (viewModel, mockRepository) = createViewModel()
+    mockRepository.loadAllDaysResult = []
+    viewModel.loadData()
+    viewModel.selectedDate = TestDataBuilder.fixedDate
+
+    viewModel.updateWater(2.0)
+    viewModel.updateWater(0)
+
+    #expect(viewModel.currentDayData?.water == nil)
+}
+```
+
+Asserting a mock's `...Called` / `...CalledWith` flag is behaviour when the interaction is the contract: `SaveDayDataUseCase` exists to hand days to the repository, so `mockRepository.saveCalledWithDays` is its observable output.
+
+## Anti-patterns
+
+- **Implementation-coupled**: the test reaches past the interface, such as widening `DayData.meetsPoorCriteria` from `private` so a test can call it, instead of asserting `status`. The tell: a refactor that keeps behaviour breaks the test.
+- **Tautological**: the expected value is recomputed the way the code computes it, so the test passes by construction and can never disagree with the code. Expected values come from an independent source: a literal, a worked example, the spec.
+
+  ```swift
+  var day = DayData(date: TestDataBuilder.fixedDate)
+  day.water = 1.5
+
+  // Tautological: rebuilds the status rule
+  let filled = [!day.meals.isEmpty, day.water != nil, !day.workouts.isEmpty, day.mood != nil]
+      .filter { $0 }.count
+  #expect(day.status == (filled < 2 ? .incomplete : .poor))
+
+  // Independent literal
+  #expect(day.status == .incomplete)
+  ```
+
+- **Horizontal slicing**: writing every test first, then every implementation. Bulk tests verify _imagined_ behaviour, lock in a test structure before the implementation is understood, and stay green through real changes. Work in **vertical slices**: one test, one implementation, repeat.
