@@ -5,7 +5,7 @@ description: Run HealthTracker's quality gate (scripts/quality) and act on its r
 
 # Quality gate
 
-`scripts/quality` runs every gate once and prints a table; exit 0 means all passed. Thresholds live in `scripts/quality-thresholds.env`, per-file floor exceptions in `scripts/coverage-exceptions.txt`, usage in `scripts/quality --help`.
+`scripts/quality` runs every gate once and prints a table; exit 0 means all passed. Thresholds live in `scripts/quality-thresholds.env`, per-file floor exceptions in `scripts/coverage-exceptions.txt`, usage in `scripts/quality --help`. The per-file floor fails on a `stale exception` (a listed file now at or above `FILE_FLOOR`): delete that line from the exceptions file.
 
 ## 1. Run it
 
