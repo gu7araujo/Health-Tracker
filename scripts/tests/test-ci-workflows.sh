@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Fitness test for .github/workflows: every Summary step runs under if: always() and calls
 # scripts/ci/summary.sh unconditionally, so a run that stops before build/quality.json is
-# written still gets summary.sh's "no report" summary instead of a blank one.
+# written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
+# wiring, NUL-safe xargs, weekly/ci test-step parity, the weekly failure issue, action pinning.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -49,6 +50,39 @@ while IFS= read -r line; do
   fail "action not pinned by SHA with a '# v...' comment: $line"
 done < <(grep -HnE '^[^#]*uses: ' "$ROOT"/.github/workflows/*.yml |
   grep -vE 'uses: [^@ ]+@[0-9a-f]{40} # v[0-9][^ ]* *$' | sed "s|^$ROOT/||")
+
+# File lists piped to xargs are NUL-separated, so a filename with spaces stays one argument.
+while IFS= read -r line; do
+  fail "pipe a NUL-separated list (grep -Z ... | xargs -0): $line"
+done < <(grep -HnE '\| *xargs' "$ROOT"/.github/workflows/*.yml |
+  grep -vE 'grep -[A-Za-z]*Z[A-Za-z]* .*\| *xargs -0 ' | sed "s|^$ROOT/||")
+
+# test_steps <workflow>: the test job's steps, with the quality mode spelled --full and without
+# weekly.yml's red-run notification.
+test_steps() {
+  awk '/^  test:/ { job = 1; next } job && /^  [a-z]/ { exit } job && /^    steps:/ { steps = 1; next } steps { print }' "$1" |
+    awk '/^ *- name: Notify on failure *$/ { skip = 1; next } skip && /^      - / { skip = 0 } !skip' |
+    sed 's|scripts/quality "\$MODE"|scripts/quality --full|'
+}
+# The weekly run copies ci.yml's test job steps (see weekly.yml); they must not drift apart.
+WEEKLY="$ROOT/.github/workflows/weekly.yml"
+drift="$(diff <(test_steps "$CI") <(test_steps "$WEEKLY"))" ||
+  fail "weekly.yml's test steps drifted from ci.yml's (< ci.yml, > weekly.yml):"$'\n'"$drift"
+[ -n "$(test_steps "$CI")" ] || fail "ci.yml: no test job steps found"
+
+# A red scheduled run opens (or comments on) an issue, so it does not go unnoticed.
+notify="$(awk '/^ *- name: Notify on failure *$/ { found = 1; next } found && /^ *- / { exit } found { print }' "$WEEKLY")"
+grep -qE "^ *if: failure\(\) && github.event_name == 'schedule' *\$" <<<"$notify" ||
+  fail "weekly.yml: needs a 'Notify on failure' step with if: failure() && github.event_name == 'schedule'"
+grep -q 'gh issue create' <<<"$notify" || fail "weekly.yml: 'Notify on failure' should open an issue"
+grep -qE '^ *issues: write *$' "$WEEKLY" || fail "weekly.yml: opening an issue needs 'issues: write'"
+# A hung simulator must fail the Quality gate step, not time out the job: a job timeout is a
+# cancel, so the if: failure() upload and notification steps would be skipped.
+gate="$(awk '/^ *- name: Quality gate *$/ { found = 1; next } found && /^ *- / { exit } found { print }' "$WEEKLY")"
+gate_timeout="$(sed -nE 's/^ *timeout-minutes: ([0-9]+) *$/\1/p' <<<"$gate")"
+job_timeout="$(sed -nE 's/^    timeout-minutes: ([0-9]+) *$/\1/p' "$WEEKLY")"
+[ -n "$gate_timeout" ] && [ "$gate_timeout" -lt "$job_timeout" ] ||
+  fail "weekly.yml: the Quality gate step needs a timeout-minutes below the job's ($job_timeout)"
 
 # The AI review costs per run: draft PRs skip it. Fork PRs get no secrets, so they skip it too.
 grep -qxF "    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository" \
