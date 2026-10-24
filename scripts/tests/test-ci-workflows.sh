@@ -76,6 +76,13 @@ grep -qE "^ *if: failure\(\) && github.event_name == 'schedule' *\$" <<<"$notify
   fail "weekly.yml: needs a 'Notify on failure' step with if: failure() && github.event_name == 'schedule'"
 grep -q 'gh issue create' <<<"$notify" || fail "weekly.yml: 'Notify on failure' should open an issue"
 grep -qE '^ *issues: write *$' "$WEEKLY" || fail "weekly.yml: opening an issue needs 'issues: write'"
+# A hung simulator must fail the Quality gate step, not time out the job: a job timeout is a
+# cancel, so the if: failure() upload and notification steps would be skipped.
+gate="$(awk '/^ *- name: Quality gate *$/ { found = 1; next } found && /^ *- / { exit } found { print }' "$WEEKLY")"
+gate_timeout="$(sed -nE 's/^ *timeout-minutes: ([0-9]+) *$/\1/p' <<<"$gate")"
+job_timeout="$(sed -nE 's/^    timeout-minutes: ([0-9]+) *$/\1/p' "$WEEKLY")"
+[ -n "$gate_timeout" ] && [ "$gate_timeout" -lt "$job_timeout" ] ||
+  fail "weekly.yml: the Quality gate step needs a timeout-minutes below the job's ($job_timeout)"
 
 # The AI review costs per run: draft PRs skip it.
 grep -qxE "    if: github.event.pull_request.draft != true *" "$ROOT/.github/workflows/claude-code-review.yml" ||

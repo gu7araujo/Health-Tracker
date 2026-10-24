@@ -39,6 +39,9 @@ jobs:
       - name: Script tests
         run: scripts/tests/run
       - name: Quality gate
+        # Below the job's limit: a step timeout fails the step, so the if: failure() steps
+        # still run; a job timeout cancels it and skips them.
+        timeout-minutes: 45
         run: scripts/quality --full --json
       - name: Summary
         if: always()
