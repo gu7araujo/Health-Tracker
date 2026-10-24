@@ -65,6 +65,18 @@ evaluate full file-below-floor.json exceptions.txt
 [ "$code" -eq 0 ] || fail "excepted file should not fail the floor (got $code)"
 expect_row "Per-file floor" 100.00 ">=" 80.0 true
 
+# A listed file that now meets the floor is a stale exception: it fails the floor so the list only shrinks.
+evaluate full file-below-floor.json stale-exceptions.txt
+[ "$code" -eq 1 ] || fail "a stale exception should fail the floor (got $code)"
+expect_row "Per-file floor" 100.00 ">=" 80.0 false
+[[ "$err" == *"stale exception: "*"stale-exceptions.txt:3: HealthTracker/Domain/A.swift 100.00%"* ]] ||
+  fail "should name the stale entry: $err"
+[[ "$err" == *"stale exception: "*"stale-exceptions.txt:4: HealthTracker/Data/Missing.swift absent from coverage (remove the entry)"* ]] ||
+  fail "should name an exception path missing from coverage: $err"
+[[ "$err" != *"Migration/B.swift"* ]] || fail "B is still below the floor, so its entry is not stale: $err"
+[[ "$err" != *"below floor: HealthTracker/Data/Migration/B.swift"* ]] ||
+  fail "whitespace around an exception path should not stop it being exempt: $err"
+
 evaluate full views-excluded.json
 [ "$code" -eq 0 ] || fail "Presentation/Views files should be excluded from the floor (got $code)"
 expect_row "App line coverage" 91.82 ">=" 90.0 true

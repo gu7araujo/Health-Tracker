@@ -190,7 +190,7 @@ scripts/quality --fast --update-baseline
 
 It raises the four `*_UNIT_MIN` values (line and region) to the newly measured coverage, rounded down to one decimal. It never lowers a threshold, and it only runs when every gate is green. Commit the changed `scripts/quality-thresholds.env` together with the tests that earned it.
 
-**Exceptions:** `scripts/coverage-exceptions.txt` lists files that were already below the per-file floor when the gate was introduced. Each line is a path plus a comment with its coverage. Remove a file from the list once it's covered. Adding a file to the list, or lowering a threshold, is a deliberate decision: call it out in the PR.
+**Exceptions:** `scripts/coverage-exceptions.txt` lists files that were already below the per-file floor when the gate was introduced. Each line is a path plus a comment with its coverage. Remove a file from the list once it's covered: the floor fails on an entry whose file now meets `FILE_FLOOR`. Adding a file to the list, or lowering a threshold, is a deliberate decision: call it out in the PR.
 
 ## Unused code
 
