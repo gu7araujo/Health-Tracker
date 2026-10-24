@@ -29,7 +29,7 @@ This README is the human guide to building, testing and the **quality gate**. AI
 brew install swiftlint swiftformat xcbeautify jq
 ```
 
-and the pinned [Periphery](https://github.com/peripheryapp/periphery) binary for the Unused code gate. This installs it (sha256-checked), plus the pinned SwiftLint and SwiftFormat, into `build/tools/bin`, which only `scripts/quality` puts first on `PATH` (the hooks and a standalone `scripts/doctor` still use the Homebrew tools):
+and the pinned [Periphery](https://github.com/peripheryapp/periphery) binary for the Unused code gate. This installs it, plus the pinned SwiftLint and SwiftFormat (each release zip sha256-checked), into `build/tools/bin`, which only `scripts/quality` puts first on `PATH` (the hooks and a standalone `scripts/doctor` still use the Homebrew tools):
 
 ```bash
 scripts/ci/install-tools.sh build/tools/bin
@@ -312,7 +312,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 | Draft PR | ✅ | skipped |
 | Ready PR (opened, pushed, or marked ready) | ✅ | `scripts/quality --full` |
 | Push to `main` (a merge) | ✅ | `scripts/quality --fast` |
-| Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full` |
+| Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full`; a red run opens an issue "Weekly quality gate failed" (or comments on the open one) |
 | Manual (**Run workflow** in the Actions tab) | ✅ (`ci.yml`) | `scripts/quality --full` |
 
 **`lint`** runs on `ubuntu-24.04` (~1 min). It installs the pinned SwiftLint and SwiftFormat (`scripts/ci/install-tools.sh`), checks formatting, lints, and runs the [fitness checks](#fitness-functions) (on PRs also the persisted-shape guard, which only warns). SwiftLint violations show inline on the PR diff; SwiftFormat failures show in the step log. Linux SwiftLint skips the rules that need SourceKit (`custom_rules`, `statement_position`), so this job is a fast pre-filter: the full lint runs again in `test`. It also runs ShellCheck on the scripts and hooks and actionlint on the workflows.
