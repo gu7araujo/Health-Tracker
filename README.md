@@ -29,22 +29,19 @@ This README is the human guide to building, testing and the **quality gate**. AI
 brew install swiftlint swiftformat xcbeautify jq
 ```
 
-and the pinned [Periphery](https://github.com/peripheryapp/periphery) binary for the Unused code gate. This installs it (sha256-checked), plus the pinned SwiftLint and SwiftFormat, into `build/tools/bin`, which only `scripts/quality` puts first on `PATH` (the hooks and a standalone `scripts/doctor` still use the Homebrew tools):
-
-```bash
-scripts/ci/install-tools.sh build/tools/bin
-```
+and the pinned [Periphery](https://github.com/peripheryapp/periphery) binary for the Unused code gate, which `scripts/bootstrap` (step 2) installs.
 
 The versions are pinned in `scripts/tool-versions.env` (SwiftLint 0.65.0, SwiftFormat 0.61.1, Periphery 3.8.0, Xcode 27.1). Pinning matters because formatter and linter rules change between releases: a different version can flag code that passes on another machine.
 
-**2. Bootstrap the clone (once):**
+**2. Bootstrap the clone (once per clone or worktree):**
 
 ```bash
 scripts/bootstrap
 ```
 
-This does two things:
+This does three things:
 - It points git at the repo's hooks (`git config core.hooksPath .githooks`). The path is relative, so every worktree uses its own `.githooks`. If a different hooks path was set before, it tells you it replaced it.
+- It runs `scripts/ci/install-tools.sh build/tools/bin`, which downloads the pinned Periphery (sha256-checked), SwiftLint and SwiftFormat into `build/tools/bin`. `scripts/quality` and `scripts/doctor` run tools from there before `PATH`. A fresh worktree has no `build/tools/bin`, so bootstrap it before its first push: without Periphery the pre-push gate fails.
 - It runs `scripts/doctor`, which compares your installed tools with the pins and prints a fix command for each mismatch.
 
 Running `scripts/bootstrap` again is safe.
@@ -364,7 +361,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | Path | Purpose |
 |---|---|
 | `scripts/quality` | The quality gate (see above) |
-| `scripts/bootstrap` | One-time setup: enables `.githooks`, runs `doctor` |
+| `scripts/bootstrap` | One-time setup per clone or worktree: enables `.githooks`, installs the pinned tools into `build/tools/bin`, runs `doctor` |
 | `scripts/doctor` | Compares installed tools with the pins. Warns locally, fails when `CI=true` |
 | `scripts/tool-versions.env` | Pinned SwiftLint / SwiftFormat / Periphery / Xcode versions |
 | `scripts/quality-thresholds.env` | Coverage thresholds and ratchets |
@@ -391,7 +388,7 @@ scripts/tests/run
 | Hooks don't run on commit or push | Run `scripts/bootstrap`, then check with `git config core.hooksPath` (should print `.githooks`) |
 | Commit refused: "unstaged changes" | A staged Swift file also has unstaged edits. `git add` it fully, or stash the extra edits |
 | A gate shows `n/a` | Nothing was measured: the build failed or a test bundle crashed. Read `build/xcodebuild.log` |
-| Unused code shows `n/a` | `periphery` is missing (run `scripts/ci/install-tools.sh build/tools/bin`) or the scan failed (its output is above the table) |
+| Unused code shows `n/a` | `periphery` is missing (run `scripts/bootstrap`) or the scan failed (its output is above the table) |
 | Push takes ~2 min | That's the pre-push `--fast` gate building and running the unit tests |
 | Too many `HT-*` simulators | `xcrun simctl list devices \| grep HT-`, then `xcrun simctl delete <name>` for branches you're done with |
 | Coverage gate red after deleting tests or code | Add tests for the least-covered files (see [Fixing a red gate](#fixing-a-red-gate)). Don't lower the threshold silently |
