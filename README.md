@@ -77,21 +77,7 @@ scripts/quality --fast --update-baseline # raise the coverage ratchets (see belo
 scripts/quality --help
 ```
 
-Example `--fast` output (`--full` adds the UI tests, App line coverage and Per-file floor rows, 12 in all):
-
-```
-Format                               0  <= 0       ✓
-Lint                                 0  <= 0       ✓
-Fitness                              0  <= 0       ✓
-Unit tests                           0  <= 0       ✓
-Unused code                          0  <= 0       ✓
-Domain unit line coverage       97.95%  >= 97.9%   ✓
-Data unit line coverage         96.44%  >= 96.4%   ✓
-Domain unit region coverage     96.96%  >= 96.9%   ✓
-Data unit region coverage       94.21%  >= 94.2%   ✓
-
-9/9 gates passed.
-```
+Each row prints the gate, its measured value, the threshold and ✓ or ✗; run it for the current table. `scripts/quality --help` lists what each mode runs.
 
 ### What each gate checks
 
@@ -103,12 +89,9 @@ Data unit region coverage       94.21%  >= 94.2%   ✓
 | Unit tests | both | `HealthTrackerTests` has 0 failures |
 | UI tests | `--full` | `HealthTrackerUITests` has 0 failures |
 | Unused code | both | `periphery scan` reports 0 unused declarations (see [Unused code](#unused-code)) |
-| Domain unit line coverage | both | Unit-test coverage of `HealthTracker/Domain/` ≥ `DOMAIN_UNIT_MIN` |
-| Data unit line coverage | both | Unit-test coverage of `HealthTracker/Data/` ≥ `DATA_UNIT_MIN` |
-| Domain unit region coverage | both | Unit-test region coverage of `HealthTracker/Domain/` ≥ `DOMAIN_REGION_UNIT_MIN` |
-| Data unit region coverage | both | Unit-test region coverage of `HealthTracker/Data/` ≥ `DATA_REGION_UNIT_MIN` |
-| App line coverage | `--full` | Unit + UI coverage of the whole app ≥ `APP_LINE_MIN` (95%) |
-| Per-file floor | `--full` | The least-covered file is ≥ `FILE_FLOOR` (85%). Files under `Presentation/Views/` and those listed in `scripts/coverage-exceptions.txt` don't count |
+| Domain / Data unit line and region coverage | both | Unit-test line and region coverage of `HealthTracker/Domain/` and `HealthTracker/Data/` ≥ their `*_UNIT_MIN` ratchet |
+| App line coverage | `--full` | Unit + UI coverage of the whole app ≥ `APP_LINE_MIN` |
+| Per-file floor | `--full` | The least-covered file is ≥ `FILE_FLOOR`. Files under `Presentation/Views/` and those listed in `scripts/coverage-exceptions.txt` don't count |
 
 Why two kinds of coverage:
 - UI tests run a lot of code without checking much of it, so app-wide coverage can look high while the business rules go untested. The Domain and Data gates count **unit tests only**, which keeps the rules in those layers covered on their own. To measure that, `--full` runs the unit tests and the UI tests as two separate runs, then merges them into `build/Test.xcresult` for the app-wide numbers.
@@ -171,16 +154,7 @@ For a red region row, the `llvm-cov report` / `llvm-cov show` commands that list
 
 ## Coverage thresholds and the ratchet
 
-The thresholds live in `scripts/quality-thresholds.env`:
-
-| Threshold | Value | Meaning |
-|---|---|---|
-| `APP_LINE_MIN` | 95.0 | App-wide unit + UI coverage |
-| `FILE_FLOOR` | 85.0 | Minimum coverage for any one file (Views excluded) |
-| `DOMAIN_UNIT_MIN` | ratchet | Domain unit-test coverage. Started at today's measured value, aiming for 95+ |
-| `DATA_UNIT_MIN` | ratchet | Data unit-test coverage. Started at today's measured value, aiming for 95 |
-| `DOMAIN_REGION_UNIT_MIN` | ratchet | Domain unit-test region coverage. Started at the measured value (2026-10-23) |
-| `DATA_REGION_UNIT_MIN` | ratchet | Data unit-test region coverage. Started at the measured value (2026-10-23) |
+The thresholds live in `scripts/quality-thresholds.env`, the source of truth for their values. `APP_LINE_MIN` (app-wide unit + UI coverage) and `FILE_FLOOR` (any one file, Views excluded) are fixed; the four `*_UNIT_MIN` values (Domain and Data, line and region, unit tests only) are ratchets.
 
 **The ratchet:** after you raise Domain or Data unit line or region coverage, lock in the gain:
 
@@ -206,7 +180,7 @@ periphery scan --skip-build --index-store-path build/DerivedData/Index.noindex/D
 
 **Evaluated and skipped** (2026-10-23):
 - **Mutation testing (Muter):** no release since 2023; master inserts no mutants, and with the regression reverted it silently drops nested mutants and reports them as survivors. It would also cost ~25–35 macOS minutes a run. Revisit when upstream fixes it.
-- **Branch coverage:** Swift 6.4 emits no branch regions (`llvm-cov` reports 0/0 for every file), so there is nothing to measure. Region coverage is the planned replacement.
+- **Branch coverage:** Swift 6.4 emits no branch regions (`llvm-cov` reports 0/0 for every file), so there is nothing to measure. The region coverage gates take its place.
 
 ## Lint rules
 
@@ -357,7 +331,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
   - pushes to `main` and force-pushes;
   - `gh pr merge`.
 - A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately. If SwiftFormat or SwiftLint can't run, the hook reports that as an error instead of passing.
-- Agents open PRs as **draft**, run `scripts/quality --full` locally, mark the PR ready (which starts the macOS job) and wait for the checks. If `test` goes red, the agent moves the PR back to draft, fixes and verifies locally, and marks it ready one more time; a failure it can't reproduce locally, or a second red ready run, comes to you as a report instead. At most two ready runs per PR without your go-ahead. You review and merge.
+- Agents open PRs as **draft**, run `CI=true scripts/quality --full` locally, mark the PR ready (which starts the macOS job) and wait for the checks. If `test` goes red, the agent moves the PR back to draft, fixes and verifies locally, and marks it ready one more time; a failure it can't reproduce locally, or a second red ready run, comes to you as a report instead. At most two ready runs per PR without your go-ahead. You review and merge.
 
 ## Script reference
 
