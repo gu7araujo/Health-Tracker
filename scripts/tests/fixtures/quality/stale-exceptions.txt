@@ -1,3 +1,4 @@
 # B is still below the floor; A is covered now, so its entry is stale.
-HealthTracker/Data/Migration/B.swift  # 70.0%
+  HealthTracker/Data/Migration/B.swift  # 70.0%
 HealthTracker/Domain/A.swift  # 60.0%
+HealthTracker/Data/Missing.swift  # deleted
