@@ -82,7 +82,7 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
   ```
 - Each `.swift` file you edit or write is formatted in place and linted by a Claude Code hook; fix the violations it reports.
 - The git hooks refuse commits and pushes to `main` and run `--fast` before every push. Let them run: no `--no-verify`, no `SKIP_QUALITY`. The push takes ~2 min, past the Bash tool's 120 s default, so run `git push` with a 600000 ms timeout.
-- Open PRs as **draft**. Mark one ready only after a green local `scripts/quality --full`: push, wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run (a push and `gh pr ready` in the same second cancelled the ready run once; a PR touching only docs or agent config gets no run, so stop with the link), then `gh pr ready <n>` and `gh pr checks <n> --watch`. Green: stop there with the link; the user approves and merges every PR. Red: follow the `quality-gate` skill's CI section. Each ready run costs ~11 macOS min, so a PR gets at most **two ready runs** without the user's go-ahead.
+- Open PRs as **draft**. Mark one ready only after a green local `CI=true scripts/quality --full` (`CI=true` turns compiler warnings into errors, as CI does): push, wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run (a push and `gh pr ready` in the same second cancelled the ready run once; a PR touching only docs or agent config gets no run, so stop with the link), then `gh pr ready <n>` and `gh pr checks <n> --watch`. Green: stop there with the link; the user approves and merges every PR. Red: follow the `quality-gate` skill's CI section. Each ready run costs ~11 macOS min, so a PR gets at most **two ready runs** without the user's go-ahead.
 
 **CI** (GitHub Actions, ~200 macOS min/month on the Free plan). The Linux `lint` job runs format, lint, fitness, ShellCheck and actionlint on every PR and push that touches more than docs or agent config. Draft and Dependabot PRs run only `lint`. Ready PRs also run `test` (`scripts/quality --full` on `runs-on: xcode-27`), pushes to `main` run `--fast`, and the weekly schedule runs `--full`. A red check is read and reproduced through the `quality-gate` skill's CI section.
 
@@ -95,7 +95,7 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
 
 ## Committing
 
-- The pre-push hook runs `scripts/quality --fast`; run `scripts/quality --full` before marking a PR ready. Never push a broken build or failing tests.
+- The pre-push hook runs `scripts/quality --fast`; run `CI=true scripts/quality --full` before marking a PR ready. Never push a broken build or failing tests.
 - Branch first (`git switch -c <type>/<name>`): the hooks refuse commits on `main`.
 - Use the `gh` CLI for GitHub work — pull requests, issues, reviews, checks, releases, API calls.
 - After a PR you opened is merged, run the `retro` skill and report its table alongside the requested work (it doesn't block it); implementing any of its proposals needs the user's go-ahead.
