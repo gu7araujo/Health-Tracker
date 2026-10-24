@@ -57,11 +57,20 @@ case "\$(cat "\$zip")" in
   *) exit 9 ;;
 esac
 EOF
-# shasum prints the pinned sha256 for any file, or \$FAKE_SHA.
+# shasum prints the asset's pinned sha256, or 0000 for the asset named in \$BAD_SHA.
 cat >"$TMP/stubs/shasum" <<EOF
 #!/bin/sh
 for last in "\$@"; do :; done
-echo "\${FAKE_SHA:-$PERIPHERY_SHA256}  \$last"
+asset="\$(cat "\$last")"
+case "\$asset" in
+  "\${BAD_SHA:-}") sha=0000 ;;
+  portable_swiftlint.zip) sha="${SWIFTLINT_SHA256_MACOS:-}" ;;
+  swiftlint_linux_amd64.zip) sha="${SWIFTLINT_SHA256_LINUX:-}" ;;
+  swiftformat.zip) sha="${SWIFTFORMAT_SHA256_MACOS:-}" ;;
+  swiftformat_linux.zip) sha="${SWIFTFORMAT_SHA256_LINUX:-}" ;;
+  *) sha="$PERIPHERY_SHA256" ;;
+esac
+echo "\$sha  \$last"
 EOF
 chmod +x "$TMP/stubs/"*
 
@@ -93,10 +102,18 @@ grep -qx "$release/peripheryapp/periphery/releases/download/$PERIPHERY_VERSION/p
 [[ "$out" == *"Periphery $PERIPHERY_VERSION"* ]] || fail "should print the installed Periphery version, got: $out"
 
 # A zip whose sha256 is not the pinned one is never installed.
-install Darwin arm64 FAKE_SHA=0000
-[ "$code" -ne 0 ] || fail "a periphery zip with the wrong sha256 should fail the install"
-[ ! -e "$TMP/bin/periphery" ] || fail "a periphery zip with the wrong sha256 should not be installed"
-[[ "$out" == *"sha256"* ]] || fail "a sha256 mismatch should say so, got: $out"
+# bad_sha <os> <arch> <asset> <tool>
+bad_sha() {
+  install "$1" "$2" BAD_SHA="$3"
+  [ "$code" -ne 0 ] || fail "$1: a $3 with the wrong sha256 should fail the install"
+  [ ! -e "$TMP/bin/$4" ] || fail "$1: a $3 with the wrong sha256 should not be installed"
+  [[ "$out" == *"$3 sha256"* ]] || fail "$1: a $3 sha256 mismatch should say so, got: $out"
+}
+bad_sha Darwin arm64 "periphery-$PERIPHERY_VERSION.zip" periphery
+bad_sha Darwin arm64 portable_swiftlint.zip swiftlint
+bad_sha Darwin arm64 swiftformat.zip swiftformat
+bad_sha Linux x86_64 swiftlint_linux_amd64.zip swiftlint
+bad_sha Linux x86_64 swiftformat_linux.zip swiftformat
 
 install Linux x86_64
 [ "$code" -eq 0 ] || fail "Linux install should succeed (got $code): $out"

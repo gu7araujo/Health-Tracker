@@ -41,7 +41,7 @@ scripts/bootstrap
 
 This does three things:
 - It points git at the repo's hooks (`git config core.hooksPath .githooks`). The path is relative, so every worktree uses its own `.githooks`. If a different hooks path was set before, it tells you it replaced it.
-- It runs `scripts/ci/install-tools.sh build/tools/bin`, which downloads the pinned Periphery (sha256-checked), SwiftLint and SwiftFormat into `build/tools/bin`. `scripts/quality` and `scripts/doctor` run tools from there before `PATH`. A fresh worktree has no `build/tools/bin`, so bootstrap it before its first push: without Periphery the pre-push gate fails.
+- It runs `scripts/ci/install-tools.sh build/tools/bin`, which downloads the pinned Periphery, SwiftLint and SwiftFormat (each release zip sha256-checked) into `build/tools/bin`. `scripts/quality` and `scripts/doctor` run tools from there before `PATH`. A fresh worktree has no `build/tools/bin`, so bootstrap it before its first push: without Periphery the pre-push gate fails.
 - It runs `scripts/doctor`, which compares your installed tools with the pins and prints a fix command for each mismatch.
 
 Running `scripts/bootstrap` again is safe.
@@ -187,7 +187,7 @@ scripts/quality --fast --update-baseline
 
 It raises the four `*_UNIT_MIN` values (line and region) to the newly measured coverage, rounded down to one decimal. It never lowers a threshold, and it only runs when every gate is green. Commit the changed `scripts/quality-thresholds.env` together with the tests that earned it.
 
-**Exceptions:** `scripts/coverage-exceptions.txt` lists files that were already below the per-file floor when the gate was introduced. Each line is a path plus a comment with its coverage. Remove a file from the list once it's covered. Adding a file to the list, or lowering a threshold, is a deliberate decision: call it out in the PR.
+**Exceptions:** `scripts/coverage-exceptions.txt` lists files that were already below the per-file floor when the gate was introduced. Each line is a path plus a comment with its coverage. Remove a file from the list once it's covered: the floor fails on an entry whose file now meets `FILE_FLOOR`. Adding a file to the list, or lowering a threshold, is a deliberate decision: call it out in the PR.
 
 ## Unused code
 
@@ -309,7 +309,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 | Draft PR | ✅ | skipped |
 | Ready PR (opened, pushed, or marked ready) | ✅ | `scripts/quality --full` |
 | Push to `main` (a merge) | ✅ | `scripts/quality --fast` |
-| Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full` |
+| Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full`; a red run opens an issue "Weekly quality gate failed" (or comments on the open one) |
 | Manual (**Run workflow** in the Actions tab) | ✅ (`ci.yml`) | `scripts/quality --full` |
 
 **`lint`** runs on `ubuntu-24.04` (~1 min). It installs the pinned SwiftLint and SwiftFormat (`scripts/ci/install-tools.sh`), checks formatting, lints, and runs the [fitness checks](#fitness-functions) (on PRs also the persisted-shape guard, which only warns). SwiftLint violations show inline on the PR diff; SwiftFormat failures show in the step log. Linux SwiftLint skips the rules that need SourceKit (`custom_rules`, `statement_position`), so this job is a fast pre-filter: the full lint runs again in `test`. It also runs ShellCheck on the scripts and hooks and actionlint on the workflows.

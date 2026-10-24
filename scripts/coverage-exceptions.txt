@@ -1,9 +1,6 @@
 # Files exempt from the per-file floor (FILE_FLOOR in scripts/quality-thresholds.env).
 # One repo-relative path per line, then a comment with its measured line coverage (unit + UI, iOS 27.0, 2026-10-22).
-# Grandfathered offenders: remove an entry once its file is covered. Never add a new file here silently.
+# Grandfathered offenders: remove an entry once its file is covered (the floor fails on a stale entry). Never add a new file here silently.
 
 # Permanent: the only executable lines bridge the real UNUserNotificationCenter, which unit tests replace with a fake.
 HealthTracker/Data/Services/UserNotificationCentering.swift  # 0.00%
-
-# To burn down with unit tests:
-HealthTracker/Extensions/View+Extensions.swift  # 72.00%

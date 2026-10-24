@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Installs the SwiftLint and SwiftFormat release binaries pinned in scripts/tool-versions.env, and
-# on macOS the sha256-verified Periphery release.
+# on macOS the Periphery release. Every zip's sha256 is verified against its pin before unpacking.
 #
 # Usage: scripts/ci/install-tools.sh [<bin-dir>]
 #   <bin-dir> defaults to ${RUNNER_TEMP:-$TMPDIR}/ci-tools/bin. When GITHUB_PATH is set, <bin-dir>
@@ -16,14 +16,14 @@ BIN="${1:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/ci-tools/bin}"
 
 case "$(uname -s)-$(uname -m)" in
   Darwin-*)
-    lint_asset="portable_swiftlint.zip" lint_bin="swiftlint"
-    format_asset="swiftformat.zip" format_bin="swiftformat"
+    lint_asset="portable_swiftlint.zip" lint_bin="swiftlint" lint_sha="$SWIFTLINT_SHA256_MACOS"
+    format_asset="swiftformat.zip" format_bin="swiftformat" format_sha="$SWIFTFORMAT_SHA256_MACOS"
     periphery="yes"
     ;;
   # The Linux SwiftLint zip also holds a dynamically linked `swiftlint`; the static one has no system deps.
   Linux-x86_64)
-    lint_asset="swiftlint_linux_amd64.zip" lint_bin="swiftlint-static"
-    format_asset="swiftformat_linux.zip" format_bin="swiftformat_linux"
+    lint_asset="swiftlint_linux_amd64.zip" lint_bin="swiftlint-static" lint_sha="$SWIFTLINT_SHA256_LINUX"
+    format_asset="swiftformat_linux.zip" format_bin="swiftformat_linux" format_sha="$SWIFTFORMAT_SHA256_LINUX"
     periphery=""
     ;;
   *)
@@ -36,9 +36,21 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$BIN"
 
-# install <tool> <owner/repo> <version> <asset> <binary>: unzips the asset and installs <binary> as <tool>.
+# verify <zip> <asset> <pinned sha256>
+verify() {
+  local sha
+  sha="$(shasum -a 256 "$1" | awk '{ print $1 }')"
+  [ "$sha" = "$3" ] || {
+    echo "error: $2 sha256 is $sha, pinned $3" >&2
+    exit 1
+  }
+}
+
+# install <tool> <owner/repo> <version> <asset> <binary> <sha256>: verifies and unzips the asset and
+# installs <binary> as <tool>.
 install_tool() {
   curl -fsSL --retry 3 -o "$work/$1.zip" "https://github.com/$2/releases/download/$3/$4"
+  verify "$work/$1.zip" "$4" "$6"
   unzip -q -o "$work/$1.zip" -d "$work/$1"
   [ -f "$work/$1/$5" ] || {
     echo "error: no $5 in $4" >&2
@@ -48,20 +60,16 @@ install_tool() {
   chmod +x "$BIN/$1"
 }
 
-install_tool swiftlint realm/SwiftLint "$SWIFTLINT_VERSION" "$lint_asset" "$lint_bin"
-install_tool swiftformat nicklockwood/SwiftFormat "$SWIFTFORMAT_VERSION" "$format_asset" "$format_bin"
+install_tool swiftlint realm/SwiftLint "$SWIFTLINT_VERSION" "$lint_asset" "$lint_bin" "$lint_sha"
+install_tool swiftformat nicklockwood/SwiftFormat "$SWIFTFORMAT_VERSION" "$format_asset" "$format_bin" "$format_sha"
 
-# Periphery (macOS only): verify the zip's sha256 before unpacking, and keep the zip's layout, since
-# periphery loads the libIndexStore.dylib that ships beside it.
+# Periphery (macOS only): keep the zip's layout, since periphery loads the libIndexStore.dylib
+# that ships beside it.
 if [ -n "$periphery" ]; then
   zip="$work/periphery.zip"
   curl -fsSL --retry 3 -o "$zip" \
     "https://github.com/peripheryapp/periphery/releases/download/$PERIPHERY_VERSION/periphery-$PERIPHERY_VERSION.zip"
-  sha="$(shasum -a 256 "$zip" | awk '{ print $1 }')"
-  [ "$sha" = "$PERIPHERY_SHA256" ] || {
-    echo "error: periphery-$PERIPHERY_VERSION.zip sha256 is $sha, pinned $PERIPHERY_SHA256" >&2
-    exit 1
-  }
+  verify "$zip" "periphery-$PERIPHERY_VERSION.zip" "$PERIPHERY_SHA256"
   unzip -q -o "$zip" -d "$work/periphery"
   cp "$work/periphery/periphery" "$work/periphery/libIndexStore.dylib" "$BIN/"
   chmod +x "$BIN/periphery"
