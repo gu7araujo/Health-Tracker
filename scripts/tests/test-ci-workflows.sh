@@ -56,6 +56,11 @@ while IFS= read -r line; do
   fail "pipe a NUL-separated list (grep -Z ... | xargs -0): $line"
 done < <(grep -HnE '\| *xargs' "$ROOT"/.github/workflows/*.yml |
   grep -vE 'grep -[A-Za-z]*Z[A-Za-z]* .*\| *xargs -0 ' | sed "s|^$ROOT/||")
+# Every xargs takes -0, also when the pipe is split across lines.
+while IFS= read -r line; do
+  fail "xargs needs -0 for a NUL-separated list: $line"
+done < <(grep -HnE '^[^#]*(^|[^[:alnum:]_-])xargs([^[:alnum:]_-]|$)' "$ROOT"/.github/workflows/*.yml |
+  grep -vE 'xargs -0( |$)' | sed "s|^$ROOT/||")
 
 # test_steps <workflow>: the test job's steps, with the quality mode spelled --full and without
 # weekly.yml's red-run notification.
@@ -76,13 +81,17 @@ grep -qE "^ *if: failure\(\) && github.event_name == 'schedule' *\$" <<<"$notify
   fail "weekly.yml: needs a 'Notify on failure' step with if: failure() && github.event_name == 'schedule'"
 grep -q 'gh issue create' <<<"$notify" || fail "weekly.yml: 'Notify on failure' should open an issue"
 grep -qE '^ *issues: write *$' "$WEEKLY" || fail "weekly.yml: opening an issue needs 'issues: write'"
-# A hung simulator must fail the Quality gate step, not time out the job: a job timeout is a
-# cancel, so the if: failure() upload and notification steps would be skipped.
-gate="$(awk '/^ *- name: Quality gate *$/ { found = 1; next } found && /^ *- / { exit } found { print }' "$WEEKLY")"
-gate_timeout="$(sed -nE 's/^ *timeout-minutes: ([0-9]+) *$/\1/p' <<<"$gate")"
-job_timeout="$(sed -nE 's/^    timeout-minutes: ([0-9]+) *$/\1/p' "$WEEKLY")"
-[ -n "$gate_timeout" ] && [ "$gate_timeout" -lt "$job_timeout" ] ||
-  fail "weekly.yml: the Quality gate step needs a timeout-minutes below the job's ($job_timeout)"
+# A hung simulator must fail the Quality gate step, not time out the test job (ci.yml and
+# weekly.yml): a job timeout is a cancel, so the if: failure() upload and notification steps
+# would be skipped.
+for workflow in "$CI" "$WEEKLY"; do
+  job="$(awk '/^  test:/ { found = 1; next } found && /^  [a-z]/ { exit } found { print }' "$workflow")"
+  gate="$(awk '/^ *- name: Quality gate *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$job")"
+  gate_timeout="$(sed -nE 's/^ *timeout-minutes: ([0-9]+) *$/\1/p' <<<"$gate")"
+  job_timeout="$(sed -nE 's/^    timeout-minutes: ([0-9]+) *$/\1/p' <<<"$job")"
+  [ -n "$gate_timeout" ] && [ -n "$job_timeout" ] && [ "$gate_timeout" -lt "$job_timeout" ] ||
+    fail "$(basename "$workflow"): the Quality gate step needs a timeout-minutes below the test job's ($job_timeout)"
+done
 
 # The AI review costs per run: draft PRs skip it. Fork PRs get no secrets, so they skip it too.
 grep -qxF "    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository" \
