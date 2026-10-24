@@ -53,9 +53,9 @@ git switch -c feat/my-change            # 1. branch: committing on main is refus
 # ...edit code and tests (red → green)...
 scripts/quality --fast                  # 2. iterate: ~2 min
 git commit -m "..."                     # 3. pre-commit hook formats + lints staged Swift files, runs fitness checks
-scripts/quality --full                  # 4. done check: ~8 min, the same bar CI uses
+CI=true scripts/quality --full          # 4. done check: ~8 min, the same bar CI uses
 git push -u origin feat/my-change       # 5. pre-push hook re-runs --fast; pushing to main is refused
-gh pr create --draft                    # 6. open as draft, mark ready when --full is green
+gh pr create --draft                    # 6. open as draft, mark ready when step 4 is green
 ```
 
 Every PR is reviewed and merged by hand. Auto-merge is off, and agents are not allowed to merge.
@@ -311,7 +311,7 @@ gh run view <run-id> --log-failed                           # the failing step's
 gh run download <run-id> -n xcresult-<run-id> -D build/ci   # test results and xcodebuild.log
 ```
 
-The artifact is uploaded only when `test` fails, and kept for 7 days. Open `build/ci/Test.xcresult` in Xcode, or reproduce locally with `scripts/quality --full`. If CI and your Mac disagree, run `scripts/doctor` first: CI uses exactly the versions in `scripts/tool-versions.env`.
+The artifact is uploaded only when `test` fails, and kept for 7 days. Open `build/ci/Test.xcresult` in Xcode, or reproduce locally with `CI=true scripts/quality --full`. If CI and your Mac disagree, run `scripts/doctor` first: CI uses exactly the versions in `scripts/tool-versions.env`.
 
 GitHub does not enforce the checks on the Free plan. Look at them before you approve and merge.
 
