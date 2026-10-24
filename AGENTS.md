@@ -5,7 +5,7 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 ## Repo Map
 
 Deep maps + layer rules: `HealthTracker/Domain/AGENTS.md`, `HealthTracker/Data/AGENTS.md`,
-`HealthTracker/Presentation/AGENTS.md`, `HealthTrackerTests/AGENTS.md`, `HealthTrackerUITests/AGENTS.md`
+`HealthTracker/Presentation/AGENTS.md`, `HealthTrackerTests/AGENTS.md`, `HealthTrackerUITests/AGENTS.md`, `scripts/AGENTS.md`
 
 - `HealthTracker/UITestingSupport.swift` — the `-uiTesting` launch-argument hook: temp-dir repository, skips migration and permission prompts.
 - `HealthTracker/Resources/` — localizable strings for `en` and `pt-BR`.
