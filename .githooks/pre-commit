@@ -11,6 +11,8 @@ if [ "$(git symbolic-ref --short -q HEAD || true)" = "main" ]; then
 fi
 
 cd "$(git rev-parse --show-toplevel)"
+# Same lookup as scripts/quality: the pinned tools in build/tools/bin run before those on PATH.
+[ -d build/tools/bin ] && PATH="$PWD/build/tools/bin:$PATH"
 
 # Any staged .swift/.strings change, deletions and renames included, can break a cross-file
 # rule (key parity, test mirroring, accessibility IDs). The checks read the staged snapshot, so an
