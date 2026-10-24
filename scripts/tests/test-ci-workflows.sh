@@ -50,8 +50,13 @@ while IFS= read -r line; do
 done < <(grep -HnE '^[^#]*uses: ' "$ROOT"/.github/workflows/*.yml |
   grep -vE 'uses: [^@ ]+@[0-9a-f]{40} # v[0-9][^ ]* *$' | sed "s|^$ROOT/||")
 
-# The AI review costs per run: draft PRs skip it.
-grep -qxE "    if: github.event.pull_request.draft != true *" "$ROOT/.github/workflows/claude-code-review.yml" ||
-  fail "claude-code-review.yml: the job needs 'if: github.event.pull_request.draft != true'"
+# The AI review costs per run: draft PRs skip it. Fork PRs get no secrets, so they skip it too.
+grep -qxF "    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository" \
+  "$ROOT/.github/workflows/claude-code-review.yml" ||
+  fail "claude-code-review.yml: the job must skip draft and fork PRs"
+
+# The public repo's @claude job spends the owner's token: it answers only the owner.
+grep -qxF "      github.actor == 'gu7araujo' && (" "$ROOT/.github/workflows/claude.yml" ||
+  fail "claude.yml: the job must run only when github.actor is the owner"
 
 [ "$failures" -eq 0 ]
