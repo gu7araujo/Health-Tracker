@@ -47,7 +47,7 @@ Every gate turns green through code or tests:
 - **Unused code**: Periphery prints each finding on stderr as `<file>:<line>:<col>: warning: <finding>` (e.g. `Unused function 'name()'`, `Assign-only property`).
   - Delete the declaration, with any mock member or test that only exercises it. A protocol requirement goes from the protocol, its conformers and its mock together.
   - Used only through something Periphery cannot see (a generated `$binding` of an iOS 27 `@State` property, reflection): put `// periphery:ignore - <reason>` on the line above it and call it out (end of this section).
-  - `n/a`: the scan failed (no index store, bad `.periphery.yml`) or `periphery` is missing; a failed scan prints its output above the table. Install the pinned binary with `scripts/ci/install-tools.sh build/tools/bin`; `scripts/quality` runs tools from there first.
+  - `n/a`: the scan failed (no index store, bad `.periphery.yml`) or `periphery` is missing; a failed scan prints its output above the table. Run `scripts/bootstrap`: it installs the pinned binary into `build/tools/bin`, where `scripts/quality` looks first.
   - Re-scan alone with `periphery scan --skip-build --index-store-path build/DerivedData/Index.noindex/DataStore` (`.periphery.yml` supplies the rest). It reads the index of the last gate run, so it misses edits made since; the next `scripts/quality` run rebuilds it.
 - **Coverage**: add tests for the least-covered files (section 4) until the measured value clears the threshold.
 

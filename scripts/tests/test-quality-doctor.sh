@@ -3,12 +3,15 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-DOCTOR="$ROOT/scripts/doctor"
 # shellcheck source=../tool-versions.env
 source "$ROOT/scripts/tool-versions.env"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
+# Runs a copy of scripts/, so this checkout's own build/tools/bin stays out of the lookup.
+mkdir -p "$TMP/repo/scripts"
+cp "$ROOT/scripts/doctor" "$ROOT/scripts/tool-versions.env" "$TMP/repo/scripts/"
+DOCTOR="$TMP/repo/scripts/doctor"
 failures=0
 
 fail() {
@@ -71,5 +74,12 @@ rm "$TMP/ok/periphery"
 run_doctor "$TMP/ok"
 [[ "$out" == *"Periphery not installed"*"scripts/ci/install-tools.sh build/tools/bin"* ]] ||
   fail "should report missing Periphery with the local install command: $out"
+
+# Tools only in build/tools/bin (where install-tools.sh puts them and scripts/quality looks first)
+# count as installed.
+stub "$TMP/repo/build/tools/bin" "$SWIFTLINT_VERSION" "$SWIFTFORMAT_VERSION" "$XCODE_VERSION" "$PERIPHERY_VERSION"
+out="$(PATH="/usr/bin:/bin" CI=true "$DOCTOR" 2>&1)"
+code=$?
+[ "$code" -eq 0 ] || fail "tools in build/tools/bin should count as installed (got $code): $out"
 
 [ "$failures" -eq 0 ]
