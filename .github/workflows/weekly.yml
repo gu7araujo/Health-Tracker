@@ -3,6 +3,8 @@ name: Weekly
 # Full gate on a schedule, to catch drift (runner image, simulator runtime) between PRs.
 # The steps duplicate ci.yml's test job on purpose: a reusable workflow would rename the
 # future required check to "test / test" and add indirection for a handful of steps.
+# scripts/tests/test-ci-workflows.sh keeps them in step. A red scheduled run opens an issue
+# (or comments on the open one), so it reaches the repo's watchers.
 # Follow-up: HealthTrackerIntentsUITests (iOS 27 runtime) joins here and on push to main
 # (an intents-ui-tests job in ci.yml) once feature/app-intents lands; never on PRs.
 on:
@@ -21,6 +23,9 @@ jobs:
   test:
     runs-on: xcode-27
     timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: write
     env:
       CI: "true"
     steps:
@@ -34,6 +39,9 @@ jobs:
       - name: Script tests
         run: scripts/tests/run
       - name: Quality gate
+        # Below the job's limit: a step timeout fails the step, so the if: failure() steps
+        # still run; a job timeout cancels it and skips them.
+        timeout-minutes: 45
         run: scripts/quality --full --json
       - name: Summary
         if: always()
@@ -47,3 +55,17 @@ jobs:
             build/*.xcresult
             build/xcodebuild.log
           retention-days: 7
+      - name: Notify on failure
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Weekly quality gate failed"
+          open="$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')"
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body "Failed again: $RUN_URL"
+          else
+            gh issue create --title "$title" --body "The scheduled \`--full\` run failed: $RUN_URL"
+          fi

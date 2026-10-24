@@ -67,7 +67,7 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
 
 `scripts/quality` is the one gate: it prints a pass/fail table and exits 0 only when every gate passes. Reading its output, chasing coverage, and fixing a red gate: `quality-gate` skill.
 
-- Run `scripts/bootstrap` once per clone: it installs the git hooks and checks tool versions.
+- Run `scripts/bootstrap` once per clone and per new worktree, before its first push: it installs the git hooks and the pinned SwiftLint, SwiftFormat and Periphery into `build/tools/bin`, and checks tool versions.
 - Iterate with `scripts/quality --fast` (format, lint, fitness, unit tests, unused code, Domain/Data line and region coverage).
 - The Domain/Data ratchets measure line and region coverage. A region is a code path inside a line (the default of `?? 0`, one side of `&&`), so a line counts as covered while one of its regions never ran. Lowering any ratchet is the user's call (below).
 - The Unused code gate runs Periphery (`.periphery.yml`, strict, no baseline) on the index of the gate's own test build (`build/DerivedData`) and fails on any unused declaration.

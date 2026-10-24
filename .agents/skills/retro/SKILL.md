@@ -29,7 +29,7 @@ Read, in this order (most catches live in the first two, since PRs are often squ
 5. **CI's numbers**: `gh run view <id> --log | grep -E 'coverage|Per-file|gates passed'` on the ready run, against the PR body's local table and `scripts/quality-thresholds.env`.
 6. **Local review logs**, when the session kept them (Codex output, verifier notes in its scratch directory).
 
-Then sweep the standing lists once per retro, since nothing else reports a stale entry in them: `scripts/coverage-exceptions.txt` (each file's coverage from `build/Test.xcresult`, `quality-gate` skill section 4; one at or above `FILE_FLOOR` is stale. The file comes from `scripts/quality --full` on `main`, unit + UI coverage as `FILE_FLOOR` measures; run one first if `build/` is missing), `scripts/fitness/test-mirror-exceptions.txt`, and the `.swiftlint-baseline.json` count. Check README's gate table against `scripts/quality --help` and the current gate rows.
+Then sweep the standing lists once per retro: `scripts/quality --full` reports stale entries in `scripts/coverage-exceptions.txt` (run it if its output is unavailable), while `scripts/fitness/test-mirror-exceptions.txt` and the `.swiftlint-baseline.json` count still need a manual sweep. Check README's gate table against `scripts/quality --help` and the current gate rows.
 
 **Done when:** every PR in the range has each of the six sources read, and each catch is one row with its evidence (PR, commit sha, run id or log file), or the PR is noted as "no catches".
 

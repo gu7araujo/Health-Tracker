@@ -41,6 +41,14 @@ test_bootstrap_runs_doctor_when_present() {
   [ -e "$WORK/doctor-ran" ] || { echo "doctor not run"; return 1; }
 }
 
+test_bootstrap_installs_tools_into_build_tools_bin() {
+  new_repo install-tools
+  mkdir scripts/ci
+  printf '#!/usr/bin/env bash\necho "$1" > "%s"\n' "$WORK/install-tools-arg" > scripts/ci/install-tools.sh && chmod +x scripts/ci/install-tools.sh
+  scripts/bootstrap > /dev/null || { echo "bootstrap failed"; return 1; }
+  [ "$(cat "$WORK/install-tools-arg" 2>/dev/null)" = "build/tools/bin" ] || { echo "install-tools.sh not run with build/tools/bin"; return 1; }
+}
+
 test_bootstrap_prints_next_steps() {
   new_repo next-steps
   local out
