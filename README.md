@@ -41,7 +41,7 @@ scripts/bootstrap
 
 This does three things:
 - It points git at the repo's hooks (`git config core.hooksPath .githooks`). The path is relative, so every worktree uses its own `.githooks`. If a different hooks path was set before, it tells you it replaced it.
-- It runs `scripts/ci/install-tools.sh build/tools/bin`, which downloads the pinned Periphery, SwiftLint and SwiftFormat (each release zip sha256-checked) into `build/tools/bin`. `scripts/quality` and `scripts/doctor` run tools from there before `PATH`. A fresh worktree has no `build/tools/bin`, so bootstrap it before its first push: without Periphery the pre-push gate fails.
+- It runs `scripts/ci/install-tools.sh build/tools/bin`, which downloads the pinned Periphery, SwiftLint and SwiftFormat (each release zip sha256-checked) into `build/tools/bin`. `scripts/quality`, `scripts/doctor` and the pre-commit and Claude Code format hooks run tools from there before `PATH`. A fresh worktree has no `build/tools/bin`, so bootstrap it before its first push: without Periphery the pre-push gate fails.
 - It runs `scripts/doctor`, which compares your installed tools with the pins and prints a fix command for each mismatch.
 
 Running `scripts/bootstrap` again is safe.
