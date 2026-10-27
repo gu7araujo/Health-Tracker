@@ -56,11 +56,18 @@ while IFS= read -r line; do
   fail "pipe a NUL-separated list (grep -Z ... | xargs -0): $line"
 done < <(grep -HnE '\| *xargs' "$ROOT"/.github/workflows/*.yml |
   grep -vE 'grep -[A-Za-z]*Z[A-Za-z]* .*\| *xargs -0 ' | sed "s|^$ROOT/||")
-# Every xargs takes -0, also when the pipe is split across lines.
+# Every xargs takes -0, also when the pipe is split across lines. Quoted strings, comments and
+# step names are not commands.
 while IFS= read -r line; do
   fail "xargs needs -0 for a NUL-separated list: $line"
-done < <(grep -HnE '^[^#]*(^|[^[:alnum:]_-])xargs([^[:alnum:]_-]|$)' "$ROOT"/.github/workflows/*.yml |
-  grep -vE 'xargs -0( |$)' | sed "s|^$ROOT/||")
+done < <(awk '{
+  code = $0
+  gsub(/"[^"]*"|'\''[^'\'']*'\''/, "", code)
+  sub(/(^|[ \t])#.*/, "", code)
+  if (code ~ /^ *(- )?name:/) next
+  gsub(/xargs -0( |$)/, "", code)
+  if (code ~ /(^|[^[:alnum:]_-])xargs([^[:alnum:]_-]|$)/) print FILENAME ":" FNR ":" $0
+}' "$ROOT"/.github/workflows/*.yml | sed "s|^$ROOT/||")
 
 # test_steps <workflow>: the test job's steps, with the quality mode spelled --full and without
 # weekly.yml's red-run notification.
