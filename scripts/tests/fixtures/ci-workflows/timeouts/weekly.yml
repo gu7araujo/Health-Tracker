@@ -1,0 +1,8 @@
+# Must fail: the test job's timeout is below the Quality gate step's.
+jobs:
+  test:
+    timeout-minutes: 30
+    steps:
+      - name: Quality gate
+        timeout-minutes: 45
+        run: scripts/quality --full --json

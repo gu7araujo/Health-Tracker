@@ -1,0 +1,8 @@
+# Must fail: the pipe is split across lines, and the xargs on the second line has no -0.
+jobs:
+  lint:
+    steps:
+      - name: ShellCheck
+        run: |
+          grep -rlZ '^#!' scripts |
+            xargs shellcheck

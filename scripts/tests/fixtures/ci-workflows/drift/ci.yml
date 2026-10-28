@@ -1,0 +1,8 @@
+# Must fail with drift/weekly.yml: weekly.yml's test steps differ from these.
+jobs:
+  test:
+    timeout-minutes: 60
+    steps:
+      - name: Quality gate
+        timeout-minutes: 45
+        run: scripts/quality "$MODE" --json

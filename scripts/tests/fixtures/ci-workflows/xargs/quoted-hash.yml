@@ -1,0 +1,6 @@
+# Must fail: the # inside the quoted pattern is not a comment, so the bare xargs after it counts.
+jobs:
+  lint:
+    steps:
+      - name: ShellCheck
+        run: grep -rlZ "a # b" scripts | xargs -0 shellcheck; xargs echo <list.txt

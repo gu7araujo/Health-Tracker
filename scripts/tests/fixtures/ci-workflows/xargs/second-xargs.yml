@@ -1,0 +1,6 @@
+# Must fail: one xargs -0 on the line does not cover a second, bare xargs.
+jobs:
+  lint:
+    steps:
+      - name: ShellCheck
+        run: grep -rlZ x scripts | xargs -0 shellcheck && cat list.txt | xargs rm

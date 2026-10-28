@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Runs every scripts/tests/test-*.sh; exits non-zero if any fails.
+# Runs every scripts/tests/test-*.sh, with the repo's build/tools/bin (the pinned tools) first on
+# PATH when it exists; exits non-zero if any fails.
 set -uo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
+# Same lookup as scripts/quality: the pinned tools in build/tools/bin run before those on PATH,
+# so the hook tests work on a Mac that has only what scripts/bootstrap installed.
+[ -d "$DIR/../../build/tools/bin" ] && PATH="$(cd "$DIR/../../build/tools/bin" && pwd):$PATH"
 failed=0
 total=0
 

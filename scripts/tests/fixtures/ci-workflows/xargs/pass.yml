@@ -1,0 +1,10 @@
+# Must pass: xargs in a step name, a comment or a quoted string is not a command, and xargs -0 is fine.
+jobs:
+  lint:
+    steps:
+      - name: Lint each file with xargs
+        # xargs gets a NUL-separated list
+        run: |
+          echo "files go to xargs"
+          grep -rlZ x scripts |
+            xargs -0 shellcheck
