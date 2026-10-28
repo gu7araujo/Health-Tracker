@@ -7,8 +7,9 @@ set -uo pipefail
 source "$(dirname "$0")/tool-versions.env"
 
 # Same lookup as scripts/quality: tools in build/tools/bin run before those on PATH.
-tools_bin="$(dirname "$0")/../build/tools/bin"
-[ -d "$tools_bin" ] && PATH="$(cd "$tools_bin" && pwd):$PATH"
+# shellcheck source=lib/tools-path.sh
+source "$(dirname "$0")/lib/tools-path.sh"
+prepend_tools_path "$(dirname "$0")/.."
 
 level="warning"
 [ "${CI:-}" = "true" ] && level="error"

@@ -10,7 +10,9 @@ file="$(jq -r '.tool_input.file_path // empty')"
 # Run from the repo root so SwiftLint picks up .swiftlint.yml.
 cd "$(dirname "$0")/../.." || exit 1
 # Same lookup as scripts/quality: the pinned tools in build/tools/bin run before those on PATH.
-[ -d build/tools/bin ] && PATH="$PWD/build/tools/bin:$PATH"
+# shellcheck source=../../scripts/lib/tools-path.sh
+source scripts/lib/tools-path.sh
+prepend_tools_path "$PWD"
 
 for tool in swiftformat swiftlint; do
   if ! command -v "$tool" >/dev/null; then

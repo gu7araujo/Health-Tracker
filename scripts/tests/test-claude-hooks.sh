@@ -53,8 +53,9 @@ run_hook "$WORK/Missing.swift"
 # The hook must never pass silently when its tools can't run.
 # bin/ holds jq plus the tool stubs; PATH keeps only system dirs besides it. Runs a copy of the hook
 # in a temp repo, so this checkout's own build/tools/bin stays out of the lookup.
-mkdir -p "$WORK/repo/.claude/hooks"
+mkdir -p "$WORK/repo/.claude/hooks" "$WORK/repo/scripts/lib"
 cp "$HOOK" "$WORK/repo/.claude/hooks/"
+cp "$ROOT/scripts/lib/tools-path.sh" "$WORK/repo/scripts/lib/"
 HOOK="$WORK/repo/.claude/hooks/format-swift.sh"
 mkdir -p "$WORK/bin"
 ln -s "$(command -v jq)" "$WORK/bin/jq"

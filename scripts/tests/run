@@ -6,7 +6,9 @@ set -uo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 # Same lookup as scripts/quality: the pinned tools in build/tools/bin run before those on PATH,
 # so the hook tests work on a Mac that has only what scripts/bootstrap installed.
-[ -d "$DIR/../../build/tools/bin" ] && PATH="$(cd "$DIR/../../build/tools/bin" && pwd):$PATH"
+# shellcheck source=../lib/tools-path.sh
+source "$DIR/../lib/tools-path.sh"
+prepend_tools_path "$DIR/../.."
 failed=0
 total=0
 

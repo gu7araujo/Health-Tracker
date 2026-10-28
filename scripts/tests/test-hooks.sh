@@ -10,7 +10,7 @@ trap 'rm -rf "$WORK"' EXIT
 unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE SKIP_QUALITY QUALITY_CMD
 
 # A repo with one commit on main (made before the hooks were enabled),
-# the hooks copied in, and a bare "origin" remote.
+# the hooks and the tools-path helper they source copied in, and a bare "origin" remote.
 new_repo() {
   local dir="$WORK/$1"
   git init -q -b main "$dir"
@@ -19,7 +19,8 @@ new_repo() {
   git config user.email "hooks@example.com"
   git config commit.gpgsign false
   cp -R "$ROOT/.githooks" .githooks
-  git add .githooks
+  mkdir -p scripts/lib && cp "$ROOT/scripts/lib/tools-path.sh" scripts/lib/
+  git add .githooks scripts
   git commit -q --allow-empty -m init
   git config core.hooksPath .githooks
   git init -q --bare "$WORK/$1.git"
@@ -108,7 +109,7 @@ test_commit_with_staged_swift_deletion_succeeds() {
 test_commit_runs_doctor_but_only_warns() {
   new_repo doctor
   git switch -q -c feat/doctor
-  mkdir scripts && stub scripts/doctor "$WORK/doctor-ran" 1
+  stub scripts/doctor "$WORK/doctor-ran" 1
   cp "$FIXTURES/Formatted.swift.fixture" Greeter.swift && git add Greeter.swift
   git commit -q -m add || { echo "commit failed"; return 1; }
   [ -e "$WORK/doctor-ran" ] || { echo "doctor not run"; return 1; }

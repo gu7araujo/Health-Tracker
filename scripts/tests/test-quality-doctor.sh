@@ -9,8 +9,9 @@ source "$ROOT/scripts/tool-versions.env"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 # Runs a copy of scripts/, so this checkout's own build/tools/bin stays out of the lookup.
-mkdir -p "$TMP/repo/scripts"
+mkdir -p "$TMP/repo/scripts/lib"
 cp "$ROOT/scripts/doctor" "$ROOT/scripts/tool-versions.env" "$TMP/repo/scripts/"
+cp "$ROOT/scripts/lib/tools-path.sh" "$TMP/repo/scripts/lib/"
 DOCTOR="$TMP/repo/scripts/doctor"
 failures=0
 
