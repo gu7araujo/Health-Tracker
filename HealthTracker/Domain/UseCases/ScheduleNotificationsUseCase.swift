@@ -61,8 +61,6 @@ final class ScheduleNotificationsUseCase {
         let title = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
             ?? String(localized: "app_title")
 
-        var scheduledCount = 0
-
         for targetDate in targetDates {
             let dateString = formatDateForIdentifier(targetDate)
             let (lunchComponents, eveningComponents) = notificationTiming(for: targetDate)
@@ -84,11 +82,9 @@ final class ScheduleNotificationsUseCase {
                 dateComponents: eveningComponents,
                 repeats: false
             )
-
-            scheduledCount += 2
         }
 
-        logger.info("Successfully scheduled \(scheduledCount) notifications")
+        logger.info("Successfully scheduled \(targetDates.count * 2) notifications")
     }
 
     // MARK: - Private Helpers
