@@ -11,7 +11,7 @@
 
 ## Quality gate
 
-<!-- Paste the table printed by `scripts/quality --full`. -->
+<!-- Paste the table printed by `scripts/quality --full`; a change touching only docs or agent config may paste the `--fast` table instead. -->
 
 ```text
 ```
