@@ -16,7 +16,7 @@ scripts/quality --full --json   # done: everything in --fast, plus UI tests, app
 
 It tests on `--simulator <udid>` when given; otherwise it reuses or clones a simulator named `HT-<branch>`, so parallel worktrees stay isolated. An exported `SIMULATOR_ID` is ignored on purpose. Delete the clone when the branch is done: `xcrun simctl delete "HT-<branch with / replaced by ->"`.
 
-**Done when:** `scripts/quality --full` exits 0. Paste the table it prints into the final report and PR. Before marking a PR ready, run it as `CI=true scripts/quality --full`: only `CI=true` turns compiler warnings into errors, as CI does, so a warning that passes locally fails the ready run. It also makes `scripts/doctor` exit 1 before any gate on a missing or mismatched pinned tool or Xcode: run `scripts/bootstrap` first and fix what its `doctor` reports.
+**Done when:** `scripts/quality --full` exits 0. Paste the table it prints into the final report and PR; a change touching only docs or agent config may paste the `--fast` table instead. Before marking a PR ready, run it as `CI=true scripts/quality --full`: only `CI=true` turns compiler warnings into errors, as CI does, so a warning that passes locally fails the ready run. It also makes `scripts/doctor` exit 1 before any gate on a missing or mismatched pinned tool or Xcode: run `scripts/bootstrap` first and fix what its `doctor` reports.
 
 ## 2. Read the result
 
