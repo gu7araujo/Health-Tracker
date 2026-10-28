@@ -1,0 +1,16 @@
+# Must pass: ci.yml's test steps, a Notify on failure step that opens an issue, issues: write.
+jobs:
+  test:
+    timeout-minutes: 60
+    permissions:
+      issues: write
+    steps:
+      - name: Quality gate
+        timeout-minutes: 45
+        run: scripts/quality --full --json
+      - name: Summary
+        if: always()
+        run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
+      - name: Notify on failure
+        if: failure() && github.event_name == 'schedule'
+        run: gh issue create --title "Weekly quality gate failed"

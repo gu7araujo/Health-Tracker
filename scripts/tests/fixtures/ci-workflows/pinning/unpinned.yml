@@ -1,0 +1,6 @@
+# Must fail: an action pinned by tag, and one pinned by SHA without its '# v...' comment.
+jobs:
+  lint:
+    steps:
+      - uses: foo/bar@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

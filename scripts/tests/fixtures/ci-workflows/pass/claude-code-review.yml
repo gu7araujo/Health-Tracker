@@ -1,0 +1,4 @@
+# Must pass: the review skips draft and fork PRs.
+jobs:
+  claude-review:
+    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository

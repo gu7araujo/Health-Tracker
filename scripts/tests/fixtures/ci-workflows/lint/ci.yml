@@ -1,0 +1,17 @@
+# Must fail every lint-job check: fetch-depth: 2 and the fitness step sit in the test job, not
+# lint; Persisted shape runs on push, against HEAD^2.
+jobs:
+  lint:
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Persisted shape
+        if: github.event_name == 'push'
+        run: scripts/fitness/persisted-shape-guard.sh HEAD^2
+  test:
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - name: Fitness
+        run: scripts/fitness/run

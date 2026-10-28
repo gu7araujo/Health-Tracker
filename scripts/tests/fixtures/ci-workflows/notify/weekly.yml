@@ -1,0 +1,12 @@
+# Must fail every notify check: Notify on failure also runs on workflow_dispatch, only comments,
+# and the job can only read issues ('issues: write' sits in a comment).
+jobs:
+  test:
+    permissions:
+      issues: read # not issues: write
+    steps:
+      - name: Notify on failure
+        if: failure()
+        run: gh issue comment 1 --body "failed"
+      - name: Open issue
+        run: gh issue create --title "Weekly quality gate failed"
