@@ -9,6 +9,6 @@
 
 prepend_tools_path() {
   local bin
-  bin="$(CDPATH= cd -- "$1/build/tools/bin" 2>/dev/null && pwd)" || return 0
+  bin="$(CDPATH='' cd -- "$1/build/tools/bin" 2>/dev/null && pwd)" || return 0
   PATH="$bin:$PATH"
 }
