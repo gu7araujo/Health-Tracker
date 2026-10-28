@@ -2,7 +2,8 @@
 # Fitness test for .github/workflows: every Summary step runs under if: always() and calls
 # scripts/ci/summary.sh unconditionally, so a run that stops before build/quality.json is
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
-# wiring, the test job's PR filter, NUL-safe xargs, weekly/ci test-step parity, the weekly failure issue, action pinning.
+# wiring, the test job's PR filter, NUL-safe xargs, weekly/ci test-step parity, the weekly
+# failure issue, action pinning.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
 # checks on scripts/tests/fixtures/ci-workflows to prove they still catch what they are for).
 set -uo pipefail
@@ -72,13 +73,11 @@ done < <(awk '{
   if (code ~ /(^|[^[:alnum:]_-])xargs([^[:alnum:]_-]|$)/) print FILENAME ":" FNR ":" $0
 }' "$WORKFLOWS"/*.yml | sed "s|^$ROOT/||")
 
-# Draft PRs run the macOS test job too, so marking a PR ready needs no run of its own: no
-# ready_for_review trigger (it would re-run the draft's checks). Dependabot PRs skip test.
+# Draft PRs run the macOS test job too; Dependabot PRs skip it.
 test_job="$(awk '/^  test:/ { found = 1; next } found && /^  [a-z]/ { exit } found { print }' "$CI")"
 test_if="$(awk '/^    if:/ { found = 1; print; next } found && /^      / { print; next } found { exit }' <<<"$test_job")"
 grep -q 'draft' <<<"$test_if" && fail "ci.yml test job: draft PRs run test too; drop the draft condition"
 grep -qF "github.actor != 'dependabot[bot]'" <<<"$test_if" || fail "ci.yml test job: Dependabot PRs must skip test"
-grep -qE '^[^#]*ready_for_review' "$CI" && fail "ci.yml: no ready_for_review trigger; the draft's run already checked the commit"
 
 # test_steps <workflow>: the test job's steps, with the quality mode spelled --full and without
 # weekly.yml's red-run notification.
@@ -146,7 +145,6 @@ if [ $# -eq 0 ]; then
   must_not "no test job steps found"
   fixture draft
   must "ci.yml test job: draft PRs run test too; drop the draft condition"
-  must "ci.yml: no ready_for_review trigger"
   must_not "Dependabot PRs must skip test"
   fixture drift
   must "ci.yml test job: Dependabot PRs must skip test"

@@ -1,8 +1,5 @@
-# Must fail: draft PRs skip the test job, and marking a PR ready re-runs the draft's checks.
+# Must fail: draft PRs skip the test job.
 # Must pass the Dependabot check: Dependabot PRs still skip test.
-on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
 jobs:
   test:
     if: >-

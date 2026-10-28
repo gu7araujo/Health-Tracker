@@ -21,7 +21,7 @@ The core loop is **red → green**: write a failing test, then make it pass. Fol
 1. Before coding, state how you'll verify the change — which unit/UI test, which bash command, screenshot, skill, or tool, etc.
 2. Write that test first and watch it fail (**red**).
 3. Implement the minimum code to pass it (**green**).
-4. Run `scripts/quality --full` (`--fast` for a docs-only change) and iterate until it exits 0 — that's the bar for a task being done (see [Quality Gates](#quality-gates)).
+4. Run `scripts/quality --full` (`--fast` for a change touching only docs or agent config, as defined in Quality Gates) and iterate until it exits 0 — that's the bar for a task being done (see [Quality Gates](#quality-gates)).
 
 Every bug fix starts with a regression test that reproduces the bug. Aim for near-total coverage: every public function, file, and edge case earns a test. Prefer Xcode MCP tools when they fit, and follow the plan when we have one.
 
@@ -82,7 +82,7 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
   ```
 - Each `.swift` file you edit or write is formatted in place and linted by a Claude Code hook; fix the violations it reports.
 - The git hooks refuse commits and pushes to `main` and run `--fast` before every push. Let them run: no `--no-verify`, no `SKIP_QUALITY`. The push takes ~2 min, past the Bash tool's 120 s default, so run `git push` with a 600000 ms timeout.
-- Open PRs as **draft**. Every push to a PR runs CI, drafts included. Mark one ready only after a green local `CI=true scripts/quality --full` (`CI=true` turns compiler warnings into errors and makes `doctor` fatal, as CI does: run `scripts/bootstrap` first and fix what it reports) and a green CI run on that commit: push, wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run (until then `gh pr checks` has nothing to watch; a docs-only PR gets no run, so skip to `gh pr ready <n>`), then `gh pr checks <n> --watch`. Green: `gh pr ready <n>` and stop there with the link; the user approves and merges every PR. Red: follow the `quality-gate` skill's CI section, which reads and reproduces each red run before the next push.
+- Open PRs as **draft**. Every push to a PR runs CI, drafts included. A docs-only PR gets no CI run: stop with the link once `--fast` is green. Mark any other PR ready only after a green local `CI=true scripts/quality --full` (`CI=true` turns compiler warnings into errors and makes `doctor` fatal, as CI does: run `scripts/bootstrap` first and fix what it reports): push, wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run (until then `gh pr checks` has nothing to watch), then `gh pr ready <n>`, which re-runs CI against the current `main`, and `gh pr checks <n> --watch`. Green: stop there with the link; the user approves and merges every PR. Red: follow the `quality-gate` skill's CI section, which reads and reproduces each red run before the next push.
 
 **CI** (GitHub Actions; the repo is public, so its standard runners, macOS included, are free). The Linux `lint` job runs format, lint, fitness, ShellCheck and actionlint on every PR and push that touches more than docs or agent config. PRs, drafts included, also run `test` (`scripts/quality --full` on `runs-on: xcode-27`, ~23 min); Dependabot PRs run only `lint`. Pushes to `main` run `--fast` (~10–14 min), and the weekly schedule runs `--full` (~23 min). A red check is read and reproduced through the `quality-gate` skill's CI section.
 
