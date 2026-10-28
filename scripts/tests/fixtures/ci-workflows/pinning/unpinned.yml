@@ -1,6 +1,8 @@
-# Must fail: an action pinned by tag, and one pinned by SHA without its '# v...' comment.
+# Must fail: an action pinned by tag, one pinned by SHA without its '# v...' comment, and one
+# pinned by a short SHA (a mutable ref).
 jobs:
   lint:
     steps:
       - uses: foo/bar@v4
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e # v7.0.1

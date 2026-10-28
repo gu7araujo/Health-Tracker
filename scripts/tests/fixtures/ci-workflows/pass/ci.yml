@@ -1,5 +1,5 @@
-# Must pass every check, with weekly.yml, claude.yml and claude-code-review.yml beside it: the
-# smallest workflows the checks accept, so the run exits 0.
+# Must pass every check: the smallest workflows the checks accept, so the run exits 0. Every
+# other fixture dir is copied over these, so it fails only the checks it breaks.
 jobs:
   lint:
     steps:

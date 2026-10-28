@@ -1,12 +1,21 @@
-# Must fail every notify check: Notify on failure also runs on workflow_dispatch, only comments,
-# and the job can only read issues ('issues: write' sits in a comment).
+# Must fail every notify check, and only those: Notify on failure also runs on non-scheduled runs
+# and only comments (the issue opens in another job), and 'issues: write' sits in a comment.
 jobs:
   test:
+    timeout-minutes: 60
     permissions:
       issues: read # not issues: write
     steps:
+      - name: Quality gate
+        timeout-minutes: 45
+        run: scripts/quality --full --json
+      - name: Summary
+        if: always()
+        run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
       - name: Notify on failure
         if: failure()
         run: gh issue comment 1 --body "failed"
+  report:
+    steps:
       - name: Open issue
         run: gh issue create --title "Weekly quality gate failed"

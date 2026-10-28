@@ -120,64 +120,68 @@ grep -qxF "      github.actor == 'gu7araujo' && (" "$WORKFLOWS/claude.yml" ||
 # default run, so the fixture runs do not recurse.
 if [ $# -eq 0 ]; then
   FIXTURES="$ROOT/scripts/tests/fixtures/ci-workflows"
-  # fixture <dir> pass|fail: runs the checks on that fixture dir once and asserts its exit status;
-  # must and must_not assert on its output.
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' EXIT
+  # fixture <dir> <n>: runs the checks on pass/ with that dir's files copied over it, so only the
+  # checks the dir breaks fail, and asserts exactly n FAIL lines, each counted in the exit status;
+  # must asserts on its output.
   fixture() {
     dir="$1"
-    out="$("$0" "$FIXTURES/$dir" 2>&1)"
+    mkdir "$tmp/$dir"
+    cp "$FIXTURES"/pass/*.yml "$FIXTURES/$dir"/*.yml "$tmp/$dir/"
+    out="$("$0" "$tmp/$dir" 2>&1)"
     status=$?
-    if [ "$2" = pass ]; then
-      [ "$status" -eq 0 ] || fail "fixture $dir: expected exit 0, got $status:"$'\n'"$out"
-    else
-      [ "$status" -ne 0 ] || fail "fixture $dir: expected a non-zero exit, got 0"
-    fi
+    printed="$(grep -c '^  FAIL: ' <<<"$out")"
+    counted="$(sed -nE 's/^([0-9]+) check\(s\) failed$/\1/p' <<<"$out")"
+    [ "$printed" -eq "$2" ] && [ "${counted:-0}" -eq "$2" ] && { [ "$2" -ne 0 ] || [ "$status" -eq 0 ]; } ||
+      fail "fixture $dir: expected $2 FAIL line(s), all counted; got exit $status:"$'\n'"$out"
   }
   must() { grep -qF -- "$1" <<<"$out" || fail "fixture $dir: expected '$1', got:"$'\n'"$out"; }
-  must_not() { ! grep -qF -- "$1" <<<"$out" || fail "fixture $dir: unexpected '$1':"$'\n'"$out"; }
-  fixture pass pass
-  fixture xargs fail
-  XARGS="FAIL: xargs needs -0 for a NUL-separated list: scripts/tests/fixtures/ci-workflows/xargs"
+  fixture pass 0
+  fixture xargs 4
+  XARGS="FAIL: xargs needs -0 for a NUL-separated list: $tmp/xargs"
   must "$XARGS/split-line.yml:8:"
   must "$XARGS/quoted-hash.yml:6:"
   must "$XARGS/second-xargs.yml:6:"
-  must "FAIL: pipe a NUL-separated list (grep -Z ... | xargs -0): scripts/tests/fixtures/ci-workflows/xargs/producer.yml:6:"
-  fixture timeouts fail
+  must "FAIL: pipe a NUL-separated list (grep -Z ... | xargs -0): $tmp/xargs/producer.yml:6:"
+  fixture timeouts 2
   must "ci.yml: the Quality gate step needs a timeout-minutes below the test job's (45)"
   must "weekly.yml: the Quality gate step needs a timeout-minutes below the test job's (30)"
-  must_not "drifted"
-  must_not "no test job steps found"
-  fixture drift fail
+  fixture drift 1
   must "weekly.yml's test steps drifted from ci.yml's"
-  must_not "Quality gate step needs"
-  fixture pinning fail
-  PINNING="FAIL: action not pinned by SHA with a '# v...' comment: scripts/tests/fixtures/ci-workflows/pinning/unpinned.yml"
-  must "$PINNING:5:"
+  fixture pinning 3
+  PINNING="FAIL: action not pinned by SHA with a '# v...' comment: $tmp/pinning/unpinned.yml"
   must "$PINNING:6:"
-  # A checkout path with sed or glob metacharacters (| [ * \) still prints repo-relative paths.
-  odd="$(mktemp -d)/a|b[*\\c"
-  mkdir -p "$odd/scripts/tests/fixtures/ci-workflows"
-  cp "$0" "$odd/scripts/tests/"
-  cp -R "$FIXTURES/pinning" "$odd/scripts/tests/fixtures/ci-workflows/"
-  dir="pinning (checkout at $odd)"
-  out="$("$odd/scripts/tests/test-ci-workflows.sh" "$odd/scripts/tests/fixtures/ci-workflows/pinning" 2>&1)"
-  must "$PINNING:5:"
-  rm -rf "${odd%/*}"
-  fixture summary fail
+  must "$PINNING:7:"
+  must "$PINNING:8:"
+  fixture summary 3
   must "FAIL: not-always.yml: Summary step is not if: always()"
   must "FAIL: conditional.yml: Summary step does not call summary.sh unconditionally"
   must "FAIL: outside.yml calls summary.sh outside a Summary step"
-  fixture lint fail
+  fixture lint 4
   must "FAIL: ci.yml lint job: checkout needs fetch-depth: 2"
   must "FAIL: ci.yml lint job: no 'run: scripts/fitness/run' step"
   must "FAIL: ci.yml lint job: 'Persisted shape' step must run on pull_request only"
   must "FAIL: ci.yml lint job: 'Persisted shape' step must run the guard against HEAD^1"
-  fixture notify fail
+  fixture notify 3
   must "FAIL: weekly.yml: needs a 'Notify on failure' step with if: failure()"
   must "FAIL: weekly.yml: 'Notify on failure' should open an issue"
   must "FAIL: weekly.yml: opening an issue needs 'issues: write'"
-  fixture claude fail
+  fixture claude 2
   must "FAIL: claude-code-review.yml: the job must"
   must "FAIL: claude.yml: the job must"
+  # A checkout path with sed or glob metacharacters (| [ * \) still prints repo-relative paths, from
+  # each check that prints file paths.
+  odd="$tmp/a|b[*\\c"
+  rel="scripts/tests/fixtures/ci-workflows/odd"
+  mkdir -p "$odd/$rel"
+  cp "$0" "$odd/scripts/tests/"
+  cp "$FIXTURES/pinning/unpinned.yml" "$FIXTURES/xargs/producer.yml" "$FIXTURES/xargs/split-line.yml" "$odd/$rel/"
+  dir="odd (checkout at $odd)"
+  out="$("$odd/scripts/tests/test-ci-workflows.sh" "$odd/$rel" 2>&1)"
+  must "comment: $rel/unpinned.yml:6:"
+  must "xargs -0): $rel/producer.yml:6:"
+  must "NUL-separated list: $rel/split-line.yml:8:"
 fi
 
-[ "$failures" -eq 0 ]
+[ "$failures" -eq 0 ] || { printf '%s check(s) failed\n' "$failures"; exit 1; }
