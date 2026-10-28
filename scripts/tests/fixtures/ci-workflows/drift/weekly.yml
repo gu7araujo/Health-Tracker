@@ -1,0 +1,8 @@
+# Must fail with drift/ci.yml: the Quality gate step runs --fast, not ci.yml's --full.
+jobs:
+  test:
+    timeout-minutes: 60
+    steps:
+      - name: Quality gate
+        timeout-minutes: 45
+        run: scripts/quality --fast --json

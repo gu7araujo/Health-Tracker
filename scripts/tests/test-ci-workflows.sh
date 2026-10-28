@@ -3,9 +3,12 @@
 # scripts/ci/summary.sh unconditionally, so a run that stops before build/quality.json is
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
 # wiring, NUL-safe xargs, weekly/ci test-step parity, the weekly failure issue, action pinning.
+# Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
+# checks on scripts/tests/fixtures/ci-workflows to prove they still catch what they are for).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+WORKFLOWS="${1:-$ROOT/.github/workflows}"
 # shellcheck disable=SC2016 # the literal workflow line; $GITHUB_STEP_SUMMARY must not expand
 EXPECTED='run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"'
 failures=0
@@ -15,7 +18,7 @@ fail() {
   failures=$((failures + 1))
 }
 
-for workflow in "$ROOT"/.github/workflows/*.yml; do
+for workflow in "$WORKFLOWS"/*.yml; do
   name="$(basename "$workflow")"
   # The Summary step's lines, from "- name: Summary" up to the next step.
   step="$(awk '
@@ -35,7 +38,7 @@ done
 # The Linux lint job runs the fitness checks, and on PRs the warn-only persisted-shape guard
 # against the merge commit's first parent (the PR base): checkout fetch-depth 2 brings that parent
 # (persist-credentials: false leaves no token for a later `git fetch` in this private repo).
-CI="$ROOT/.github/workflows/ci.yml"
+CI="$WORKFLOWS/ci.yml"
 lint="$(awk '/^  lint:/ { found = 1; next } found && /^  [a-z]/ { exit } found { print }' "$CI")"
 grep -qE '^ *fetch-depth: 2 *$' <<<"$lint" || fail "ci.yml lint job: checkout needs fetch-depth: 2 for the merge commit's parent"
 grep -qE '^ *run: scripts/fitness/run *$' <<<"$lint" || fail "ci.yml lint job: no 'run: scripts/fitness/run' step"
@@ -48,13 +51,13 @@ grep -qE '^ *run: scripts/fitness/persisted-shape-guard.sh HEAD\^1 *$' <<<"$guar
 # Every action is pinned by full commit SHA, with its version in a comment (Dependabot bumps both).
 while IFS= read -r line; do
   fail "action not pinned by SHA with a '# v...' comment: $line"
-done < <(grep -HnE '^[^#]*uses: ' "$ROOT"/.github/workflows/*.yml |
+done < <(grep -HnE '^[^#]*uses: ' "$WORKFLOWS"/*.yml |
   grep -vE 'uses: [^@ ]+@[0-9a-f]{40} # v[0-9][^ ]* *$' | sed "s|^$ROOT/||")
 
 # File lists piped to xargs are NUL-separated, so a filename with spaces stays one argument.
 while IFS= read -r line; do
   fail "pipe a NUL-separated list (grep -Z ... | xargs -0): $line"
-done < <(grep -HnE '\| *xargs' "$ROOT"/.github/workflows/*.yml |
+done < <(grep -HnE '\| *xargs' "$WORKFLOWS"/*.yml |
   grep -vE 'grep -[A-Za-z]*Z[A-Za-z]* .*\| *xargs -0 ' | sed "s|^$ROOT/||")
 # Every xargs takes -0, also when the pipe is split across lines. Quoted strings, comments and
 # step names are not commands.
@@ -67,7 +70,7 @@ done < <(awk '{
   if (code ~ /^ *(- )?name:/) next
   gsub(/xargs -0( |$)/, "", code)
   if (code ~ /(^|[^[:alnum:]_-])xargs([^[:alnum:]_-]|$)/) print FILENAME ":" FNR ":" $0
-}' "$ROOT"/.github/workflows/*.yml | sed "s|^$ROOT/||")
+}' "$WORKFLOWS"/*.yml | sed "s|^$ROOT/||")
 
 # test_steps <workflow>: the test job's steps, with the quality mode spelled --full and without
 # weekly.yml's red-run notification.
@@ -77,7 +80,7 @@ test_steps() {
     sed 's|scripts/quality "\$MODE"|scripts/quality --full|'
 }
 # The weekly run copies ci.yml's test job steps (see weekly.yml); they must not drift apart.
-WEEKLY="$ROOT/.github/workflows/weekly.yml"
+WEEKLY="$WORKFLOWS/weekly.yml"
 drift="$(diff <(test_steps "$CI") <(test_steps "$WEEKLY"))" ||
   fail "weekly.yml's test steps drifted from ci.yml's (< ci.yml, > weekly.yml):"$'\n'"$drift"
 [ -n "$(test_steps "$CI")" ] || fail "ci.yml: no test job steps found"
@@ -102,11 +105,37 @@ done
 
 # The AI review costs per run: draft PRs skip it. Fork PRs get no secrets, so they skip it too.
 grep -qxF "    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository" \
-  "$ROOT/.github/workflows/claude-code-review.yml" ||
+  "$WORKFLOWS/claude-code-review.yml" ||
   fail "claude-code-review.yml: the job must skip draft and fork PRs"
 
 # The public repo's @claude job spends the owner's token: it answers only the owner.
-grep -qxF "      github.actor == 'gu7araujo' && (" "$ROOT/.github/workflows/claude.yml" ||
+grep -qxF "      github.actor == 'gu7araujo' && (" "$WORKFLOWS/claude.yml" ||
   fail "claude.yml: the job must run only when github.actor is the owner"
+
+# The real workflows pass every check, which a check gone blind would too: the fixtures prove the
+# xargs, timeout and parity checks still catch what they are for. Only on the default run, so the
+# fixture runs do not recurse.
+if [ $# -eq 0 ]; then
+  FIXTURES="$ROOT/scripts/tests/fixtures/ci-workflows"
+  # check_fixture <dir> <must|must-not> <message>: the checks on that fixture dir print (or don't) the message.
+  check_fixture() {
+    local out
+    out="$("$0" "$FIXTURES/$1" 2>&1)"
+    case "$2" in
+      must) grep -qF -- "$3" <<<"$out" || fail "fixture $1: expected '$3', got:"$'\n'"$out" ;;
+      must-not) grep -qF -- "$3" <<<"$out" && fail "fixture $1: unexpected '$3':"$'\n'"$out" ;;
+    esac
+  }
+  XARGS="FAIL: xargs needs -0 for a NUL-separated list: scripts/tests/fixtures/ci-workflows/xargs"
+  check_fixture xargs must "$XARGS/split-line.yml:8:"
+  check_fixture xargs must "$XARGS/quoted-hash.yml:6:"
+  check_fixture xargs must "$XARGS/second-xargs.yml:6:"
+  check_fixture xargs must-not "xargs/pass.yml"
+  check_fixture timeouts must "ci.yml: the Quality gate step needs a timeout-minutes below the test job's (45)"
+  check_fixture timeouts must "weekly.yml: the Quality gate step needs a timeout-minutes below the test job's (30)"
+  check_fixture timeouts must-not "drifted"
+  check_fixture drift must "weekly.yml's test steps drifted from ci.yml's"
+  check_fixture drift must-not "Quality gate step needs"
+fi
 
 [ "$failures" -eq 0 ]
