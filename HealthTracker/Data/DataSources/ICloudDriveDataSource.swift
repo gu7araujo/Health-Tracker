@@ -32,7 +32,7 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
     }
 
     /// Resolves the file URL: iCloud Documents if available, local Documents otherwise.
-    /// Uses `FileManager.url(forUbiquityContainerIdentifier: nil)` for the first container.
+    /// Asks the injected `fileManager` for the first ubiquity container (`url(forUbiquityContainerIdentifier: nil)`).
     /// Never force-unwraps — returns local fallback URL if iCloud is unavailable.
     private var fileURL: URL {
         if let directoryOverride {
@@ -58,7 +58,7 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
         var result: [RecordedDayData] = []
 
         fileCoordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { coordinatedURL in
-            guard FileManager.default.fileExists(atPath: coordinatedURL.path) else {
+            guard fileManager.fileExists(atPath: coordinatedURL.path) else {
                 return
             }
 
@@ -93,8 +93,8 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
             do {
                 // Ensure the Documents directory exists
                 let directory = coordinatedURL.deletingLastPathComponent()
-                if !FileManager.default.fileExists(atPath: directory.path) {
-                    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                if !fileManager.fileExists(atPath: directory.path) {
+                    try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
                 }
 
                 let container = DayDataContainer(days: days.map(\.dayData))
@@ -132,15 +132,15 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
             writingItemAt: backupURL, options: .forReplacing,
             error: &coordinatorError
         ) { readURL, writeURL in
-            guard FileManager.default.fileExists(atPath: readURL.path) else {
+            guard fileManager.fileExists(atPath: readURL.path) else {
                 return
             }
 
             do {
-                if FileManager.default.fileExists(atPath: writeURL.path) {
-                    try FileManager.default.removeItem(at: writeURL)
+                if fileManager.fileExists(atPath: writeURL.path) {
+                    try fileManager.removeItem(at: writeURL)
                 }
-                try FileManager.default.copyItem(at: readURL, to: writeURL)
+                try fileManager.copyItem(at: readURL, to: writeURL)
                 logger.info("Backed up data file to \(backupURL.lastPathComponent)")
             } catch {
                 logger.error("Failed to back up data file: \(error.localizedDescription)")

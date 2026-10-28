@@ -290,6 +290,46 @@ extension ICloudDriveDataSourceTests {
 
         let dataFileURL = container.appendingPathComponent("Documents/HealthTrackerData.json")
         #expect(FileManager.default.fileExists(atPath: dataFileURL.path))
+    }
+
+    @Test func load_readsFromDocumentsInUbiquityContainer() throws {
+        let container = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: container) }
+        let day = try #require(TestDataBuilder.makeRecordedOptimalDay())
+        ICloudDriveDataSource(logger: MockLogger(), directoryOverride: container.appendingPathComponent("Documents"))
+            .save([day])
+        let dataSource = ICloudDriveDataSource(
+            logger: MockLogger(), fileManager: UbiquityFileManager(containerURL: container)
+        )
+
         #expect(dataSource.load() == [day])
+    }
+}
+
+/// File manager whose `createDirectory` always fails.
+private final nonisolated class FailingCreateDirectoryFileManager: FileManager {
+    override func createDirectory(
+        at _: URL, withIntermediateDirectories _: Bool, attributes _: [FileAttributeKey: Any]? = nil
+    ) throws {
+        throw CocoaError(.fileWriteNoPermission)
+    }
+}
+
+// MARK: - Injected file manager
+
+extension ICloudDriveDataSourceTests {
+    @Test func save_usesInjectedFileManagerToCreateMissingDirectory() throws {
+        let directory = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let mockLogger = MockLogger()
+        let dataSource = ICloudDriveDataSource(
+            logger: mockLogger,
+            directoryOverride: directory.appendingPathComponent("Documents"),
+            fileManager: FailingCreateDirectoryFileManager()
+        )
+
+        try dataSource.save([#require(TestDataBuilder.makeRecordedOptimalDay())])
+
+        #expect(mockLogger.didLog(level: .error, containing: "Failed to save"))
     }
 }
