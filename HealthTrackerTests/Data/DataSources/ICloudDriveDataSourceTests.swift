@@ -134,7 +134,9 @@ struct ICloudDriveDataSourceTests {
         let directory = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let dataSource = ICloudDriveDataSource(logger: MockLogger(), directoryOverride: directory)
-        try dataSource.save([#require(TestDataBuilder.makeRecordedOptimalDay())])
+        let day = try #require(TestDataBuilder.makeRecordedOptimalDay())
+        dataSource.save([day])
+        try #require(dataSource.load() == [day])
         let presenter = blockCoordination(of: directory)
         defer { NSFileCoordinator.removeFilePresenter(presenter) }
 
