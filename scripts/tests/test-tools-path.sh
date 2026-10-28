@@ -17,7 +17,8 @@ fail() {
 # path_after <root> [shell options]: PATH after sourcing the helper and calling it on <root> from
 # $TMP, in a shell with the given options (the callers run under set -uo pipefail or set -euo pipefail).
 path_after() {
-  (cd "$TMP" && PATH="/usr/bin:/bin" bash -c "set $2; source '$ROOT/scripts/lib/tools-path.sh'; prepend_tools_path '$1'; printf '%s' \"\$PATH\"")
+  (cd "$TMP" && PATH="/usr/bin:/bin" bash -c "set $2"'; source "$1"; prepend_tools_path "$2"; printf "%s" "$PATH"' \
+    _ "$ROOT/scripts/lib/tools-path.sh" "$1")
 }
 
 # Present: the absolute build/tools/bin comes first, even from a relative root.
@@ -26,6 +27,10 @@ mkdir -p "$TMP/repo/build/tools/bin"
   fail "build/tools/bin should come first on PATH, got: $(path_after "$TMP/repo" "-uo pipefail")"
 [ "$(path_after repo "-euo pipefail")" = "$TMP/repo/build/tools/bin:/usr/bin:/bin" ] ||
   fail "a relative root should resolve to an absolute entry, got: $(path_after repo "-euo pipefail")"
+
+# An exported CDPATH makes cd print the dir it enters; that must not end up in PATH.
+[ "$(CDPATH=. path_after repo "-euo pipefail")" = "$TMP/repo/build/tools/bin:/usr/bin:/bin" ] ||
+  fail "CDPATH should not change the entry, got: $(CDPATH=. path_after repo "-euo pipefail")"
 
 # Missing: plain PATH.
 [ "$(path_after "$TMP/none" "-euo pipefail")" = "/usr/bin:/bin" ] ||
@@ -44,9 +49,10 @@ fi
 
 # Every script that looks up the pinned tools uses the helper, not its own copy of the lookup.
 for caller in scripts/quality scripts/doctor .githooks/pre-commit .claude/hooks/format-swift.sh scripts/tests/run; do
-  grep -q 'prepend_tools_path' "$ROOT/$caller" || fail "$caller should use prepend_tools_path"
-  if grep -q 'PATH=.*tools' "$ROOT/$caller"; then
-    fail "$caller should not build its own build/tools/bin PATH entry"
+  src="$(grep -v '^[[:space:]]*#' "$ROOT/$caller")"
+  grep -q '^[[:space:]]*prepend_tools_path ' <<<"$src" || fail "$caller should call prepend_tools_path"
+  if grep -q 'PATH=' <<<"$src"; then
+    fail "$caller should not set PATH itself"
   fi
 done
 

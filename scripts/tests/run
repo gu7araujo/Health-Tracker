@@ -4,7 +4,7 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
-# Same lookup as scripts/quality: the pinned tools in build/tools/bin run before those on PATH,
+# scripts/lib/tools-path.sh: the pinned tools in build/tools/bin run before those on PATH,
 # so the hook tests work on a Mac that has only what scripts/bootstrap installed.
 # shellcheck source=../lib/tools-path.sh
 source "$DIR/../lib/tools-path.sh"

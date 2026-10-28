@@ -38,6 +38,7 @@ PATH="$TMP/path-bin:$PATH" "$TMP/repo/scripts/tests/run" >/dev/null 2>&1 || fail
 # an empty PATH entry. Root enters any dir, so skip it there.
 if [ "$(id -u)" -ne 0 ]; then
   chmod 000 "$TMP/repo/build/tools/bin"
+  rm -f "$TMP/seen"
   mkdir -p "$TMP/cwd" && cp "$TMP/path-bin/swiftlint" "$TMP/cwd/swiftlint"
   (cd "$TMP/cwd" && PATH="$TMP/path-bin:$PATH" "$TMP/repo/scripts/tests/run" >/dev/null 2>&1) ||
     fail "run should pass with an unenterable build/tools/bin"

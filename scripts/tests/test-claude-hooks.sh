@@ -103,4 +103,16 @@ code=$?
 [ -e "$WORK/pinned-swiftformat-ran" ] || fail "build/tools/bin/swiftformat not run"
 [ -e "$WORK/pinned-swiftlint-ran" ] || fail "build/tools/bin/swiftlint not run"
 
+# Without scripts/lib/tools-path.sh the pinned tools can't be looked up: exit 2, even though
+# passing tools are on PATH.
+rm "$WORK/repo/scripts/lib/tools-path.sh"
+for tool in swiftformat swiftlint; do
+  printf '#!/bin/sh\n' >"$WORK/path-bin/$tool"
+done
+out="$(jq -n --arg path "$WORK/Tool.swift" '{tool_input: {file_path: $path}}' |
+  PATH="$WORK/path-bin:/usr/bin:/bin" "$HOOK" 2>&1 >/dev/null)"
+code=$?
+[ "$code" -eq 2 ] || fail "a missing tools-path helper should exit 2 (got $code): $out"
+[[ "$out" == *tools-path.sh* ]] || fail "the missing helper should be reported: $out"
+
 [ "$failures" -eq 0 ]

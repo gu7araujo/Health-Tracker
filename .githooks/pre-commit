@@ -11,7 +11,7 @@ if [ "$(git symbolic-ref --short -q HEAD || true)" = "main" ]; then
 fi
 
 cd "$(git rev-parse --show-toplevel)"
-# Same lookup as scripts/quality: the pinned tools in build/tools/bin run before those on PATH.
+# scripts/lib/tools-path.sh: the pinned tools in build/tools/bin run before those on PATH.
 # shellcheck source=../scripts/lib/tools-path.sh
 source scripts/lib/tools-path.sh
 prepend_tools_path "$PWD"
