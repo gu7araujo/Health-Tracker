@@ -51,7 +51,11 @@ run_hook "$WORK/Missing.swift"
 [ "$code" -eq 0 ] || fail "missing file should exit 0 (got $code): $out"
 
 # The hook must never pass silently when its tools can't run.
-# bin/ holds jq plus the tool stubs; PATH keeps only system dirs besides it.
+# bin/ holds jq plus the tool stubs; PATH keeps only system dirs besides it. Runs a copy of the hook
+# in a temp repo, so this checkout's own build/tools/bin stays out of the lookup.
+mkdir -p "$WORK/repo/.claude/hooks"
+cp "$HOOK" "$WORK/repo/.claude/hooks/"
+HOOK="$WORK/repo/.claude/hooks/format-swift.sh"
 mkdir -p "$WORK/bin"
 ln -s "$(command -v jq)" "$WORK/bin/jq"
 ln -s "$(command -v swiftformat)" "$WORK/bin/swiftformat"
@@ -79,5 +83,23 @@ out="$(jq -n --arg path "$WORK/Tool.swift" '{tool_input: {file_path: $path}}' | 
 code=$?
 [ "$code" -eq 2 ] || fail "failing swiftformat should exit 2 (got $code): $out"
 [[ "$out" == *"unsupported option"* ]] || fail "swiftformat's error should be shown: $out"
+
+# The pinned tools in the repo's build/tools/bin run before a different swiftformat/swiftlint
+# earlier on PATH.
+mkdir -p "$WORK/repo/build/tools/bin" "$WORK/path-bin"
+ln -s "$(command -v jq)" "$WORK/path-bin/jq"
+for tool in swiftformat swiftlint; do
+  printf '#!/bin/sh\ntouch "%s"\nexit 1\n' "$WORK/path-$tool-ran" >"$WORK/path-bin/$tool"
+  printf '#!/bin/sh\ntouch "%s"\n' "$WORK/pinned-$tool-ran" >"$WORK/repo/build/tools/bin/$tool"
+done
+chmod +x "$WORK/path-bin"/* "$WORK/repo/build/tools/bin"/*
+out="$(jq -n --arg path "$WORK/Tool.swift" '{tool_input: {file_path: $path}}' |
+  PATH="$WORK/path-bin:/usr/bin:/bin" "$HOOK" 2>&1 >/dev/null)"
+code=$?
+[ "$code" -eq 0 ] || fail "pinned tools should pass the clean file (got $code): $out"
+[ ! -e "$WORK/path-swiftformat-ran" ] || fail "swiftformat from PATH ran"
+[ ! -e "$WORK/path-swiftlint-ran" ] || fail "swiftlint from PATH ran"
+[ -e "$WORK/pinned-swiftformat-ran" ] || fail "build/tools/bin/swiftformat not run"
+[ -e "$WORK/pinned-swiftlint-ran" ] || fail "build/tools/bin/swiftlint not run"
 
 [ "$failures" -eq 0 ]

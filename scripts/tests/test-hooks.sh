@@ -81,6 +81,21 @@ test_commit_without_swift_files_skips_the_tools() {
   [ ! -e "$WORK/tool-ran" ] || { echo "swiftformat/swiftlint ran"; return 1; }
 }
 
+test_commit_runs_the_pinned_tools_in_build_tools_bin_before_path() {
+  new_repo pinned
+  git switch -q -c feat/pinned
+  mkdir -p bin build/tools/bin
+  stub bin/swiftformat "$WORK/path-tool-ran" 1
+  stub bin/swiftlint "$WORK/path-tool-ran" 1
+  stub build/tools/bin/swiftformat "$WORK/pinned-swiftformat-ran" 0
+  stub build/tools/bin/swiftlint "$WORK/pinned-swiftlint-ran" 0
+  cp "$FIXTURES/Formatted.swift.fixture" Greeter.swift && git add Greeter.swift
+  PATH="$PWD/bin:$PATH" git commit -q -m add || { echo "commit failed"; return 1; }
+  [ ! -e "$WORK/path-tool-ran" ] || { echo "swiftformat/swiftlint from PATH ran"; return 1; }
+  [ -e "$WORK/pinned-swiftformat-ran" ] || { echo "build/tools/bin/swiftformat not run"; return 1; }
+  [ -e "$WORK/pinned-swiftlint-ran" ] || { echo "build/tools/bin/swiftlint not run"; return 1; }
+}
+
 test_commit_with_staged_swift_deletion_succeeds() {
   new_repo deletion
   git switch -q -c feat/delete
