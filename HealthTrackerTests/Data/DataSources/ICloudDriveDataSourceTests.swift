@@ -9,6 +9,26 @@ import Foundation
 @testable import HealthTracker
 import Testing
 
+/// File presenter that refuses to save its changes (asked before a read) and to give up
+/// its file (asked before a replacing write), so every coordinated access to the file
+/// ends in a file coordination error.
+private final nonisolated class FailingFilePresenter: NSObject, NSFilePresenter {
+    let presentedItemURL: URL?
+    let presentedItemOperationQueue = OperationQueue()
+
+    init(url: URL) {
+        presentedItemURL = url
+    }
+
+    func savePresentedItemChanges(completionHandler: @escaping (Error?) -> Void) {
+        completionHandler(CocoaError(.fileWriteUnknown))
+    }
+
+    func accommodatePresentedItemDeletion(completionHandler: @escaping (Error?) -> Void) {
+        completionHandler(CocoaError(.fileWriteUnknown))
+    }
+}
+
 @MainActor
 struct ICloudDriveDataSourceTests {
     private func makeTempDirectory() throws -> URL {
@@ -16,6 +36,13 @@ struct ICloudDriveDataSourceTests {
             .appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
+    }
+
+    /// Registers a `FailingFilePresenter` on the data file; remove it when done.
+    private func blockCoordination(of directory: URL) -> FailingFilePresenter {
+        let presenter = FailingFilePresenter(url: directory.appendingPathComponent("HealthTrackerData.json"))
+        NSFileCoordinator.addFilePresenter(presenter)
+        return presenter
     }
 
     // MARK: - load / save
@@ -103,6 +130,32 @@ struct ICloudDriveDataSourceTests {
         #expect(mockLogger.didLog(level: .error, containing: "Failed to load"))
     }
 
+    @Test func load_returnsEmptyWhenFileCoordinationFails() throws {
+        let directory = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let dataSource = ICloudDriveDataSource(logger: MockLogger(), directoryOverride: directory)
+        try dataSource.save([#require(TestDataBuilder.makeRecordedOptimalDay())])
+        let presenter = blockCoordination(of: directory)
+        defer { NSFileCoordinator.removeFilePresenter(presenter) }
+
+        #expect(dataSource.load().isEmpty)
+    }
+
+    @Test func save_leavesDataFileUntouchedWhenFileCoordinationFails() throws {
+        let directory = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let dataSource = ICloudDriveDataSource(logger: MockLogger(), directoryOverride: directory)
+        let dataFileURL = directory.appendingPathComponent("HealthTrackerData.json")
+        let currentContents = Data("current data".utf8)
+        try currentContents.write(to: dataFileURL)
+        let presenter = blockCoordination(of: directory)
+        defer { NSFileCoordinator.removeFilePresenter(presenter) }
+
+        try dataSource.save([#require(TestDataBuilder.makeRecordedOptimalDay())])
+
+        #expect(try Data(contentsOf: dataFileURL) == currentContents)
+    }
+
     @Test func load_filtersOutEmptyDays() throws {
         let directory = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -167,6 +220,21 @@ struct ICloudDriveDataSourceTests {
 
         let backupURL = directory.appendingPathComponent("HealthTrackerData.backup.json")
         #expect(result == true)
+        #expect(!FileManager.default.fileExists(atPath: backupURL.path))
+    }
+
+    @Test func backUpDataFile_returnsFalseWhenFileCoordinationFails() throws {
+        let directory = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let dataSource = ICloudDriveDataSource(logger: MockLogger(), directoryOverride: directory)
+        try Data("current data".utf8).write(to: directory.appendingPathComponent("HealthTrackerData.json"))
+        let presenter = blockCoordination(of: directory)
+        defer { NSFileCoordinator.removeFilePresenter(presenter) }
+
+        let result = dataSource.backUpDataFile()
+
+        let backupURL = directory.appendingPathComponent("HealthTrackerData.backup.json")
+        #expect(result == false)
         #expect(!FileManager.default.fileExists(atPath: backupURL.path))
     }
 
