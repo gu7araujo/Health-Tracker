@@ -850,6 +850,11 @@ struct DayDataTests {
 
         #expect(dayData.id == date)
     }
+
+    @Test(arguments: [HealthSection.meal, .workout])
+    func healthSection_idIsTheSectionItself(section: HealthSection) {
+        #expect(section.id == section)
+    }
 }
 
 // swiftlint:enable type_body_length file_length

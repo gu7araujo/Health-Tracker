@@ -123,6 +123,25 @@ struct UserDefaultsDataSourceTests {
         #expect(loadedDays[0].dayData == day2.dayData)
     }
 
+    @Test func save_keepsPreviousData_whenEncodingFails() throws {
+        let testDefaults = createTestUserDefaults()
+        let key = "test-key-\(UUID().uuidString)"
+        let dataSource = UserDefaultsDataSource(
+            userDefaults: testDefaults,
+            storageKey: key
+        )
+        let savedDay = try #require(TestDataBuilder.makeRecordedOptimalDay())
+        dataSource.save([savedDay])
+
+        // JSONEncoder throws on a non-finite Double
+        let unencodableDay = try #require(
+            TestDataBuilder.makeRecordedDayData(from: TestDataBuilder.makeDayData(water: .nan))
+        )
+        dataSource.save([unencodableDay])
+
+        #expect(dataSource.load() == [savedDay])
+    }
+
     // MARK: - Data Integrity Tests
 
     @Test func load_filtersOutEmptyDays() throws {

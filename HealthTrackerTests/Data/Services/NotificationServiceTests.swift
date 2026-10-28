@@ -105,6 +105,17 @@ struct NotificationServiceTests {
         #expect(tag(status) == expected)
     }
 
+    @Test("Falls back to notDetermined for a status a future iOS adds")
+    func authorizationStatus_mapsUnknownUNStatusToNotDetermined() async throws {
+        let center = MockUserNotificationCenter()
+        center.authorizationStatusResult = try #require(UNAuthorizationStatus(rawValue: 99))
+        let service = makeService(center: center)
+
+        let status = await service.authorizationStatus()
+
+        #expect(tag(status) == "notDetermined")
+    }
+
     // MARK: - scheduleNotification
 
     @Test("Builds a calendar-triggered request with the given content and timing")
