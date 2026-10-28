@@ -260,3 +260,36 @@ struct ICloudDriveDataSourceTests {
         #expect(mockLogger.didLog(level: .error, containing: "back up"))
     }
 }
+
+/// File manager that reports `containerURL` as the iCloud ubiquity container.
+private final nonisolated class UbiquityFileManager: FileManager {
+    let containerURL: URL
+
+    init(containerURL: URL) {
+        self.containerURL = containerURL
+        super.init()
+    }
+
+    override func url(forUbiquityContainerIdentifier _: String?) -> URL? {
+        containerURL
+    }
+}
+
+// MARK: - iCloud container
+
+extension ICloudDriveDataSourceTests {
+    @Test func save_writesToDocumentsInUbiquityContainer() throws {
+        let container = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: container) }
+        let dataSource = ICloudDriveDataSource(
+            logger: MockLogger(), fileManager: UbiquityFileManager(containerURL: container)
+        )
+        let day = try #require(TestDataBuilder.makeRecordedOptimalDay())
+
+        dataSource.save([day])
+
+        let dataFileURL = container.appendingPathComponent("Documents/HealthTrackerData.json")
+        #expect(FileManager.default.fileExists(atPath: dataFileURL.path))
+        #expect(dataSource.load() == [day])
+    }
+}

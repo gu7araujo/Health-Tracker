@@ -45,14 +45,14 @@ struct DataMigration {
     private let legacySource: LocalDataSourceProtocol
     private let cloudSource: LocalDataSourceProtocol
     private let flags: MigrationFlagStore
-    private let backUp: () -> Bool
+    private let backUp: @MainActor () -> Bool
     private let logger: LoggerProtocol
 
     init(
         legacySource: LocalDataSourceProtocol = UserDefaultsDataSource(),
         cloudSource: LocalDataSourceProtocol = ICloudDriveDataSource(),
         flags: MigrationFlagStore = UserDefaults.standard,
-        backUp: @escaping () -> Bool = { ICloudDriveDataSource().backUpDataFile() },
+        backUp: @escaping @MainActor () -> Bool = ICloudDriveDataSource().backUpDataFile,
         logger: LoggerProtocol = LoggerFactory.dataLogger(category: "Data.Migration")
     ) {
         self.legacySource = legacySource

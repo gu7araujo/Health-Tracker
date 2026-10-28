@@ -19,13 +19,16 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
     private let fileCoordinator = NSFileCoordinator()
     private let logger: LoggerProtocol
     private let directoryOverride: URL?
+    private let fileManager: FileManager
 
     init(
         logger: LoggerProtocol = LoggerFactory.dataLogger(category: "Storage.iCloud"),
-        directoryOverride: URL? = nil
+        directoryOverride: URL? = nil,
+        fileManager: FileManager = .default
     ) {
         self.logger = logger
         self.directoryOverride = directoryOverride
+        self.fileManager = fileManager
     }
 
     /// Resolves the file URL: iCloud Documents if available, local Documents otherwise.
@@ -36,15 +39,13 @@ final class ICloudDriveDataSource: LocalDataSourceProtocol {
             return directoryOverride.appendingPathComponent(fileName)
         }
 
-        if let containerURL = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+        if let containerURL = fileManager.url(forUbiquityContainerIdentifier: nil) {
             let documentsURL = containerURL.appendingPathComponent("Documents")
             return documentsURL.appendingPathComponent(fileName)
         }
 
         // Fallback: local Documents directory
-        let localDocuments = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-        let documentsURL = localDocuments.first ?? URL(fileURLWithPath: NSTemporaryDirectory())
-        return documentsURL.appendingPathComponent(fileName)
+        return URL.documentsDirectory.appendingPathComponent(fileName)
     }
 
     /// Loads all stored day data from the JSON file.
