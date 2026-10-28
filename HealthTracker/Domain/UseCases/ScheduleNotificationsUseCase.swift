@@ -18,10 +18,12 @@ import Foundation
 final class ScheduleNotificationsUseCase {
     private let notificationService: NotificationServiceProtocol
     private let logger: LoggerProtocol
+    private let bundle: Bundle
 
-    init(notificationService: NotificationServiceProtocol, logger: LoggerProtocol) {
+    init(notificationService: NotificationServiceProtocol, logger: LoggerProtocol, bundle: Bundle = .main) {
         self.notificationService = notificationService
         self.logger = logger
+        self.bundle = bundle
     }
 
     /// Schedules 30 days of date-specific notifications (lunch and evening reminders).
@@ -54,22 +56,21 @@ final class ScheduleNotificationsUseCase {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
+        let targetDates = (0 ..< 30).compactMap { calendar.date(byAdding: .day, value: $0, to: today) }
+        // Returns the localized value when one exists, so no separate localizedInfoDictionary lookup
+        let title = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+            ?? String(localized: "app_title")
+
         var scheduledCount = 0
 
-        for dayOffset in 0 ..< 30 {
-            guard let targetDate = calendar.date(byAdding: .day, value: dayOffset, to: today) else {
-                continue
-            }
-
+        for targetDate in targetDates {
             let dateString = formatDateForIdentifier(targetDate)
             let (lunchComponents, eveningComponents) = notificationTiming(for: targetDate)
 
             // Schedule lunch notification (NOTIF-05, NOTIF-07)
             try await notificationService.scheduleNotification(
                 identifier: "lunch-reminder-\(dateString)",
-                title: Bundle.main.localizedInfoDictionary?["CFBundleDisplayName"] as? String
-                    ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
-                    ?? String(localized: "app_title"),
+                title: title,
                 body: String(localized: "notification_lunch"),
                 dateComponents: lunchComponents,
                 repeats: false
@@ -78,9 +79,7 @@ final class ScheduleNotificationsUseCase {
             // Schedule evening notification (NOTIF-06, NOTIF-08)
             try await notificationService.scheduleNotification(
                 identifier: "evening-reminder-\(dateString)",
-                title: Bundle.main.localizedInfoDictionary?["CFBundleDisplayName"] as? String
-                    ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
-                    ?? String(localized: "app_title"),
+                title: title,
                 body: String(localized: "notification_evening"),
                 dateComponents: eveningComponents,
                 repeats: false

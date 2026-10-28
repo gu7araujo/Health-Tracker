@@ -114,6 +114,24 @@ struct ScheduleNotificationsUseCaseTests {
         #expect(mockService.scheduleNotificationTitles.allSatisfy { $0 == expectedTitle })
     }
 
+    @Test func execute_fallsBackToAppTitleWhenBundleHasNoDisplayName() async throws {
+        let mockService = MockNotificationService()
+        mockService.authorizationStatusResult = .authorized
+        // The test bundle's generated Info.plist has no CFBundleDisplayName.
+        let bundle = Bundle(for: MockLogger.self)
+        #expect(bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") == nil)
+
+        let useCase = ScheduleNotificationsUseCase(
+            notificationService: mockService,
+            logger: MockLogger(),
+            bundle: bundle
+        )
+        try await useCase.execute()
+
+        #expect(mockService.scheduleNotificationTitles.count == 60)
+        #expect(mockService.scheduleNotificationTitles.allSatisfy { $0 == String(localized: "app_title") })
+    }
+
     // MARK: - Edge Cases
 
     @Test func execute_handlesNotDeterminedStatus() async throws {
