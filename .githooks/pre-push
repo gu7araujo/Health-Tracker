@@ -19,7 +19,7 @@ if [ -x scripts/fitness/persisted-shape-guard.sh ]; then
 fi
 
 if [ "${SKIP_QUALITY:-}" = "1" ]; then
-  echo "pre-push: ⚠️  SKIP_QUALITY=1, skipping the quality gate: CI re-runs the gate on every push to the PR, drafts included." >&2
+  echo "pre-push: ⚠️  SKIP_QUALITY=1, skipping the quality gate: CI re-runs the gate only on an open PR, and not on docs-only changes." >&2
   exit 0
 fi
 

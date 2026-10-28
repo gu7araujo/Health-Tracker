@@ -268,7 +268,7 @@ Enabled by `scripts/bootstrap`. They live in `.githooks/`.
 - runs `scripts/fitness/persisted-shape-guard.sh origin/main`, which only warns (also with `SKIP_QUALITY=1`);
 - runs `scripts/quality --fast`, and blocks the push if a gate is red.
 
-Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). CI still runs the gate on every push to the PR, drafts included. Use it rarely, and run `--full` before marking the PR ready.
+Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). CI still runs the gate on every push to an open PR, drafts included, unless the push touches only docs or agent config. Use it rarely, and run `--full` before marking the PR ready.
 
 ## Xcode build phase
 
@@ -280,7 +280,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 
 | Trigger | `lint` (Linux) | `test` (macOS) |
 |---|---|---|
-| PR, draft or ready (opened, pushed, reopened, or marked ready) | ✅ | `scripts/quality --full` |
+| PR, draft or ready (opened, pushed, or reopened) | ✅ | `scripts/quality --full` |
 | Push to `main` (a merge) | ✅ | `scripts/quality --fast` |
 | Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full`; a red run opens an issue "Weekly quality gate failed" (or comments on the open one) |
 | Manual (**Run workflow** in the Actions tab) | ✅ (`ci.yml`) | `scripts/quality --full` |
@@ -294,6 +294,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 - the macOS job waits for the Linux `lint` job;
 - a new push to a PR cancels the run it replaces (runs on `main` are never cancelled);
 - changes that touch only docs or agent config (the `paths-ignore` list in `ci.yml`) skip CI;
+- marking a PR ready starts no run: the draft's run already checked that commit;
 - pushes to `main` run `--fast`, since the PR already ran `--full`;
 - Dependabot PRs run only `lint`.
 
@@ -322,7 +323,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
   - pushes to `main` and force-pushes;
   - `gh pr merge`.
 - A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately. If SwiftFormat or SwiftLint can't run, the hook reports that as an error instead of passing.
-- Agents open PRs as **draft**; every push runs CI, drafts included. They run `CI=true scripts/quality --full` locally, push, mark the PR ready (which re-runs CI against the current `main`) and wait for the checks. If `test` goes red, the agent reproduces it locally, fixes it and pushes again; a failure it can't reproduce locally, or a red run after a fix that was green locally, comes to you as a report instead. You review and merge.
+- Agents open PRs as **draft**; every push runs CI, drafts included. They run `CI=true scripts/quality --full` locally, push, wait for the checks, and mark the PR ready once they are green. If `test` goes red, the agent reproduces it locally, fixes it and pushes again; a failure it can't reproduce locally, or a red run after a fix that was green locally, comes to you as a report instead. You review and merge.
 
 ## Script reference
 

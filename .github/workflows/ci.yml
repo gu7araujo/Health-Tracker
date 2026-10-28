@@ -3,11 +3,11 @@ name: CI
 # The repo is public, so standard GitHub-hosted runners (xcode-27 included) cost nothing; the
 # limits below save wall-clock time (--full ~23 min). The Linux lint job gates the macOS test job,
 # superseded runs are cancelled, and docs/agent-config-only changes skip CI. .claude/hooks and
-# .claude/settings*.json still trigger it (scripts/tests covers them). Draft PRs run test too;
-# marking a PR ready re-runs it against the current base.
+# .claude/settings*.json still trigger it (scripts/tests covers them). Draft PRs run test too,
+# so marking a PR ready (no ready_for_review trigger) needs no run of its own.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened]
     paths-ignore: ['**/*.md', '.agents/**', '.claude/skills/**', '.codex/**']
   push:
     branches: [main]

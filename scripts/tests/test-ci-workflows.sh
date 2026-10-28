@@ -73,11 +73,13 @@ done < <(awk '{
   if (code ~ /(^|[^[:alnum:]_-])xargs([^[:alnum:]_-]|$)/) print FILENAME ":" FNR ":" $0
 }' "$WORKFLOWS"/*.yml | sed "s|^$ROOT/||")
 
-# Draft PRs run the macOS test job too; Dependabot PRs skip it.
+# Draft PRs run the macOS test job too, so marking a PR ready needs no run of its own: no
+# ready_for_review trigger (it would cancel the draft's run and re-run it). Dependabot PRs skip test.
 test_job="$(awk '/^  test:/ { found = 1; next } found && /^  [a-z]/ { exit } found { print }' "$CI")"
 test_if="$(awk '/^    if:/ { found = 1; print; next } found && /^      / { print; next } found { exit }' <<<"$test_job")"
-grep -q 'draft' <<<"$test_if" && fail "ci.yml test job: draft PRs run test too; drop the draft condition"
+grep -q 'draft' <<<"$test_job" && fail "ci.yml test job: draft PRs run test too; drop the draft condition"
 grep -qF "github.actor != 'dependabot[bot]'" <<<"$test_if" || fail "ci.yml test job: Dependabot PRs must skip test"
+grep -qE '^[^#]*ready_for_review' "$CI" && fail "ci.yml: no ready_for_review trigger; the draft's run already checked the commit"
 
 # test_steps <workflow>: the test job's steps, with the quality mode spelled --full and without
 # weekly.yml's red-run notification.
@@ -145,6 +147,7 @@ if [ $# -eq 0 ]; then
   must_not "no test job steps found"
   fixture draft
   must "ci.yml test job: draft PRs run test too; drop the draft condition"
+  must "ci.yml: no ready_for_review trigger"
   must_not "Dependabot PRs must skip test"
   fixture drift
   must "ci.yml test job: Dependabot PRs must skip test"
