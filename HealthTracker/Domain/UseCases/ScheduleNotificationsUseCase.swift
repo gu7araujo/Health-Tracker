@@ -18,12 +18,18 @@ import Foundation
 final class ScheduleNotificationsUseCase {
     private let notificationService: NotificationServiceProtocol
     private let logger: LoggerProtocol
-    private let bundle: Bundle
+    private let appName: String?
 
-    init(notificationService: NotificationServiceProtocol, logger: LoggerProtocol, bundle: Bundle = .main) {
+    /// - Parameter appName: The notification title; `nil` falls back to the `app_title` string.
+    ///   `object(forInfoDictionaryKey:)` already returns the localized display name when one exists.
+    init(
+        notificationService: NotificationServiceProtocol,
+        logger: LoggerProtocol,
+        appName: String? = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+    ) {
         self.notificationService = notificationService
         self.logger = logger
-        self.bundle = bundle
+        self.appName = appName
     }
 
     /// Schedules 30 days of date-specific notifications (lunch and evening reminders).
@@ -57,9 +63,7 @@ final class ScheduleNotificationsUseCase {
         let today = calendar.startOfDay(for: Date())
 
         let targetDates = (0 ..< 30).compactMap { calendar.date(byAdding: .day, value: $0, to: today) }
-        // Returns the localized value when one exists, so no separate localizedInfoDictionary lookup
-        let title = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
-            ?? String(localized: "app_title")
+        let title = appName ?? String(localized: "app_title")
 
         for targetDate in targetDates {
             let dateString = formatDateForIdentifier(targetDate)
