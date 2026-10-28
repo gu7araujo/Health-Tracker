@@ -117,25 +117,28 @@ grep -qxF "      github.actor == 'gu7araujo' && (" "$WORKFLOWS/claude.yml" ||
 # fixture runs do not recurse.
 if [ $# -eq 0 ]; then
   FIXTURES="$ROOT/scripts/tests/fixtures/ci-workflows"
-  # check_fixture <dir> <must|must-not> <message>: the checks on that fixture dir print (or don't) the message.
-  check_fixture() {
-    local out
-    out="$("$0" "$FIXTURES/$1" 2>&1)"
-    case "$2" in
-      must) grep -qF -- "$3" <<<"$out" || fail "fixture $1: expected '$3', got:"$'\n'"$out" ;;
-      must-not) grep -qF -- "$3" <<<"$out" && fail "fixture $1: unexpected '$3':"$'\n'"$out" ;;
-    esac
+  # fixture <dir>: runs the checks on that fixture dir once; must and must_not assert on its output.
+  fixture() {
+    dir="$1"
+    out="$("$0" "$FIXTURES/$dir" 2>&1)"
   }
+  must() { grep -qF -- "$1" <<<"$out" || fail "fixture $dir: expected '$1', got:"$'\n'"$out"; }
+  must_not() { ! grep -qF -- "$1" <<<"$out" || fail "fixture $dir: unexpected '$1':"$'\n'"$out"; }
+  fixture xargs
   XARGS="FAIL: xargs needs -0 for a NUL-separated list: scripts/tests/fixtures/ci-workflows/xargs"
-  check_fixture xargs must "$XARGS/split-line.yml:8:"
-  check_fixture xargs must "$XARGS/quoted-hash.yml:6:"
-  check_fixture xargs must "$XARGS/second-xargs.yml:6:"
-  check_fixture xargs must-not "xargs/pass.yml"
-  check_fixture timeouts must "ci.yml: the Quality gate step needs a timeout-minutes below the test job's (45)"
-  check_fixture timeouts must "weekly.yml: the Quality gate step needs a timeout-minutes below the test job's (30)"
-  check_fixture timeouts must-not "drifted"
-  check_fixture drift must "weekly.yml's test steps drifted from ci.yml's"
-  check_fixture drift must-not "Quality gate step needs"
+  must "$XARGS/split-line.yml:8:"
+  must "$XARGS/quoted-hash.yml:6:"
+  must "$XARGS/second-xargs.yml:6:"
+  must "FAIL: pipe a NUL-separated list (grep -Z ... | xargs -0): scripts/tests/fixtures/ci-workflows/xargs/producer.yml:6:"
+  must_not "xargs/pass.yml"
+  fixture timeouts
+  must "ci.yml: the Quality gate step needs a timeout-minutes below the test job's (45)"
+  must "weekly.yml: the Quality gate step needs a timeout-minutes below the test job's (30)"
+  must_not "drifted"
+  must_not "no test job steps found"
+  fixture drift
+  must "weekly.yml's test steps drifted from ci.yml's"
+  must_not "Quality gate step needs"
 fi
 
 [ "$failures" -eq 0 ]

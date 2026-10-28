@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Runs every scripts/tests/test-*.sh; exits non-zero if any fails.
+# Runs every scripts/tests/test-*.sh, with the repo's build/tools/bin (the pinned tools) first on
+# PATH when it exists; exits non-zero if any fails.
 set -uo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"

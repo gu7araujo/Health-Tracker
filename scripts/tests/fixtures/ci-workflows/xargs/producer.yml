@@ -1,0 +1,6 @@
+# Must fail the pipe check: xargs -0 reads a list that no grep -Z made NUL-separated.
+jobs:
+  lint:
+    steps:
+      - name: ShellCheck
+        run: cat list.txt | xargs -0 shellcheck
