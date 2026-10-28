@@ -104,8 +104,11 @@ struct DayData: Codable, Equatable, Identifiable {
         guard categoriesCount >= 2 else { return .incomplete }
 
         // 2-4 categories have data: evaluate status
-        // Poor is checked first — any poor signal always wins, and missing water is poor
-        guard let water, !meetsPoorCriteria(water: water) else { return .poor }
+        // Missing water counts as none, which is a poor signal
+        let water = water ?? 0
+
+        // Poor is checked first — any poor signal always wins
+        if meetsPoorCriteria(water: water) { return .poor }
 
         if meetsOptimalCriteria(water: water) { return .optimal }
 
@@ -241,7 +244,7 @@ struct DayData: Codable, Equatable, Identifiable {
     /// Checks if any poor (red) criteria are met.
     /// Requirements (ANY one of):
     /// - Meals: 3+ medium meals OR any large meal (satiety ignored)
-    /// - Water: < 1.0L (missing water is poor too, checked by `status`)
+    /// - Water: < 1.0L (`status` passes missing water as 0)
     /// - Mood: sad
     /// Note: Workouts don't affect poor status
     private func meetsPoorCriteria(water: Double) -> Bool {

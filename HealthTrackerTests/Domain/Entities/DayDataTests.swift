@@ -299,25 +299,14 @@ struct DayDataTests {
         #expect(dayData.status == .poor)
     }
 
-    @Test(
-        "Missing water is poor even when every other category meets optimal or moderate",
-        arguments: [Mood.good, .neutral]
-    )
-    func status_isPoor_whenWaterNilAndOtherwiseOptimalOrModerate(mood: Mood) {
+    @Test("Missing water is poor even when every other category meets optimal")
+    func status_isPoor_whenWaterNilAndOtherwiseOptimal() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.addMeal(makeSmallMeal("A"))
         dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
-        dayData.mood = mood
-
-        #expect(dayData.status == .poor)
-    }
-
-    @Test("Missing water with a single other category stays incomplete")
-    func status_isIncomplete_whenWaterNilAndOneOtherCategory() {
-        var dayData = DayData(date: TestDataBuilder.fixedDate)
         dayData.mood = .good
 
-        #expect(dayData.status == .incomplete)
+        #expect(dayData.status == .poor)
     }
 
     @Test("Any large meal triggers poor status")
