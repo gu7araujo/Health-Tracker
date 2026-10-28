@@ -11,14 +11,24 @@ import SwiftUI
 struct HealthTrackerApp: App {
     init() {
         // Skip migration and the system permission alert when running under UI or unit tests
-        guard !UITestingSupport.isActive, !UITestingSupport.isHostingUnitTests else { return }
+        Self.startUp(
+            isTesting: UITestingSupport.isActive || UITestingSupport.isHostingUnitTests,
+            migrate: DataMigration.migrateIfNeeded,
+            requestPermission: { await NotificationPermissionManager.requestIfFirstLaunch() }
+        )
+    }
 
-        DataMigration.migrateIfNeeded()
-
-        // Request notification permission on first launch
-        Task {
-            await NotificationPermissionManager.requestIfFirstLaunch()
-        }
+    /// Production startup: runs data migrations, then requests notification permission on first launch.
+    /// Does nothing when `isTesting`; returns the permission request's task otherwise.
+    @discardableResult
+    static func startUp(
+        isTesting: Bool,
+        migrate: () -> Void,
+        requestPermission: @escaping () async -> Void
+    ) -> Task<Void, Never>? {
+        guard !isTesting else { return nil }
+        migrate()
+        return Task { await requestPermission() }
     }
 
     var body: some Scene {
