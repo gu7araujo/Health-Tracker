@@ -10,8 +10,8 @@ import SwiftUI
 @main
 struct HealthTrackerApp: App {
     init() {
-        // Skip migration and the system permission alert when running under UI tests
-        guard !UITestingSupport.isActive else { return }
+        // Skip migration and the system permission alert when running under UI or unit tests
+        guard !UITestingSupport.isActive, !UITestingSupport.isHostingUnitTests else { return }
 
         DataMigration.migrateIfNeeded()
 
@@ -23,7 +23,10 @@ struct HealthTrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainView()
+            // The unit-test host shows no UI, so it never wires the production repository
+            if !UITestingSupport.isHostingUnitTests {
+                MainView()
+            }
         }
     }
 }

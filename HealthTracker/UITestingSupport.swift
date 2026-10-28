@@ -11,6 +11,11 @@ enum UITestingSupport {
         ProcessInfo.processInfo.arguments.contains("-uiTesting")
     }
 
+    /// True when the app is only the host process for the unit-test bundle.
+    static var isHostingUnitTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
+
     /// Production repository, or one backed by a fresh temp directory per launch when UI testing.
     static func makeRepository() -> HealthDataRepositoryProtocol {
         guard isActive else { return HealthDataRepository() }
