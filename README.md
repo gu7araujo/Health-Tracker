@@ -41,7 +41,7 @@ scripts/bootstrap
 
 This does three things:
 - It points git at the repo's hooks (`git config core.hooksPath .githooks`). The path is relative, so every worktree uses its own `.githooks`. If a different hooks path was set before, it tells you it replaced it.
-- It runs `scripts/ci/install-tools.sh build/tools/bin`, which downloads the pinned Periphery, SwiftLint and SwiftFormat (each release zip sha256-checked) into `build/tools/bin`. `scripts/quality`, `scripts/doctor` and the pre-commit and Claude Code format hooks run tools from there before `PATH`. A fresh worktree has no `build/tools/bin`, so bootstrap it before its first push: without Periphery the pre-push gate fails.
+- It runs `scripts/ci/install-tools.sh build/tools/bin`, which downloads the pinned Periphery, SwiftLint and SwiftFormat (each release zip sha256-checked) into `build/tools/bin`. The gate, `doctor`, the hooks and the script tests run tools from there before `PATH`. A fresh worktree has no `build/tools/bin`, so bootstrap it before its first push: without Periphery the pre-push gate fails.
 - It runs `scripts/doctor`, which compares your installed tools with the pins and prints a fix command for each mismatch.
 
 Running `scripts/bootstrap` again is safe.
@@ -268,7 +268,7 @@ Enabled by `scripts/bootstrap`. They live in `.githooks/`.
 - runs `scripts/fitness/persisted-shape-guard.sh origin/main`, which only warns (also with `SKIP_QUALITY=1`);
 - runs `scripts/quality --fast`, and blocks the push if a gate is red.
 
-Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). CI still runs the gate once the PR is ready (draft PRs run only lint). Use it rarely, and run `--full` before marking the PR ready.
+Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). CI still runs the gate on every push to the PR, drafts included. Use it rarely, and run `--full` before marking the PR ready.
 
 ## Xcode build phase
 
@@ -280,8 +280,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 
 | Trigger | `lint` (Linux) | `test` (macOS) |
 |---|---|---|
-| Draft PR | ✅ | skipped |
-| Ready PR (opened, pushed, or marked ready) | ✅ | `scripts/quality --full` |
+| PR, draft or ready (opened, pushed, or reopened) | ✅ | `scripts/quality --full` |
 | Push to `main` (a merge) | ✅ | `scripts/quality --fast` |
 | Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full`; a red run opens an issue "Weekly quality gate failed" (or comments on the open one) |
 | Manual (**Run workflow** in the Actions tab) | ✅ (`ci.yml`) | `scripts/quality --full` |
@@ -290,18 +289,14 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 
 **`test`** runs only after `lint` passes, on `runs-on: xcode-27` (macOS 26). It selects the pinned Xcode (`scripts/ci/select-xcode.sh`) and installs the pinned tools. Then it runs the scripts' own tests (`scripts/tests/run`) and `scripts/quality` with `CI=true`, so `scripts/doctor` fails on any version drift and compiler warnings fail the build (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `GCC_TREAT_WARNINGS_AS_ERRORS`; locally they stay warnings). The gate table appears in the run's summary. Compile errors and test failures are rendered as GitHub annotations (`xcbeautify --renderer github-actions`).
 
-**Cost.** The repo is private on GitHub Free: about 200 macOS minutes a month (macOS minutes count 10× against the 2,000-minute allowance). To stay inside it:
+**Cost.** The repo is public, and GitHub Actions is free for public repositories on standard GitHub-hosted runners, macOS included (`xcode-27` is a standard-size image); only larger runners are billed. Measured run times: a PR's `--full` ~23 min, a push to `main` (`--fast`) ~10–14 min, the weekly `--full` ~23 min. To keep feedback fast:
 
 - the macOS job waits for the Linux `lint` job;
-- draft PRs run only `lint`;
 - a new push to a PR cancels the run it replaces (runs on `main` are never cancelled);
-- changes that only touch Markdown, `.agents/`, `.claude/skills/` or `.codex/` skip CI;
+- changes that touch only docs or agent config (the `paths-ignore` list in `ci.yml`) skip CI;
+- marking a PR ready starts no run: the draft's run already checked that commit;
 - pushes to `main` run `--fast`, since the PR already ran `--full`;
 - Dependabot PRs run only `lint`.
-
-Cost per item: a ready PR's `--full` run takes ~11 min (measured on the first run), and agents get at most two ready runs per PR without your go-ahead; a merge to `main` (`--fast`) is estimated at ~5 min; the **weekly** `--full` is ~47 min a month, about a quarter of the budget.
-
-Check usage under **Settings → Billing → Usage**. If it passes about 80% of the allowance, upgrade to GitHub Pro (3,000 minutes, and branch rulesets so the checks become required).
 
 **Reading a failure:**
 
@@ -321,14 +316,14 @@ GitHub does not enforce the checks on the Free plan. Look at them before you app
 
 Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-gate` skill, so they run the same commands you do:
 
-- "Done" means `scripts/quality --full` exits 0. Agents paste the gate table into their report and PR.
+- "Done" means `scripts/quality --full` exits 0; for a change touching only docs or agent config (the `paths-ignore` list in `ci.yml`), `scripts/quality --fast`. Agents paste the gate table into their report and PR.
 - `.claude/settings.json` stops Claude Code from bypassing the gate. It denies:
   - `--no-verify` / `-n` and `git -c core.hooksPath`;
   - `SKIP_QUALITY=`;
   - pushes to `main` and force-pushes;
   - `gh pr merge`.
 - A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately. If SwiftFormat or SwiftLint can't run, the hook reports that as an error instead of passing.
-- Agents open PRs as **draft**, run `CI=true scripts/quality --full` locally, mark the PR ready (which starts the macOS job) and wait for the checks. If `test` goes red, the agent moves the PR back to draft, fixes and verifies locally, and marks it ready one more time; a failure it can't reproduce locally, or a second red ready run, comes to you as a report instead. At most two ready runs per PR without your go-ahead. You review and merge.
+- Agents open PRs as **draft**; every push runs CI, drafts included. They run `CI=true scripts/quality --full` locally, push, wait for the checks, and mark the PR ready once they are green. If `test` goes red, the agent reproduces it locally, fixes it and pushes again; a failure it can't reproduce locally, or a red run after a fix that was green locally, comes to you as a report instead. You review and merge.
 
 ## Script reference
 
