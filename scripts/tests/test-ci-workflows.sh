@@ -18,6 +18,9 @@ fail() {
   printf '  FAIL: %s\n' "$1"
   failures=$((failures + 1))
 }
+# strip_root: drops the literal "$ROOT/" prefix from each line, so a checkout path holding sed or
+# glob metacharacters still prints repo-relative paths.
+strip_root() { while IFS= read -r line; do printf '%s\n' "${line#"$ROOT/"}"; done; }
 
 for workflow in "$WORKFLOWS"/*.yml; do
   name="$(basename "$workflow")"
@@ -53,13 +56,13 @@ grep -qE '^ *run: scripts/fitness/persisted-shape-guard.sh HEAD\^1 *$' <<<"$guar
 while IFS= read -r line; do
   fail "action not pinned by SHA with a '# v...' comment: $line"
 done < <(grep -HnE '^[^#]*uses: ' "$WORKFLOWS"/*.yml |
-  grep -vE 'uses: [^@ ]+@[0-9a-f]{40} # v[0-9][^ ]* *$' | sed "s|^$ROOT/||")
+  grep -vE 'uses: [^@ ]+@[0-9a-f]{40} # v[0-9][^ ]* *$' | strip_root)
 
 # File lists piped to xargs are NUL-separated, so a filename with spaces stays one argument.
 while IFS= read -r line; do
   fail "pipe a NUL-separated list (grep -Z ... | xargs -0): $line"
 done < <(grep -HnE '\| *xargs' "$WORKFLOWS"/*.yml |
-  grep -vE 'grep -[A-Za-z]*Z[A-Za-z]* .*\| *xargs -0 ' | sed "s|^$ROOT/||")
+  grep -vE 'grep -[A-Za-z]*Z[A-Za-z]* .*\| *xargs -0 ' | strip_root)
 # Every xargs takes -0, also when the pipe is split across lines. Quoted strings, comments and
 # step names are not commands.
 while IFS= read -r line; do
@@ -71,7 +74,7 @@ done < <(awk '{
   if (code ~ /^ *(- )?name:/) next
   gsub(/xargs -0( |$)/, "", code)
   if (code ~ /(^|[^[:alnum:]_-])xargs([^[:alnum:]_-]|$)/) print FILENAME ":" FNR ":" $0
-}' "$WORKFLOWS"/*.yml | sed "s|^$ROOT/||")
+}' "$WORKFLOWS"/*.yml | strip_root)
 
 # Draft PRs run the macOS test job too, so marking a PR ready needs no run of its own: no
 # ready_for_review trigger (it would cancel the draft's run and re-run it). Dependabot PRs skip test.
@@ -121,38 +124,78 @@ grep -qxF "    if: github.event.pull_request.draft != true && github.event.pull_
 grep -qxF "      github.actor == 'gu7araujo' && (" "$WORKFLOWS/claude.yml" ||
   fail "claude.yml: the job must run only when github.actor is the owner"
 
-# The real workflows pass every check, which a check gone blind would too: the fixtures prove the
-# xargs, timeout and parity checks still catch what they are for. Only on the default run, so the
-# fixture runs do not recurse.
+# The real workflows pass every check, which a check gone blind would too: the fixtures prove each
+# check still catches what it is for, and pass/ that together they accept a clean set. Only on the
+# default run, so the fixture runs do not recurse.
 if [ $# -eq 0 ]; then
   FIXTURES="$ROOT/scripts/tests/fixtures/ci-workflows"
-  # fixture <dir>: runs the checks on that fixture dir once; must and must_not assert on its output.
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' EXIT
+  # fixture <dir> <n>: runs the checks on pass/ with that dir's files copied over it, so only the
+  # checks the dir breaks fail, and asserts exactly n FAIL lines, each counted in the exit status;
+  # must asserts on its output.
   fixture() {
     dir="$1"
-    out="$("$0" "$FIXTURES/$dir" 2>&1)"
+    mkdir "$tmp/$dir"
+    cp "$FIXTURES"/pass/*.yml "$FIXTURES/$dir"/*.yml "$tmp/$dir/"
+    out="$("$0" "$tmp/$dir" 2>&1)"
+    status=$?
+    printed="$(grep -c '^  FAIL: ' <<<"$out")"
+    counted="$(sed -nE 's/^([0-9]+) check\(s\) failed$/\1/p' <<<"$out")"
+    [ "$printed" -eq "$2" ] && [ "${counted:-0}" -eq "$2" ] && { [ "$2" -ne 0 ] || [ "$status" -eq 0 ]; } ||
+      fail "fixture $dir: expected $2 FAIL line(s), all counted; got exit $status:"$'\n'"$out"
   }
   must() { grep -qF -- "$1" <<<"$out" || fail "fixture $dir: expected '$1', got:"$'\n'"$out"; }
-  must_not() { ! grep -qF -- "$1" <<<"$out" || fail "fixture $dir: unexpected '$1':"$'\n'"$out"; }
-  fixture xargs
-  XARGS="FAIL: xargs needs -0 for a NUL-separated list: scripts/tests/fixtures/ci-workflows/xargs"
+  fixture pass 0
+  fixture xargs 4
+  XARGS="FAIL: xargs needs -0 for a NUL-separated list: $tmp/xargs"
   must "$XARGS/split-line.yml:8:"
   must "$XARGS/quoted-hash.yml:6:"
   must "$XARGS/second-xargs.yml:6:"
-  must "FAIL: pipe a NUL-separated list (grep -Z ... | xargs -0): scripts/tests/fixtures/ci-workflows/xargs/producer.yml:6:"
-  must_not "xargs/pass.yml"
-  fixture timeouts
+  must "FAIL: pipe a NUL-separated list (grep -Z ... | xargs -0): $tmp/xargs/producer.yml:6:"
+  fixture timeouts 2
   must "ci.yml: the Quality gate step needs a timeout-minutes below the test job's (45)"
   must "weekly.yml: the Quality gate step needs a timeout-minutes below the test job's (30)"
-  must_not "drifted"
-  must_not "no test job steps found"
-  fixture draft
+  fixture draft 2
   must "ci.yml test job: draft PRs run test too; drop the draft condition"
   must "ci.yml: no ready_for_review trigger"
-  must_not "Dependabot PRs must skip test"
-  fixture drift
+  fixture dependabot 1
   must "ci.yml test job: Dependabot PRs must skip test"
+  fixture drift 1
   must "weekly.yml's test steps drifted from ci.yml's"
-  must_not "Quality gate step needs"
+  fixture pinning 3
+  PINNING="FAIL: action not pinned by SHA with a '# v...' comment: $tmp/pinning/unpinned.yml"
+  must "$PINNING:6:"
+  must "$PINNING:7:"
+  must "$PINNING:8:"
+  fixture summary 3
+  must "FAIL: not-always.yml: Summary step is not if: always()"
+  must "FAIL: conditional.yml: Summary step does not call summary.sh unconditionally"
+  must "FAIL: outside.yml calls summary.sh outside a Summary step"
+  fixture lint 4
+  must "FAIL: ci.yml lint job: checkout needs fetch-depth: 2"
+  must "FAIL: ci.yml lint job: no 'run: scripts/fitness/run' step"
+  must "FAIL: ci.yml lint job: 'Persisted shape' step must run on pull_request only"
+  must "FAIL: ci.yml lint job: 'Persisted shape' step must run the guard against HEAD^1"
+  fixture notify 3
+  must "FAIL: weekly.yml: needs a 'Notify on failure' step with if: failure()"
+  must "FAIL: weekly.yml: 'Notify on failure' should open an issue"
+  must "FAIL: weekly.yml: opening an issue needs 'issues: write'"
+  fixture claude 2
+  must "FAIL: claude-code-review.yml: the job must"
+  must "FAIL: claude.yml: the job must"
+  # A checkout path with sed or glob metacharacters (| [ * \) still prints repo-relative paths, from
+  # each check that prints file paths.
+  odd="$tmp/a|b[*\\c"
+  rel="scripts/tests/fixtures/ci-workflows/odd"
+  mkdir -p "$odd/$rel"
+  cp "$0" "$odd/scripts/tests/"
+  cp "$FIXTURES/pinning/unpinned.yml" "$FIXTURES/xargs/producer.yml" "$FIXTURES/xargs/split-line.yml" "$odd/$rel/"
+  dir="odd (checkout at $odd)"
+  out="$("$odd/scripts/tests/test-ci-workflows.sh" "$odd/$rel" 2>&1)"
+  must "comment: $rel/unpinned.yml:6:"
+  must "xargs -0): $rel/producer.yml:6:"
+  must "NUL-separated list: $rel/split-line.yml:8:"
 fi
 
-[ "$failures" -eq 0 ]
+[ "$failures" -eq 0 ] || { printf '%s check(s) failed\n' "$failures"; exit 1; }

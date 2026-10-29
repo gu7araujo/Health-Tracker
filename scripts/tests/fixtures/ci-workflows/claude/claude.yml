@@ -1,0 +1,7 @@
+# Must fail: the @claude job checks the actor, but not for the owner.
+jobs:
+  claude:
+    if: |
+      github.actor != 'dependabot[bot]' && (
+        contains(github.event.comment.body, '@claude')
+      )

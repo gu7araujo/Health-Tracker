@@ -1,0 +1,4 @@
+# Must fail: the review skips draft PRs but still runs on fork PRs.
+jobs:
+  claude-review:
+    if: github.event.pull_request.draft != true

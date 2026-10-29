@@ -1,0 +1,7 @@
+# Must fail: summary.sh runs only when the report exists, so a run that stops early gets a blank summary.
+jobs:
+  test:
+    steps:
+      - name: Summary
+        if: always()
+        run: test -f build/quality.json && scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"

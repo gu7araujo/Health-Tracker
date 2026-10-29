@@ -1,9 +1,23 @@
 # Must fail: the Quality gate step's timeout equals the test job's, so a hang cancels the job.
 # Must pass the step parity check: "$MODE" counts as --full, the same steps as weekly.yml.
 jobs:
+  lint:
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - name: Fitness
+        run: scripts/fitness/run
+      - name: Persisted shape
+        if: github.event_name == 'pull_request'
+        run: scripts/fitness/persisted-shape-guard.sh HEAD^1
   test:
+    if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
     timeout-minutes: 45
     steps:
       - name: Quality gate
         timeout-minutes: 45
         run: scripts/quality "$MODE" --json
+      - name: Summary
+        if: always()
+        run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"

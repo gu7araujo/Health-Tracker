@@ -1,8 +1,16 @@
-# Must fail with drift/ci.yml: the Quality gate step runs --fast, not ci.yml's --full.
+# Must fail with pass/ci.yml: the Quality gate step runs --fast, not ci.yml's --full.
 jobs:
   test:
     timeout-minutes: 60
+    permissions:
+      issues: write
     steps:
       - name: Quality gate
         timeout-minutes: 45
         run: scripts/quality --fast --json
+      - name: Summary
+        if: always()
+        run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
+      - name: Notify on failure
+        if: failure() && github.event_name == 'schedule'
+        run: gh issue create --title "Weekly quality gate failed"

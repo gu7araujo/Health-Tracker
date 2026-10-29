@@ -1,0 +1,7 @@
+# Must fail: summary.sh runs in a step not named Summary.
+jobs:
+  test:
+    steps:
+      - name: Report
+        if: always()
+        run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
