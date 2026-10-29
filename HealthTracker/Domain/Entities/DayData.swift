@@ -104,12 +104,15 @@ struct DayData: Codable, Equatable, Identifiable {
         guard categoriesCount >= 2 else { return .incomplete }
 
         // 2-4 categories have data: evaluate status
+        // Missing water counts as none, which is a poor signal
+        let water = water ?? 0
+
         // Poor is checked first — any poor signal always wins
-        if meetsPoorCriteria { return .poor }
+        if meetsPoorCriteria(water: water) { return .poor }
 
-        if meetsOptimalCriteria { return .optimal }
+        if meetsOptimalCriteria(water: water) { return .optimal }
 
-        if meetsModerateCriteria { return .moderate }
+        if meetsModerateCriteria(water: water) { return .moderate }
 
         // Fallback: has data but doesn't meet any specific criteria
         return .poor
@@ -202,7 +205,7 @@ struct DayData: Codable, Equatable, Identifiable {
     /// - Water: >= 1.8L
     /// - Workouts: Total duration >= 30 minutes
     /// - Mood: good
-    private var meetsOptimalCriteria: Bool {
+    private func meetsOptimalCriteria(water: Double) -> Bool {
         guard !meals.isEmpty else { return false }
 
         // Count medium meals (satiety ignored)
@@ -212,7 +215,7 @@ struct DayData: Codable, Equatable, Identifiable {
         // Allow only small/verySmall meals OR at most 1 medium meal (rest must be small/verySmall)
         let hasOptimalMeals = mediumMealCount <= 1 && (mediumMealCount + smallMealCount) == meals.count
 
-        let hasOptimalWater = (water ?? 0) >= 1.8
+        let hasOptimalWater = water >= 1.8
         let hasOptimalWorkouts = totalWorkoutDuration >= 30
         let hasGoodMood = mood == .good
 
@@ -225,12 +228,11 @@ struct DayData: Codable, Equatable, Identifiable {
     /// - Water: >= 1.0L AND < 1.8L
     /// - Workouts: Total duration < 30 min
     /// - Mood: neutral
-    private var meetsModerateCriteria: Bool {
+    private func meetsModerateCriteria(water: Double) -> Bool {
         let mediumMealCount = meals.count(where: { $0.quantity == .medium })
         let hasModerateMeals = mediumMealCount == 2
 
-        let waterAmount = water ?? 0
-        let hasModerateWater = waterAmount >= 1.0 && waterAmount < 1.8
+        let hasModerateWater = water >= 1.0 && water < 1.8
 
         let hasModerateWorkouts = totalWorkoutDuration < 30
 
@@ -242,15 +244,15 @@ struct DayData: Codable, Equatable, Identifiable {
     /// Checks if any poor (red) criteria are met.
     /// Requirements (ANY one of):
     /// - Meals: 3+ medium meals OR any large meal (satiety ignored)
-    /// - Water: < 1.0L (or nil)
+    /// - Water: < 1.0L (`status` passes missing water as 0)
     /// - Mood: sad
     /// Note: Workouts don't affect poor status
-    private var meetsPoorCriteria: Bool {
+    private func meetsPoorCriteria(water: Double) -> Bool {
         let mediumMealCount = meals.count(where: { $0.quantity == .medium })
         let hasLargeMeal = meals.contains { $0.quantity == .large }
         let poorMeals = mediumMealCount >= 3 || hasLargeMeal
 
-        let lowWater = (water ?? 0) < 1.0
+        let lowWater = water < 1.0
         let badMood = mood == .sad
 
         return poorMeals || lowWater || badMood

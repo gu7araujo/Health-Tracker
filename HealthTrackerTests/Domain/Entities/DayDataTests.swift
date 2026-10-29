@@ -299,6 +299,16 @@ struct DayDataTests {
         #expect(dayData.status == .poor)
     }
 
+    @Test("Missing water is poor even when every other category meets optimal")
+    func status_isPoor_whenWaterNilAndOtherwiseOptimal() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addMeal(makeSmallMeal("A"))
+        dayData.addWorkout(Workout(description: "Run", duration: Workout.Duration(minutes: 30)))
+        dayData.mood = .good
+
+        #expect(dayData.status == .poor)
+    }
+
     @Test("Any large meal triggers poor status")
     func status_isPoor_withAnyLargeMeal() {
         var dayData = DayData(date: TestDataBuilder.fixedDate)
