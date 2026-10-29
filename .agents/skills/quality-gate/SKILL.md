@@ -16,7 +16,7 @@ scripts/quality --full --json   # done: everything in --fast, plus UI tests, app
 
 It tests on `--simulator <udid>` when given; otherwise it reuses or clones a simulator named `HT-<branch>`, so parallel worktrees stay isolated. An exported `SIMULATOR_ID` is ignored on purpose. Delete the clone when the branch is done: `xcrun simctl delete "HT-<branch with / replaced by ->"`.
 
-**Done when:** `scripts/quality --full` exits 0. Paste the table it prints into the final report and PR; a change touching only docs or agent config may paste the `--fast` table instead. Before marking a PR ready, run it as `CI=true scripts/quality --full`: only `CI=true` turns compiler warnings into errors, as CI does, so a warning that passes locally fails the ready run. It also makes `scripts/doctor` exit 1 before any gate on a missing or mismatched pinned tool or Xcode: run `scripts/bootstrap` first and fix what its `doctor` reports.
+**Done when:** `scripts/quality --full` exits 0; for a change touching only docs or agent config (the paths under `paths-ignore` in `.github/workflows/ci.yml`), when `scripts/quality --fast` exits 0. Paste the table it prints into the final report and PR. Before marking any other PR ready, run it as `CI=true scripts/quality --full`: only `CI=true` turns compiler warnings into errors, as CI does, so a warning that passes locally fails the PR's CI run. It also makes `scripts/doctor` exit 1 before any gate on a missing or mismatched pinned tool or Xcode: run `scripts/bootstrap` first and fix what its `doctor` reports.
 
 ## 2. Read the result
 
@@ -117,11 +117,10 @@ Run the section 4 `xccov` commands on `build/ci/Test.xcresult`.
 
 A red run on `main` (push or weekly): reproduce on `main` with `scripts/quality --fast` (push) or `--full` (weekly), then fix it on a branch through a PR, or report it to the user.
 
-A red `test` on a ready PR spends a ready run (~11 macOS min; at most two per PR without the user's go-ahead):
+A red `test` on a PR (every push runs it, drafts included; `--full` takes ~23 min). Read each red run before the next push:
 
-1. `gh pr ready <n> --undo` first, so further pushes run only `lint`.
-2. Reproduce locally with `CI=true scripts/quality --full`.
-3. Reproduced: fix the gate as in section 3 until `--full` is green, push, and mark the PR ready once more (after the push's run starts, as in `AGENTS.md`).
-4. Stop and report to the user (run link, failing step, suspected cause) when the failure does not reproduce locally (runner image, missing pinned Xcode or tool, a test flaky only on the runner), or when the second ready run is red too.
+1. Reproduce locally with `CI=true scripts/quality --full`.
+2. Reproduced: fix the gate as in section 3 until `--full` is green, push, and watch the new run (as in `AGENTS.md`).
+3. Stop and report to the user (run link, failing step, suspected cause) when the failure does not reproduce locally (runner image, missing pinned Xcode or tool, a test flaky only on the runner), or when a run is red again after a fix that was green locally.
 
-**Done when:** `gh pr checks <n>` shows every check green, or the user has the report from step 4.
+**Done when:** `gh pr checks <n>` shows every check green, or the user has the report from step 3.

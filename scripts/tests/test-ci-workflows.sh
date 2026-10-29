@@ -2,7 +2,8 @@
 # Fitness test for .github/workflows: every Summary step runs under if: always() and calls
 # scripts/ci/summary.sh unconditionally, so a run that stops before build/quality.json is
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
-# wiring, NUL-safe xargs, weekly/ci test-step parity, the weekly failure issue, action pinning.
+# wiring, the test job's PR filter, NUL-safe xargs, weekly/ci test-step parity, the weekly
+# failure issue, action pinning.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
 # checks on scripts/tests/fixtures/ci-workflows to prove they still catch what they are for).
 set -uo pipefail
@@ -37,7 +38,7 @@ done
 
 # The Linux lint job runs the fitness checks, and on PRs the warn-only persisted-shape guard
 # against the merge commit's first parent (the PR base): checkout fetch-depth 2 brings that parent
-# (persist-credentials: false leaves no token for a later `git fetch` in this private repo).
+# (persist-credentials: false leaves no token for a later `git fetch`).
 CI="$WORKFLOWS/ci.yml"
 lint="$(awk '/^  lint:/ { found = 1; next } found && /^  [a-z]/ { exit } found { print }' "$CI")"
 grep -qE '^ *fetch-depth: 2 *$' <<<"$lint" || fail "ci.yml lint job: checkout needs fetch-depth: 2 for the merge commit's parent"
@@ -71,6 +72,14 @@ done < <(awk '{
   gsub(/xargs -0( |$)/, "", code)
   if (code ~ /(^|[^[:alnum:]_-])xargs([^[:alnum:]_-]|$)/) print FILENAME ":" FNR ":" $0
 }' "$WORKFLOWS"/*.yml | sed "s|^$ROOT/||")
+
+# Draft PRs run the macOS test job too, so marking a PR ready needs no run of its own: no
+# ready_for_review trigger (it would cancel the draft's run and re-run it). Dependabot PRs skip test.
+test_job="$(awk '/^  test:/ { found = 1; next } found && /^  [a-z]/ { exit } found { print }' "$CI")"
+test_if="$(awk '/^    if:/ { found = 1; print; next } found && /^      / { print; next } found { exit }' <<<"$test_job")"
+grep -q 'draft' <<<"$test_job" && fail "ci.yml test job: draft PRs run test too; drop the draft condition"
+grep -qF "github.actor != 'dependabot[bot]'" <<<"$test_if" || fail "ci.yml test job: Dependabot PRs must skip test"
+grep -qE '^[^#]*ready_for_review' "$CI" && fail "ci.yml: no ready_for_review trigger; the draft's run already checked the commit"
 
 # test_steps <workflow>: the test job's steps, with the quality mode spelled --full and without
 # weekly.yml's red-run notification.
@@ -136,7 +145,12 @@ if [ $# -eq 0 ]; then
   must "weekly.yml: the Quality gate step needs a timeout-minutes below the test job's (30)"
   must_not "drifted"
   must_not "no test job steps found"
+  fixture draft
+  must "ci.yml test job: draft PRs run test too; drop the draft condition"
+  must "ci.yml: no ready_for_review trigger"
+  must_not "Dependabot PRs must skip test"
   fixture drift
+  must "ci.yml test job: Dependabot PRs must skip test"
   must "weekly.yml's test steps drifted from ci.yml's"
   must_not "Quality gate step needs"
 fi
