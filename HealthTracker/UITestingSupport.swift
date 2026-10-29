@@ -12,8 +12,15 @@ enum UITestingSupport {
     }
 
     /// True when the app is only the host process for the unit-test bundle.
-    static var isHostingUnitTests: Bool {
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    static let isHostingUnitTests = hostsUnitTests(environment: ProcessInfo.processInfo.environment)
+
+    /// Production startup (migration, permission prompt) is skipped under UI or unit tests.
+    static var skipsStartup: Bool {
+        isActive || isHostingUnitTests
+    }
+
+    static func hostsUnitTests(environment: [String: String]) -> Bool {
+        environment["XCTestConfigurationFilePath"] != nil
     }
 
     /// Production repository, or one backed by a fresh temp directory per launch when UI testing.

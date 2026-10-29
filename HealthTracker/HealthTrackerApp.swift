@@ -10,9 +10,8 @@ import SwiftUI
 @main
 struct HealthTrackerApp: App {
     init() {
-        // Skip migration and the system permission alert when running under UI or unit tests
         Self.startUp(
-            isTesting: UITestingSupport.isActive || UITestingSupport.isHostingUnitTests,
+            isTesting: UITestingSupport.skipsStartup,
             migrate: DataMigration.migrateIfNeeded,
             requestPermission: { await NotificationPermissionManager.requestIfFirstLaunch() }
         )
