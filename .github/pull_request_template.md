@@ -11,7 +11,7 @@
 
 ## Quality gate
 
-<!-- Paste the table printed by `scripts/quality --full`; a change touching only docs or agent config may paste the `--fast` table instead. -->
+<!-- Paste the table printed by `scripts/quality --full`. A change touching only docs or agent config (the `paths-ignore` paths in `.github/workflows/ci.yml`) is done at `scripts/quality --fast`: paste that table. -->
 
 ```text
 ```

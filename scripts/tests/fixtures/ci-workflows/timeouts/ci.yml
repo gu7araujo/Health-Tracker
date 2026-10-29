@@ -12,6 +12,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: scripts/fitness/persisted-shape-guard.sh HEAD^1
   test:
+    if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
     timeout-minutes: 45
     steps:
       - name: Quality gate
