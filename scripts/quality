@@ -51,7 +51,7 @@ LIB="$ROOT/scripts/lib"
 RESULT="build/Test.xcresult"
 cd "$ROOT" || exit 1
 # shellcheck source=lib/tools-path.sh
-source "$LIB/tools-path.sh"
+source "$LIB/tools-path.sh" || exit 1
 prepend_tools_path "$ROOT"
 # shellcheck source=quality-thresholds.env
 source scripts/quality-thresholds.env

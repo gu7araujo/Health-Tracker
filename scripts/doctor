@@ -8,7 +8,7 @@ source "$(dirname "$0")/tool-versions.env"
 
 # scripts/lib/tools-path.sh: tools in build/tools/bin run before those on PATH.
 # shellcheck source=lib/tools-path.sh
-source "$(dirname "$0")/lib/tools-path.sh"
+source "$(dirname "$0")/lib/tools-path.sh" || exit 1
 prepend_tools_path "$(dirname "$0")/.."
 
 level="warning"

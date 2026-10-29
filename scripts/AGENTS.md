@@ -7,8 +7,7 @@ The bash tooling behind the quality gate, the git hooks and CI. Each script's he
 - `quality` — the one gate: runs every check and prints the pass/fail table (`--help` lists the modes).
 - `bootstrap` — setup per clone or new worktree: enables `.githooks`, installs the pinned tools into `build/tools/bin` (`ci/install-tools.sh`), then runs `doctor`.
 - `doctor` — compares installed tools with `tool-versions.env`; warns locally, fails under `CI=true`.
-- `lib/` — helpers behind `quality`; each file's header names its job.
-- `lib/tools-path.sh` — `prepend_tools_path <root>`: the one build/tools/bin PATH lookup, sourced by `quality`, `doctor`, `tests/run`, `.githooks/pre-commit` and `.claude/hooks/format-swift.sh`.
+- `lib/` — helpers behind `quality`; each file's header names its job. `tools-path.sh` (`prepend_tools_path <root>`, the one build/tools/bin PATH lookup) is also sourced by `doctor`, `tests/run`, `.githooks/pre-commit` and `.claude/hooks/format-swift.sh`.
 - `ci/` — GitHub Actions steps: pinned tool install, Xcode selection, the job summary.
 - `fitness/` — cross-file checks; `fitness/run` runs them all, except `persisted-shape-guard.sh` (warn-only, needs a base ref).
 - `tests/` — a `test-*.sh` per script or config it covers (fixtures in `tests/fixtures/`); `tests/run` picks up every `test-*.sh`. CI runs it in the macOS `test` job, `quality` does not, so run `scripts/tests/run` yourself after a script change.

@@ -51,9 +51,21 @@ fi
 for caller in scripts/quality scripts/doctor .githooks/pre-commit .claude/hooks/format-swift.sh scripts/tests/run; do
   src="$(grep -v '^[[:space:]]*#' "$ROOT/$caller")"
   grep -q '^[[:space:]]*prepend_tools_path ' <<<"$src" || fail "$caller should call prepend_tools_path"
-  if grep -q 'PATH=' <<<"$src"; then
+  if grep -Eq '(^|[^A-Za-z0-9_])PATH=' <<<"$src"; then
     fail "$caller should not set PATH itself"
   fi
+done
+
+# Without the helper, the callers that run without set -e stop instead of going on with PATH's tools.
+# (pre-commit runs under set -e; format-swift.sh's exit 2 is tested in test-claude-hooks.sh.)
+for caller in scripts/quality scripts/doctor scripts/tests/run; do
+  mkdir -p "$TMP/nohelper/$(dirname "$caller")"
+  cp "$ROOT/$caller" "$TMP/nohelper/$caller"
+  out="$("$TMP/nohelper/$caller" 2>&1 >/dev/null)"
+  code=$?
+  [ "$code" -ne 0 ] || fail "$caller should fail without scripts/lib/tools-path.sh"
+  [[ "$out" != *"prepend_tools_path: command not found"* ]] ||
+    fail "$caller should stop at the missing helper, not go on: $out"
 done
 
 [ "$failures" -eq 0 ]
