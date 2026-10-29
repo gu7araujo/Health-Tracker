@@ -19,7 +19,7 @@ import Foundation
 /// - Permission denied (requestAuthorizationResult = false)
 /// - Authorization errors (set requestAuthorizationError)
 /// - Different authorization statuses (notDetermined, authorized, denied, etc.)
-final class MockNotificationService: NotificationServiceProtocol {
+final nonisolated class MockNotificationService: NotificationServiceProtocol, @unchecked Sendable {
     // MARK: - Stored Results
 
     /// The authorization status to return from authorizationStatus()
@@ -60,9 +60,13 @@ final class MockNotificationService: NotificationServiceProtocol {
     // Tracking properties for cancellation methods
     var cancelNotificationsCalled = false
     var cancelNotificationsIdentifiers: [[String]] = []
+    var cancelNotificationsRanOnMainThread: Bool?
 
     var removeDeliveredNotificationsCalled = false
     var removeDeliveredNotificationsIdentifiers: [[String]] = []
+
+    /// Called from inside `cancelNotifications`, on whatever thread the caller used.
+    var onCancelNotifications: (@Sendable () -> Void)?
 
     // MARK: - NotificationServiceProtocol Implementation
 
@@ -108,6 +112,8 @@ final class MockNotificationService: NotificationServiceProtocol {
     func cancelNotifications(withIdentifiers identifiers: [String]) {
         cancelNotificationsCalled = true
         cancelNotificationsIdentifiers.append(identifiers)
+        cancelNotificationsRanOnMainThread = Thread.isMainThread
+        onCancelNotifications?()
     }
 
     func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {

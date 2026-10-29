@@ -21,6 +21,15 @@ struct CancelNotificationsUseCaseTests {
         #expect(mockService.cancelNotificationsCalled == true)
     }
 
+    /// Called from the main actor, the blocking system call still runs off the main thread.
+    @Test func execute_runsOffMainThread() async throws {
+        let mockService = MockNotificationService()
+        let useCase = CancelNotificationsUseCase(notificationService: mockService, logger: MockLogger())
+        try await useCase.execute()
+
+        #expect(mockService.cancelNotificationsRanOnMainThread == false)
+    }
+
     @Test func execute_removesDeliveredNotifications() async throws {
         let mockService = MockNotificationService()
         let mockLogger = MockLogger()

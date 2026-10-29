@@ -18,7 +18,7 @@ import Foundation
 /// - Verify specific messages were logged at specific levels
 /// - Check that no errors were logged
 /// - Inspect all captured messages
-final class MockLogger: LoggerProtocol, @unchecked Sendable {
+final nonisolated class MockLogger: LoggerProtocol, @unchecked Sendable {
     // MARK: - Captured Messages
 
     private(set) var debugMessages: [String] = []

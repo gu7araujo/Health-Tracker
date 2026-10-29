@@ -9,12 +9,11 @@ import Testing
 
 @MainActor
 struct MainViewModelMealWorkoutTests {
-    private func createViewModel() -> (viewModel: MainViewModel,
-                                       mockRepository: MockHealthDataRepository)
-    {
+    private func createViewModel(
+        notificationService mockNotificationService: MockNotificationService = MockNotificationService()
+    ) -> (viewModel: MainViewModel, mockRepository: MockHealthDataRepository) {
         let mockRepository = MockHealthDataRepository()
         let mockLogger = MockLogger()
-        let mockNotificationService = MockNotificationService()
         let viewModel = MainViewModel(
             loadUseCase: LoadDayDataUseCase(repository: mockRepository, logger: mockLogger),
             saveUseCase: SaveDayDataUseCase(repository: mockRepository, logger: mockLogger),
@@ -36,6 +35,23 @@ struct MainViewModelMealWorkoutTests {
         #expect(viewModel.currentDayData?.meals.count == 1)
         #expect(viewModel.currentDayData?.meals.first?.description == "Breakfast")
         #expect(mockRepository.saveCalledWithDays != nil)
+    }
+
+    /// The notification-cancel XPC can block for minutes on a cold `usernotificationsd`;
+    /// it must never run on the main thread, or the first save freezes the UI.
+    @Test func addMeal_cancelsNotificationsOffMainThread() async {
+        let mockNotificationService = MockNotificationService()
+        let (viewModel, mockRepository) = createViewModel(notificationService: mockNotificationService)
+        mockRepository.loadAllDaysResult = []
+        viewModel.loadData()
+        viewModel.selectedDate = TestDataBuilder.fixedDate
+        let ranOnMainThread = await withCheckedContinuation { continuation in
+            mockNotificationService.onCancelNotifications = {
+                continuation.resume(returning: Thread.isMainThread)
+            }
+            viewModel.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
+        }
+        #expect(!ranOnMainThread)
     }
 
     @Test func addMeal_withMultipleItems_preservesItems() {
