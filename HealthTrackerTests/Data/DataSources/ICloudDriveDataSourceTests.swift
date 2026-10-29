@@ -288,8 +288,10 @@ extension ICloudDriveDataSourceTests {
 
         dataSource.save([day])
 
-        let dataFileURL = container.appendingPathComponent("Documents/HealthTrackerData.json")
-        #expect(FileManager.default.fileExists(atPath: dataFileURL.path))
+        let documents = ICloudDriveDataSource(
+            logger: MockLogger(), directoryOverride: container.appendingPathComponent("Documents")
+        )
+        #expect(documents.load() == [day])
     }
 
     @Test func load_readsFromDocumentsInUbiquityContainer() throws {
@@ -331,5 +333,6 @@ extension ICloudDriveDataSourceTests {
         try dataSource.save([#require(TestDataBuilder.makeRecordedOptimalDay())])
 
         #expect(mockLogger.didLog(level: .error, containing: "Failed to save"))
+        #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("Documents").path))
     }
 }
