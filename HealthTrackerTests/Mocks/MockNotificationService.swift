@@ -68,6 +68,9 @@ final nonisolated class MockNotificationService: NotificationServiceProtocol, @u
     /// Called from inside `cancelNotifications`, on whatever thread the caller used.
     var onCancelNotifications: (@Sendable () -> Void)?
 
+    /// `CancelNotificationsUseCase` calls the cancel methods from parallel off-main calls.
+    private let lock = NSLock()
+
     // MARK: - NotificationServiceProtocol Implementation
 
     func requestAuthorization(options: NotificationAuthorizationOptions) async throws -> Bool {
@@ -110,14 +113,18 @@ final nonisolated class MockNotificationService: NotificationServiceProtocol, @u
     }
 
     func cancelNotifications(withIdentifiers identifiers: [String]) {
-        cancelNotificationsCalled = true
-        cancelNotificationsIdentifiers.append(identifiers)
-        cancelNotificationsRanOnMainThread = Thread.isMainThread
+        lock.withLock {
+            cancelNotificationsCalled = true
+            cancelNotificationsIdentifiers.append(identifiers)
+            cancelNotificationsRanOnMainThread = Thread.isMainThread
+        }
         onCancelNotifications?()
     }
 
     func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
-        removeDeliveredNotificationsCalled = true
-        removeDeliveredNotificationsIdentifiers.append(identifiers)
+        lock.withLock {
+            removeDeliveredNotificationsCalled = true
+            removeDeliveredNotificationsIdentifiers.append(identifiers)
+        }
     }
 }

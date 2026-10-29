@@ -45,13 +45,11 @@ struct MainViewModelMealWorkoutTests {
         mockRepository.loadAllDaysResult = []
         viewModel.loadData()
         viewModel.selectedDate = TestDataBuilder.fixedDate
-        let ranOnMainThread = await withCheckedContinuation { continuation in
-            mockNotificationService.onCancelNotifications = {
-                continuation.resume(returning: Thread.isMainThread)
-            }
+        await withCheckedContinuation { continuation in
+            mockNotificationService.onCancelNotifications = { continuation.resume() }
             viewModel.addMeal(Meal(description: "Breakfast", quantity: .small, satisfaction: .fifty))
         }
-        #expect(!ranOnMainThread)
+        #expect(mockNotificationService.cancelNotificationsRanOnMainThread == false)
     }
 
     @Test func addMeal_withMultipleItems_preservesItems() {

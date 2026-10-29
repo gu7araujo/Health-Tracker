@@ -100,6 +100,24 @@ struct CancelNotificationsUseCaseTests {
         #expect(mockService.cancelNotificationsIdentifiers.count == 2) // Two separate calls tracked
     }
 
+    /// Every save fires its own `execute()`, and they now run in parallel off the main actor.
+    @Test func execute_concurrentCalls_recordsEveryCall() async throws {
+        let mockService = MockNotificationService()
+        let mockLogger = MockLogger()
+        let useCase = CancelNotificationsUseCase(notificationService: mockService, logger: mockLogger)
+
+        try await withThrowingTaskGroup { group in
+            for _ in 0 ..< 1000 {
+                group.addTask { try await useCase.execute() }
+            }
+            try await group.waitForAll()
+        }
+
+        #expect(mockService.cancelNotificationsIdentifiers.count == 1000)
+        #expect(mockService.removeDeliveredNotificationsIdentifiers.count == 1000)
+        #expect(mockLogger.infoMessages.count == 1000)
+    }
+
     @Test func execute_worksAcrossDayBoundaries() async throws {
         let mockService = MockNotificationService()
         let mockLogger = MockLogger()
