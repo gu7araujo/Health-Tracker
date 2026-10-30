@@ -41,7 +41,7 @@ nonisolated protocol Repository {
 }
 
 // Plain data next to the protocol is still declaration-only, isolation modifier or not.
-nonisolated struct Options: OptionSet {
+struct Options: OptionSet {
     let rawValue: Int
     static let alert = Options(rawValue: 1 << 0)
 }
