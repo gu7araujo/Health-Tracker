@@ -14,7 +14,7 @@ import Foundation
 /// This protocol abstracts notification operations without coupling the Domain layer
 /// to iOS UserNotifications framework. Concrete implementations in the Data layer
 /// will handle platform-specific details.
-protocol NotificationServiceProtocol {
+protocol NotificationServiceProtocol: Sendable {
     /// Requests authorization to display notifications.
     ///
     /// This method requests permission from the user to show notifications.
@@ -65,7 +65,7 @@ protocol NotificationServiceProtocol {
     /// Use this to prevent future notifications from firing.
     ///
     /// - Parameter identifiers: Array of notification identifiers to cancel
-    func cancelNotifications(withIdentifiers identifiers: [String])
+    nonisolated func cancelNotifications(withIdentifiers identifiers: [String])
 
     /// Removes delivered notifications with the specified identifiers.
     ///
@@ -74,7 +74,7 @@ protocol NotificationServiceProtocol {
     /// after the user has taken action.
     ///
     /// - Parameter identifiers: Array of notification identifiers to remove
-    func removeDeliveredNotifications(withIdentifiers identifiers: [String])
+    nonisolated func removeDeliveredNotifications(withIdentifiers identifiers: [String])
 }
 
 // MARK: - Domain Types

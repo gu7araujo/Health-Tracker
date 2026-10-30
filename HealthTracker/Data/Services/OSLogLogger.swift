@@ -18,7 +18,7 @@ import OSLog
 /// This is the ONLY file in the project that should import OSLog framework.
 ///
 /// Thread-safe and Sendable for use with Swift Concurrency.
-final class OSLogLogger: LoggerProtocol, Sendable {
+final nonisolated class OSLogLogger: LoggerProtocol, Sendable {
     private let logger: Logger
     private let isDebugBuild: Bool
 
@@ -71,7 +71,7 @@ final class OSLogLogger: LoggerProtocol, Sendable {
 /// Helper function to detect debug build configuration.
 ///
 /// Returns true when running in DEBUG mode, false otherwise.
-private func isDebugConfiguration() -> Bool {
+private nonisolated func isDebugConfiguration() -> Bool {
     #if DEBUG
         return true
     #else

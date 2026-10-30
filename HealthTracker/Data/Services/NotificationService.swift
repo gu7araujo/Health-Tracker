@@ -114,13 +114,13 @@ final class NotificationService: NotificationServiceProtocol {
         logger.info("All pending notifications canceled")
     }
 
-    func cancelNotifications(withIdentifiers identifiers: [String]) {
+    nonisolated func cancelNotifications(withIdentifiers identifiers: [String]) {
         logger.debug("Canceling notifications: \(identifiers)")
         notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
         logger.info("Canceled \(identifiers.count) notification(s)")
     }
 
-    func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
+    nonisolated func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
         logger.debug("Removing delivered notifications: \(identifiers)")
         notificationCenter.removeDeliveredNotifications(withIdentifiers: identifiers)
         logger.info("Removed \(identifiers.count) delivered notification(s)")
