@@ -14,18 +14,18 @@ import UserNotifications
 /// unit-tested with a fake center.
 ///
 /// Together with `NotificationService`, this file is scoped to the UserNotifications framework.
-protocol UserNotificationCentering: Sendable {
+nonisolated protocol UserNotificationCentering: Sendable {
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
     func authorizationStatus() async -> UNAuthorizationStatus
     func add(_ request: UNNotificationRequest) async throws
     func removeAllPendingNotificationRequests()
-    nonisolated func removePendingNotificationRequests(withIdentifiers identifiers: [String])
-    nonisolated func removeDeliveredNotifications(withIdentifiers identifiers: [String])
+    func removePendingNotificationRequests(withIdentifiers identifiers: [String])
+    func removeDeliveredNotifications(withIdentifiers identifiers: [String])
 }
 
 /// `UNUserNotificationCenter` already provides every requirement except a bare
 /// authorization-status accessor; bridge it through `notificationSettings()`.
-extension UNUserNotificationCenter: UserNotificationCentering {
+nonisolated extension UNUserNotificationCenter: UserNotificationCentering {
     func authorizationStatus() async -> UNAuthorizationStatus {
         await notificationSettings().authorizationStatus
     }

@@ -6,7 +6,7 @@
 #
 # Skipped:
 #   - Protocol-only files: the file declares a protocol, and, comments aside, every line holding a `{`
-#     opens a protocol, struct or enum and holds only that one `{`. So protocols plus plain data types
+#     opens a protocol, struct or enum (optionally `nonisolated`) and holds only that one `{`. So protocols plus plain data types
 #     (cases, stored lets) pass; any func/init/computed-property/closure body, class, actor or extension
 #     makes the file need a test.
 #   - Paths listed in scripts/fitness/test-mirror-exceptions.txt (repo-relative path, then a # comment).
@@ -35,7 +35,7 @@ protocol_only() {
     /(^|[[:space:]])protocol[[:space:]]/ { proto = 1 }
     /\{/ {
       if (gsub(/\{/, "{") > 1) logic = 1
-      else if ($0 !~ /^[[:space:]]*((public|internal|fileprivate|private)[[:space:]]+)?(protocol|struct|enum)[[:space:]]/) logic = 1
+      else if ($0 !~ /^[[:space:]]*((public|internal|fileprivate|private)[[:space:]]+)?(nonisolated[[:space:]]+)?(protocol|struct|enum)[[:space:]]/) logic = 1
     }
     END { exit !(proto && !logic) }
   ' "$1"

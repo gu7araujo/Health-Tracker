@@ -1,6 +1,6 @@
 ---
 name: retro
-description: Run a retro on merged HealthTracker PRs (what reviewers and CI caught, which doc needs updating, which catch can become a SwiftLint rule or fitness check, which threshold proved wrong). Use after a PR you opened is merged, or when asked to run a retro or what we learned from a PR or range of PRs.
+description: Run a retro on merged HealthTracker PRs (what reviewers and CI caught, which doc needs updating, which catch can become a SwiftLint rule or fitness check, which threshold proved wrong). Use once a feature or batch of related PRs is merged, or when asked to run a retro or what we learned from a PR or range of PRs.
 ---
 
 # Retro
@@ -45,7 +45,7 @@ Check each catch against the current tree first (`grep -rln '<keyword>' scripts/
 | 4. Threshold or exception | A threshold CI measured differently, a ratchet that blocked a good change, a stale or new exception, baseline or disable | The change and the numbers behind it. It is the user's call |
 | 5. Process or tooling | CI cost, a flaky test, a hook gap, a tool that misreports, a reviewer that finds nothing | The smallest change to the workflow, script or doc |
 
-A catch can take two classes (a regression test exists, but the rule behind it is unwritten: 1 + 2). Prefer the class-3 enforcer when the pattern can recur; prefer a shorter doc over a sync test when the doc only copies what a command prints.
+A catch can take two classes (a regression test exists, but the rule behind it is unwritten: 1 + 2). Prefer the class-3 enforcer when the pattern can recur; prefer a shorter doc over a sync test when the doc only copies what a command prints. Propose an action only for a catch that has recurred or cost more than about an hour; record the rest as "leave it".
 
 ## 3. Report
 
