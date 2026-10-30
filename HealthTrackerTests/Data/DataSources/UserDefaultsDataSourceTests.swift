@@ -10,19 +10,36 @@ import Foundation
 import Testing
 
 @MainActor
-struct UserDefaultsDataSourceTests {
+final class UserDefaultsDataSourceTests {
     // MARK: - Test Helpers
 
-    /// Creates an isolated UserDefaults instance for testing
-    private func createTestUserDefaults() -> UserDefaults {
-        let suiteName = "test-suite-\(UUID().uuidString)"
-        return UserDefaults(suiteName: suiteName)!
+    /// The UserDefaults suite every test here uses (each test has its own storage key), cleared in `deinit`
+    private let suite: TestUserDefaults
+    private var testDefaults: UserDefaults {
+        suite.defaults
+    }
+
+    init() throws {
+        suite = try TestUserDefaults(name: "UserDefaultsDataSourceTests")
+    }
+
+    isolated deinit {
+        suite.remove()
+    }
+
+    @Test func deinit_removesTestSuite() throws {
+        var tests: UserDefaultsDataSourceTests? = try UserDefaultsDataSourceTests()
+        let suite = try #require(tests).suite
+        suite.defaults.set(true, forKey: "probe")
+
+        tests = nil
+
+        #expect(suite.defaults.object(forKey: "probe") == nil)
     }
 
     // MARK: - Load Tests
 
     @Test func load_returnsEmptyArray_whenNoData() {
-        let testDefaults = createTestUserDefaults()
         let dataSource = UserDefaultsDataSource(
             userDefaults: testDefaults,
             storageKey: "test-key-\(UUID().uuidString)"
@@ -34,7 +51,6 @@ struct UserDefaultsDataSourceTests {
     }
 
     @Test func load_returnsEmptyArray_whenCorruptedData() {
-        let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         // Store invalid JSON data
         testDefaults.set(Data("corrupted data".utf8), forKey: key)
@@ -52,7 +68,6 @@ struct UserDefaultsDataSourceTests {
     // MARK: - Save and Load Round-Trip Tests
 
     @Test func saveAndLoad_roundTrip_preservesData() throws {
-        let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         let dataSource = UserDefaultsDataSource(
             userDefaults: testDefaults,
@@ -72,7 +87,6 @@ struct UserDefaultsDataSourceTests {
     }
 
     @Test func saveAndLoad_roundTrip_withSingleDay() throws {
-        let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         let dataSource = UserDefaultsDataSource(
             userDefaults: testDefaults,
@@ -88,7 +102,6 @@ struct UserDefaultsDataSourceTests {
     }
 
     @Test func saveAndLoad_roundTrip_withEmptyArray() {
-        let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         let dataSource = UserDefaultsDataSource(
             userDefaults: testDefaults,
@@ -102,7 +115,6 @@ struct UserDefaultsDataSourceTests {
     }
 
     @Test func save_overwritesPreviousData() throws {
-        let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         let dataSource = UserDefaultsDataSource(
             userDefaults: testDefaults,
@@ -124,7 +136,6 @@ struct UserDefaultsDataSourceTests {
     }
 
     @Test func save_keepsPreviousData_whenEncodingFails() throws {
-        let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         let dataSource = UserDefaultsDataSource(
             userDefaults: testDefaults,
@@ -145,7 +156,6 @@ struct UserDefaultsDataSourceTests {
     // MARK: - Data Integrity Tests
 
     @Test func load_filtersOutEmptyDays() throws {
-        let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
 
         // Manually create a container with empty day
@@ -169,7 +179,6 @@ struct UserDefaultsDataSourceTests {
     }
 
     @Test func saveAndLoad_preservesAllDayDataProperties() throws {
-        let testDefaults = createTestUserDefaults()
         let key = "test-key-\(UUID().uuidString)"
         let dataSource = UserDefaultsDataSource(
             userDefaults: testDefaults,
