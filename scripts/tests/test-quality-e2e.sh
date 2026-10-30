@@ -122,6 +122,7 @@ sim_state() { sed -i.bak "s/\"WORKTREE-UDID\",\"state\":\"[A-Za-z]*\"/\"WORKTREE
 sim_state Booted
 : >"$TMP/simctl.calls"
 run_quality '[]' --fast
+[[ "$out" == *"on simulator WORKTREE-UDID"* ]] || fail "should still test on an already booted simulator, got: $out"
 [ ! -s "$TMP/simctl.calls" ] || fail "an already booted simulator should stay booted, got: $(cat "$TMP/simctl.calls")"
 sim_state Shutdown
 
