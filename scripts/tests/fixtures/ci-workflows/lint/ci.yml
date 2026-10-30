@@ -1,0 +1,26 @@
+# Must fail every lint-job check, and only those: fetch-depth: 2 and the fitness step sit in the
+# build job, not lint; Persisted shape runs on push, against HEAD^2. The test job is pass/ci.yml's.
+jobs:
+  lint:
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Persisted shape
+        if: github.event_name == 'push'
+        run: scripts/fitness/persisted-shape-guard.sh HEAD^2
+  build:
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - name: Fitness
+        run: scripts/fitness/run
+  test:
+    if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
+    timeout-minutes: 60
+    steps:
+      - name: Quality gate
+        timeout-minutes: 45
+        run: scripts/quality "$MODE" --json
+      - name: Summary
+        if: always()
+        run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"

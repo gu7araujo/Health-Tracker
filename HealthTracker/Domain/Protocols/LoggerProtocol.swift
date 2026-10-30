@@ -22,26 +22,26 @@ protocol LoggerProtocol: Sendable {
     /// These are typically only visible in DEBUG builds.
     ///
     /// - Parameter message: The message to log
-    func debug(_ message: String)
+    nonisolated func debug(_ message: String)
 
     /// Log an informational message.
     ///
     /// Info messages track successful operations and key business events.
     ///
     /// - Parameter message: The message to log
-    func info(_ message: String)
+    nonisolated func info(_ message: String)
 
     /// Log a warning message.
     ///
     /// Warning messages indicate recoverable errors or unexpected but handled states.
     ///
     /// - Parameter message: The message to log
-    func warning(_ message: String)
+    nonisolated func warning(_ message: String)
 
     /// Log an error message.
     ///
     /// Error messages indicate failures and unrecoverable states.
     ///
     /// - Parameter message: The message to log
-    func error(_ message: String)
+    nonisolated func error(_ message: String)
 }

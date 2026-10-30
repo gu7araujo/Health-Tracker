@@ -42,7 +42,7 @@ xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<s
 xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerUITests/CalendarUITests/testTodaySelectedOnLaunchAndEmptyStates | xcbeautify
 ```
 
-**Done when:** the run reports `Test Succeeded` with zero failures. The bar for a task being done is `scripts/quality --full` exiting 0 (`quality-gate` skill).
+**Done when:** the run reports `Test Succeeded` with zero failures. The bar for a task being done is `scripts/quality --full` exiting 0, or `--fast` for a change touching only docs or agent config (`paths-ignore` in `.github/workflows/ci.yml`; `quality-gate` skill).
 
 ## 3. Coverage report (when you need it)
 

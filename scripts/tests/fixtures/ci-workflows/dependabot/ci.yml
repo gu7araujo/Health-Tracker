@@ -1,0 +1,24 @@
+# Must fail only the Dependabot check: the test job runs for every PR, so Dependabot's action
+# bumps would spend a macOS run each.
+jobs:
+  lint:
+    steps:
+      # uses: foo/bar@v4 in a comment is not an action.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - name: Fitness
+        run: scripts/fitness/run
+      - name: Persisted shape
+        if: github.event_name == 'pull_request'
+        run: scripts/fitness/persisted-shape-guard.sh HEAD^1
+  test:
+    if: github.event_name != 'workflow_dispatch'
+    timeout-minutes: 60
+    steps:
+      - name: Quality gate
+        timeout-minutes: 45
+        run: scripts/quality "$MODE" --json
+      - name: Summary
+        if: always()
+        run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"

@@ -50,7 +50,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LIB="$ROOT/scripts/lib"
 RESULT="build/Test.xcresult"
 cd "$ROOT" || exit 1
-[ -d build/tools/bin ] && PATH="$ROOT/build/tools/bin:$PATH"
+# shellcheck source=lib/tools-path.sh
+source "$LIB/tools-path.sh" || exit 1
+prepend_tools_path "$ROOT"
 # shellcheck source=quality-thresholds.env
 source scripts/quality-thresholds.env
 

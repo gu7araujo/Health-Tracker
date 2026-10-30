@@ -20,7 +20,7 @@ struct DataMigrationTests {
         legacy: MockLocalDataSource? = nil,
         cloud: MockLocalDataSource? = nil,
         flags: MockMigrationFlagStore? = nil,
-        backUp: @escaping () -> Bool = { true },
+        backUp: @escaping @MainActor () -> Bool = { true },
         logger: MockLogger? = nil
     ) -> DataMigration {
         DataMigration(
@@ -364,9 +364,9 @@ extension DataMigrationTests {
 
     @Test("UserDefaults reports a flag as done only after markDone")
     func userDefaultsFlagStore_marksFlagDone() throws {
-        let suiteName = "test-suite-\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let suite = try TestUserDefaults()
+        defer { suite.remove() }
+        let defaults = suite.defaults
 
         #expect(!defaults.isDone(DataMigration.durationMigrationKey))
         defaults.markDone(DataMigration.durationMigrationKey)
@@ -377,9 +377,9 @@ extension DataMigrationTests {
 
     @Test("UserDefaults clearLegacyStore removes only the legacy `store` blob")
     func userDefaultsFlagStore_clearsOnlyLegacyStore() throws {
-        let suiteName = "test-suite-\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let suite = try TestUserDefaults()
+        defer { suite.remove() }
+        let defaults = suite.defaults
         defaults.set(Data("legacy".utf8), forKey: "store")
         defaults.markDone(DataMigration.iCloudMigrationKey)
 

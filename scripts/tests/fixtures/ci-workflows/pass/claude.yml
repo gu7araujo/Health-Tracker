@@ -1,0 +1,7 @@
+# Must pass: the @claude job answers only the owner.
+jobs:
+  claude:
+    if: |
+      github.actor == 'gu7araujo' && (
+        contains(github.event.comment.body, '@claude')
+      )

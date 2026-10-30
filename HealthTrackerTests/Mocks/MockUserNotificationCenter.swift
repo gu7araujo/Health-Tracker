@@ -12,7 +12,7 @@ import UserNotifications
 /// Mock implementation of `UserNotificationCentering` for testing `NotificationService`
 /// without touching the real `UNUserNotificationCenter`. Follows the shared mock pattern:
 /// `...Result`/`...Error` stubs for return values, and spies for interaction verification.
-final class MockUserNotificationCenter: UserNotificationCentering {
+final nonisolated class MockUserNotificationCenter: UserNotificationCentering, @unchecked Sendable {
     // MARK: - Stored Results
 
     var requestAuthorizationResult = true
