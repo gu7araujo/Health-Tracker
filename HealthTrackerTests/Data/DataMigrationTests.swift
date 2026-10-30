@@ -20,7 +20,7 @@ struct DataMigrationTests {
         legacy: MockLocalDataSource? = nil,
         cloud: MockLocalDataSource? = nil,
         flags: MockMigrationFlagStore? = nil,
-        backUp: @escaping () -> Bool = { true },
+        backUp: @escaping @MainActor () -> Bool = { true },
         logger: MockLogger? = nil
     ) -> DataMigration {
         DataMigration(

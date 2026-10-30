@@ -5,6 +5,3 @@
 # Permanent: a protocol plus a 3-line bridge to the real UNUserNotificationCenter, which unit tests replace
 # with a fake (MockUserNotificationCenter); same reason as scripts/coverage-exceptions.txt.
 HealthTracker/Data/Services/UserNotificationCentering.swift
-
-# To burn down with unit tests:
-HealthTracker/Domain/UseCases/RequestNotificationPermissionUseCase.swift  # tested by RequestNotifPermissionUseCaseTests.swift; rename it to mirror

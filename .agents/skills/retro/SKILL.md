@@ -26,7 +26,7 @@ Read, in this order (most catches live in the first two, since PRs are often squ
 2. **Commit bodies** (`.commits[].messageBody`): a commit that fixes review findings, or any commit dated after the timeline's `ready_for_review` event, is a late catch.
 3. **Comments and reviews**: `.comments`, `.reviews` and the inline file. A bot's "No issues found" is a data point about the reviewer (class 5).
 4. **CI runs**: keep only runs whose `headSha` is one of the PR's `.commits[].oid` (a branch name can be reused by another PR). A `failure` is a catch; a `skipped` one is not; read it with `gh run view <id> --log-failed`. A `cancelled` run is a superseded draft run unless the same sha has no successful run. `gh run view <id> --json attempt` above 1 means a re-run; `gh api 'repos/{owner}/{repo}/actions/runs/<id>/attempts/1/jobs'` shows why.
-5. **CI's numbers**: `gh run view <id> --log | grep -E 'coverage|Per-file|gates passed'` on the ready run, against the PR body's local table and `scripts/quality-thresholds.env`.
+5. **CI's numbers**: `gh run view <id> --log | grep -E 'coverage|Per-file|gates passed'` on the PR's last run, against the PR body's local table and `scripts/quality-thresholds.env`.
 6. **Local review logs**, when the session kept them (Codex output, verifier notes in its scratch directory).
 
 Then sweep the standing lists once per retro: `scripts/quality --full` reports stale entries in `scripts/coverage-exceptions.txt` (run it if its output is unavailable), while `scripts/fitness/test-mirror-exceptions.txt` and the `.swiftlint-baseline.json` count still need a manual sweep. Check README's gate table against `scripts/quality --help` and the current gate rows.

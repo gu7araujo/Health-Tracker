@@ -17,8 +17,12 @@ import Foundation
 /// notifications (visible in Notification Center). It targets only today's date-specific
 /// identifiers, preserving future days' notifications.
 ///
+/// `execute()` runs on the concurrent executor, never the main actor: the system calls
+/// behind it are synchronous XPC that can block for minutes while `usernotificationsd`
+/// is busy (for example on a freshly booted device), and on the main actor that froze the UI.
+///
 /// Satisfies requirements NOTIF-11, NOTIF-12, NOTIF-13, NOTIF-14.
-final class CancelNotificationsUseCase {
+final nonisolated class CancelNotificationsUseCase: Sendable {
     private let notificationService: NotificationServiceProtocol
     private let logger: LoggerProtocol
 
@@ -41,7 +45,7 @@ final class CancelNotificationsUseCase {
     /// for consistency (satisfies NOTIF-13).
     ///
     /// - Throws: An error if cancellation fails (rare system error)
-    func execute() async throws {
+    @concurrent func execute() async throws {
         // Determine today's date identifiers (NOTIF-13)
         let today = Calendar.current.startOfDay(for: Date())
         let dateString = formatDateForIdentifier(today)

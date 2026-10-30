@@ -14,13 +14,13 @@ import UserNotifications
 /// unit-tested with a fake center.
 ///
 /// Together with `NotificationService`, this file is scoped to the UserNotifications framework.
-protocol UserNotificationCentering {
+protocol UserNotificationCentering: Sendable {
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
     func authorizationStatus() async -> UNAuthorizationStatus
     func add(_ request: UNNotificationRequest) async throws
     func removeAllPendingNotificationRequests()
-    func removePendingNotificationRequests(withIdentifiers identifiers: [String])
-    func removeDeliveredNotifications(withIdentifiers identifiers: [String])
+    nonisolated func removePendingNotificationRequests(withIdentifiers identifiers: [String])
+    nonisolated func removeDeliveredNotifications(withIdentifiers identifiers: [String])
 }
 
 /// `UNUserNotificationCenter` already provides every requirement except a bare

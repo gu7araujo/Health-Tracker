@@ -18,7 +18,7 @@ import Foundation
 /// - Verify specific messages were logged at specific levels
 /// - Check that no errors were logged
 /// - Inspect all captured messages
-final class MockLogger: LoggerProtocol, @unchecked Sendable {
+final nonisolated class MockLogger: LoggerProtocol, @unchecked Sendable {
     // MARK: - Captured Messages
 
     private(set) var debugMessages: [String] = []
@@ -26,22 +26,25 @@ final class MockLogger: LoggerProtocol, @unchecked Sendable {
     private(set) var warningMessages: [String] = []
     private(set) var errorMessages: [String] = []
 
+    /// `CancelNotificationsUseCase` logs from parallel off-main calls.
+    private let lock = NSLock()
+
     // MARK: - LoggerProtocol Implementation
 
     func debug(_ message: String) {
-        debugMessages.append(message)
+        lock.withLock { debugMessages.append(message) }
     }
 
     func info(_ message: String) {
-        infoMessages.append(message)
+        lock.withLock { infoMessages.append(message) }
     }
 
     func warning(_ message: String) {
-        warningMessages.append(message)
+        lock.withLock { warningMessages.append(message) }
     }
 
     func error(_ message: String) {
-        errorMessages.append(message)
+        lock.withLock { errorMessages.append(message) }
     }
 
     // MARK: - Test Helpers

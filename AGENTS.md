@@ -7,7 +7,7 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 Deep maps + layer rules: `HealthTracker/Domain/AGENTS.md`, `HealthTracker/Data/AGENTS.md`,
 `HealthTracker/Presentation/AGENTS.md`, `HealthTrackerTests/AGENTS.md`, `HealthTrackerUITests/AGENTS.md`, `scripts/AGENTS.md`
 
-- `HealthTracker/UITestingSupport.swift` — the `-uiTesting` launch-argument hook: temp-dir repository, skips migration and permission prompts.
+- `HealthTracker/UITestingSupport.swift` — the `-uiTesting` launch-argument hook: temp-dir repository, skips migration and permission prompts. It also detects the unit-test host (`XCTestConfigurationFilePath`), which skips that startup and renders no `MainView`.
 - `HealthTracker/Resources/` — localizable strings for `en` and `pt-BR`.
 
 ## Apple Documentation
@@ -21,7 +21,7 @@ The core loop is **red → green**: write a failing test, then make it pass. Fol
 1. Before coding, state how you'll verify the change — which unit/UI test, which bash command, screenshot, skill, or tool, etc.
 2. Write that test first and watch it fail (**red**).
 3. Implement the minimum code to pass it (**green**).
-4. Run `scripts/quality --full` and iterate until it exits 0 — that's the bar for a task being done (see [Quality Gates](#quality-gates)).
+4. Run `scripts/quality --full` (`--fast` for a change touching only docs or agent config, as defined in Quality Gates) and iterate until it exits 0 — that's the bar for a task being done (see [Quality Gates](#quality-gates)).
 
 Every bug fix starts with a regression test that reproduces the bug. Aim for near-total coverage: every public function, file, and edge case earns a test. Prefer Xcode MCP tools when they fit, and follow the plan when we have one.
 
@@ -72,7 +72,7 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
 - The Domain/Data ratchets measure line and region coverage. A region is a code path inside a line (the default of `?? 0`, one side of `&&`), so a line counts as covered while one of its regions never ran. Lowering any ratchet is the user's call (below).
 - The Unused code gate runs Periphery (`.periphery.yml`, strict, no baseline) on the index of the gate's own test build (`build/DerivedData`) and fails on any unused declaration.
 - The Fitness gate (`scripts/fitness/run`) checks the cross-file rules linked from the layer `AGENTS.md` files (localization parity, test mirror, UI-test accessibility IDs); pre-commit and CI `lint` run it too.
-- A task is **done** when `scripts/quality --full` exits 0. Paste its gate table in your final report and PR; a change touching only docs or agent config may paste the `--fast` table instead.
+- A task is **done** when `scripts/quality --full` exits 0. A change touching only docs or agent config (the paths under `paths-ignore` in `.github/workflows/ci.yml`; CI skips it) is **done** when `scripts/quality --fast` exits 0. Paste that run's gate table in your final report and PR.
 - Fix a red gate in code or tests. Lowering a threshold, editing `scripts/coverage-exceptions.txt` or `scripts/fitness/test-mirror-exceptions.txt`, or adding a `swiftlint:disable` or `// periphery:ignore` is a decision for the user: call each one out explicitly in the report and PR.
 - Lint enforces size/complexity limits and the layer rules as SwiftLint rules (all in `.swiftlint.yml`). `.swiftlint-baseline.json` freezes the pre-existing violations, so only new ones fail. Regenerating the baseline to absorb a new violation is the user's call, like lowering a threshold. Burning one down is fixing it and regenerating the baseline in the same commit, from the repo root (the `jq` keeps paths repo-relative):
 
@@ -82,9 +82,9 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
   ```
 - Each `.swift` file you edit or write is formatted in place and linted by a Claude Code hook; fix the violations it reports.
 - The git hooks refuse commits and pushes to `main` and run `--fast` before every push. Let them run: no `--no-verify`, no `SKIP_QUALITY`. The push takes ~2 min, past the Bash tool's 120 s default, so run `git push` with a 600000 ms timeout.
-- Open PRs as **draft**. Mark one ready only after a green local `CI=true scripts/quality --full` (`CI=true` turns compiler warnings into errors and makes `doctor` fatal, as CI does: run `scripts/bootstrap` first and fix what it reports): push, wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run (a push and `gh pr ready` in the same second cancelled the ready run once; a PR touching only docs or agent config gets no run, so stop with the link), then `gh pr ready <n>` and `gh pr checks <n> --watch`. Green: stop there with the link; the user approves and merges every PR. Red: follow the `quality-gate` skill's CI section. Each ready run costs ~11 macOS min, so a PR gets at most **two ready runs** without the user's go-ahead.
+- Open PRs as **draft**. Every push to a PR runs CI, drafts included. A docs-only PR gets no CI run: stop with the link once `--fast` is green. Mark any other PR ready only after a green local `CI=true scripts/quality --full` (`CI=true` turns compiler warnings into errors and makes `doctor` fatal, as CI does: run `scripts/bootstrap` first and fix what it reports): push, wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run (until then `gh pr checks` has nothing to watch), then `gh pr checks <n> --watch`. Green: `gh pr ready <n>` (it starts no new run) and stop there with the link; the user approves and merges every PR. Red: follow the `quality-gate` skill's CI section, which reads and reproduces each red run before the next push.
 
-**CI** (GitHub Actions, ~200 macOS min/month on the Free plan). The Linux `lint` job runs format, lint, fitness, ShellCheck and actionlint on every PR and push that touches more than docs or agent config. Draft and Dependabot PRs run only `lint`. Ready PRs also run `test` (`scripts/quality --full` on `runs-on: xcode-27`), pushes to `main` run `--fast`, and the weekly schedule runs `--full`. A red check is read and reproduced through the `quality-gate` skill's CI section.
+**CI** (GitHub Actions; the repo is public, so its standard runners, macOS included, are free). The Linux `lint` job runs format, lint, fitness, ShellCheck and actionlint on every PR and push that touches more than docs or agent config. PRs, drafts included, also run `test` (`scripts/quality --full` on `runs-on: xcode-27`, ~23 min); Dependabot PRs run only `lint`. Pushes to `main` run `--fast` (~10–14 min), and the weekly schedule runs `--full` (~23 min). A red check is read and reproduced through the `quality-gate` skill's CI section.
 
 ## Data Migrations
 
