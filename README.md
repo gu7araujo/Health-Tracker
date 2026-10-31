@@ -165,7 +165,7 @@ It raises the four `*_UNIT_MIN` values (line and region) to the newly measured c
 
 ## Unused code
 
-The Unused code gate runs [Periphery](https://github.com/peripheryapp/periphery) after the tests, so unused declarations (what AI agents tend to leave behind) fail the gate. `scripts/quality` builds into its own `build/DerivedData`, and Periphery scans that build's index store (`--skip-build`; Periphery's own build mode fails on Xcode 27.1). `.periphery.yml` sets `strict: true` and there is no baseline file: the count must be 0.
+The Unused code gate runs [Periphery](https://github.com/peripheryapp/periphery) after the tests, so unused declarations (what AI agents tend to leave behind) fail the gate. `scripts/quality` builds into its own `build/DerivedData`, and Periphery scans that build's index store (`--skip-build`, so it reuses the test build instead of building the app again). `.periphery.yml` sets `strict: true` and there is no baseline file: the count must be 0.
 
 Re-scan by hand after a gate run (it reads that run's index, so rebuild with `scripts/quality` after editing):
 
