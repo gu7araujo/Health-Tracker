@@ -42,6 +42,7 @@ case "\$1 \$2" in
   "xccov view") cat "$TMP/coverage.json" ;;
   "llvm-cov export") echo "\$*" >>"$TMP/llvm-cov.calls" && cat "$TMP/regions.json" ;;
   "xcresulttool get") cat "$TMP/tests.json" ;;
+  "simctl shutdown") echo "\$*" >>"$TMP/simctl.calls" ;;
   *) exit 0 ;;
 esac
 EOF
@@ -58,6 +59,7 @@ case "\$*" in
     touch build/DerivedData/Build/ProfileData/RUN/Coverage.profdata "\$app/\${APP_BINARY:-HealthTracker.debug.dylib}" ;;
   *-only-testing:HealthTrackerUITests*) rm -rf build/DerivedData/Build/ProfileData ;;
 esac
+[ -z "\$INTERRUPT" ] || kill -TERM "\$PPID"
 EOF
 printf '#!/bin/sh\necho "$*" >>"%s"\ncat >/dev/null\n' "$TMP/xcbeautify.calls" >"$TMP/bin/xcbeautify"
 printf '#!/bin/sh\necho "0/1 files require formatting."\n' >"$TMP/bin/swiftformat"
@@ -100,6 +102,29 @@ run_quality '[]' --fast
 
 run_quality '[]' --fast --simulator EXPLICIT-UDID
 [[ "$out" == *"on simulator EXPLICIT-UDID"* ]] || fail "--simulator should win, got: $out"
+
+# A simulator scripts/quality booted itself is shut down when it exits (green, red or interrupted),
+# so booted HT-<branch> clones never pile up; the clone itself is kept for reuse.
+for case in green red interrupted; do
+  : >"$TMP/simctl.calls"
+  lint='[]'
+  [ "$case" = red ] && lint='[{"file":"A.swift","line":1,"severity":"Error","reason":"r","rule_id":"x"}]'
+  INTERRUPT="$([ "$case" = interrupted ] && echo 1)" run_quality "$lint" --fast
+  [ "$(cat "$TMP/simctl.calls")" = "simctl shutdown WORKTREE-UDID" ] ||
+    fail "a $case run should shut down the simulator it booted, got: $(cat "$TMP/simctl.calls")"
+done
+[ "$code" -ne 0 ] || fail "an interrupted run should exit non-zero"
+# One the caller chose, or one already booted (a session in use), is left running.
+: >"$TMP/simctl.calls"
+run_quality '[]' --fast --simulator EXPLICIT-UDID
+[ ! -s "$TMP/simctl.calls" ] || fail "--simulator's device should stay booted, got: $(cat "$TMP/simctl.calls")"
+sim_state() { sed -i.bak "s/\"WORKTREE-UDID\",\"state\":\"[A-Za-z]*\"/\"WORKTREE-UDID\",\"state\":\"$1\"/" "$TMP/simulators.json"; }
+sim_state Booted
+: >"$TMP/simctl.calls"
+run_quality '[]' --fast
+[[ "$out" == *"on simulator WORKTREE-UDID"* ]] || fail "should still test on an already booted simulator, got: $out"
+[ ! -s "$TMP/simctl.calls" ] || fail "an already booted simulator should stay booted, got: $(cat "$TMP/simctl.calls")"
+sim_state Shutdown
 
 # --update-baseline must not lock in coverage from a red run.
 before="$(cat "$REPO/scripts/quality-thresholds.env")"
