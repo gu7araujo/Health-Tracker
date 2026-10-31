@@ -18,8 +18,12 @@ jobs:
     if: >-
       github.event_name != 'pull_request' ||
       (!github.event.pull_request.draft && github.actor != 'dependabot[bot]')
-    timeout-minutes: 60
+    timeout-minutes: 75
     steps:
+      - name: Simulator runtime
+        if: env.MODE == '--full'
+        timeout-minutes: 20
+        run: scripts/ci/install-simulator-runtime.sh
       - name: Quality gate
         timeout-minutes: 45
         run: scripts/quality "$MODE" --json

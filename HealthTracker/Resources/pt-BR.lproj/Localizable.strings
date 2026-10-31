@@ -102,3 +102,51 @@
 "day_status_reason.workout_none" = "sem treino";
 "day_status_reason.mood_neutral" = "humor neutro";
 "day_status_reason.mood_sad" = "humor triste";
+
+/* App Intents: Log Water */
+"intent_log_water_title" = "Registrar água";
+"intent_log_water_description" = "Adiciona água ao total de hoje.";
+"intent_param_water_amount" = "Quantidade";
+"intent_log_water_summary ${amount}" = "Registrar ${amount} de água";
+"intent_log_water_dialog %@" = "Registrado. Você bebeu %@ L de água hoje.";
+"intent_log_water_nothing_added %@" = "Nada registrado. Você bebeu %@ L de água hoje, e o máximo diário é 5 L.";
+
+/* App Intents: Log Mood */
+"intent_log_mood_title" = "Registrar humor";
+"intent_log_mood_description" = "Define o humor de hoje.";
+"intent_param_mood" = "Humor";
+"intent_param_mood_prompt" = "Como está o seu humor hoje?";
+"intent_log_mood_summary ${mood}" = "Registrar humor como ${mood}";
+"intent_log_mood_dialog %@" = "Humor registrado: %@.";
+
+/* App Intents: Add Meal */
+"intent_add_meal_title" = "Adicionar refeição";
+"intent_add_meal_description" = "Adiciona uma refeição a hoje. Separe os itens com vírgulas.";
+"intent_param_meal_items" = "Itens";
+"intent_param_meal_items_prompt" = "O que você comeu?";
+"intent_param_meal_size" = "Quantidade";
+"intent_param_meal_satisfaction" = "Satisfeito(a)";
+"intent_add_meal_summary ${items}" = "Adicionar refeição: ${items}";
+"intent_add_meal_dialog %@" = "Refeição registrada: %@.";
+
+/* App Intents: Add Workout */
+"intent_add_workout_title" = "Adicionar treino";
+"intent_add_workout_description" = "Adiciona um treino a hoje.";
+"intent_param_workout_name" = "Treino";
+"intent_param_workout_name_prompt" = "Qual treino você fez?";
+"intent_param_workout_minutes" = "Minutos";
+"intent_param_workout_intensity" = "Intensidade";
+"intent_add_workout_summary ${name}" = "Adicionar treino: ${name}";
+"intent_add_workout_dialog %@" = "Treino registrado: %@.";
+
+/* App Intents: Day Status */
+"intent_day_status_title" = "Status do dia";
+"intent_day_status_description" = "Informa o status de saúde de hoje e o motivo.";
+"intent_day_status_no_data" = "Nada registrado hoje ainda.";
+"intent_day_status_incomplete" = "Registre pelo menos duas categorias para ver o status de hoje.";
+
+/* App Intents: Enum Types */
+"intent_type_mood" = "Humor";
+"intent_type_meal_size" = "Quantidade da refeição";
+"intent_type_meal_satisfaction" = "Satisfação";
+"intent_type_workout_intensity" = "Intensidade do treino";

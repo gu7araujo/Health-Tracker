@@ -1,0 +1,9 @@
+/* App Shortcut phrases. Keys are the source phrases from HealthTrackerShortcuts.swift — a public contract once shipped. */
+"Log water in ${applicationName}" = "Registrar água no ${applicationName}";
+"I drank water in ${applicationName}" = "Bebi água no ${applicationName}";
+"I'm feeling ${mood} in ${applicationName}" = "Meu humor está ${mood} no ${applicationName}";
+"Log my mood in ${applicationName}" = "Registrar meu humor no ${applicationName}";
+"Log a meal in ${applicationName}" = "Registrar uma refeição no ${applicationName}";
+"Log a workout in ${applicationName}" = "Registrar um treino no ${applicationName}";
+"How's my day in ${applicationName}" = "Como está meu dia no ${applicationName}";
+"My status in ${applicationName}" = "Meu status no ${applicationName}";

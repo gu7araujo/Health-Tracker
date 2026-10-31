@@ -66,7 +66,8 @@ jobs:
     # test fails.
     if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
     runs-on: xcode-27
-    timeout-minutes: 60
+    # Simulator runtime (20) + Quality gate (45) + ~10 for checkout, tools and script tests.
+    timeout-minutes: 75
     env:
       CI: "true"
       MODE: ${{ github.event_name == 'push' && '--fast' || '--full' }}
@@ -80,9 +81,15 @@ jobs:
         run: scripts/ci/install-tools.sh
       - name: Script tests
         run: scripts/tests/run
+      - name: Simulator runtime
+        # --full runs HealthTrackerIntentsUITests, which needs a simulator runtime at the SDK's iOS
+        # version; the image can ship only an older one, and downloading it takes several minutes.
+        if: env.MODE == '--full' # pushes to main run --fast: no intents run
+        timeout-minutes: 20
+        run: scripts/ci/install-simulator-runtime.sh
       - name: Quality gate
-        # Below the job's limit: a step timeout fails the step, so the if: failure() steps
-        # still run; a job timeout cancels it and skips them.
+        # With the Simulator runtime step's, below the job's limit: a step timeout fails the step,
+        # so the if: failure() steps still run; a job timeout cancels it and skips them.
         timeout-minutes: 45
         run: scripts/quality "$MODE" --json
       - name: Summary

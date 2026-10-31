@@ -23,7 +23,7 @@ This README is the human guide to building, testing and the **quality gate**. AI
 
 ## Setup
 
-**1. Install the tools.** You need the Xcode version pinned in `scripts/tool-versions.env`, with an iOS 26 simulator runtime, plus:
+**1. Install the tools.** You need the Xcode version pinned in `scripts/tool-versions.env`, with an iOS 26 simulator runtime (and, for `scripts/quality --full`, one at the iPhone simulator SDK's version or later: iOS 27.2 with Xcode 27.2, installed by `xcodebuild -downloadPlatform iOS`), plus:
 
 ```bash
 brew install swiftlint swiftformat xcbeautify jq
@@ -67,7 +67,7 @@ One command decides whether the code is good enough. It prints a pass/fail table
 ```bash
 scripts/quality            # same as --fast
 scripts/quality --fast     # format, lint, fitness checks, unit tests, unused code, Domain/Data unit line + region coverage
-scripts/quality --full     # everything in --fast, plus UI tests, app coverage, per-file floor
+scripts/quality --full     # everything in --fast, plus UI and intents UI tests (iOS 27.2+ with Xcode 27.2), app coverage, per-file floor
 scripts/quality --full --json            # also writes build/quality.json
 scripts/quality --simulator <udid>       # test on a specific simulator
 scripts/quality --fast --update-baseline # raise the coverage ratchets (see below)
@@ -85,13 +85,14 @@ Each row prints the gate, its measured value, the threshold and ✓ or ✗; run 
 | Fitness | both | `scripts/fitness/run` reports 0 [cross-file violations](#fitness-functions) |
 | Unit tests | both | `HealthTrackerTests` has 0 failures |
 | UI tests | `--full` | `HealthTrackerUITests` has 0 failures |
+| Intents UI tests | `--full` | `HealthTrackerIntentsUITests` has 0 failures, on a simulator at the iPhone simulator SDK's iOS version or later (see [Which simulator it uses](#which-simulator-it-uses)) |
 | Unused code | both | `periphery scan` reports 0 unused declarations (see [Unused code](#unused-code)) |
 | Domain / Data unit line and region coverage | both | Unit-test line and region coverage of `HealthTracker/Domain/` and `HealthTracker/Data/` ≥ their `*_UNIT_MIN` ratchet |
-| App line coverage | `--full` | Unit + UI coverage of the whole app ≥ `APP_LINE_MIN` |
+| App line coverage | `--full` | Unit + UI (including intents) coverage of the whole app ≥ `APP_LINE_MIN` |
 | Per-file floor | `--full` | The least-covered file is ≥ `FILE_FLOOR`. Files under `Presentation/Views/` and those listed in `scripts/coverage-exceptions.txt` don't count |
 
 Why two kinds of coverage:
-- UI tests run a lot of code without checking much of it, so app-wide coverage can look high while the business rules go untested. The Domain and Data gates count **unit tests only**, which keeps the rules in those layers covered on their own. To measure that, `--full` runs the unit tests and the UI tests as two separate runs, then merges them into `build/Test.xcresult` for the app-wide numbers.
+- UI tests run a lot of code without checking much of it, so app-wide coverage can look high while the business rules go untested. The Domain and Data gates count **unit tests only**, which keeps the rules in those layers covered on their own. To measure that, `--full` runs the unit tests, the UI tests and the intents UI tests as three separate runs, then merges them into `build/Test.xcresult` for the app-wide numbers.
 - The per-file floor stops one well-tested file from hiding a new untested one.
 
 Line vs region coverage: a line counts as covered once any part of it runs. A **region** is a single code path, and one line can hold several: in `let amount = water ?? 0` the `?? 0` default is its own region, and so is each side of `&&` or `?:`. A test that only ever passes a non-nil `water` covers the line but leaves the default region at 0. The region rows catch those gaps. `scripts/lib/region-coverage.sh` reads them with `xcrun llvm-cov export` from the unit run's `Coverage.profdata`, before the UI run replaces it. (Swift reports no branch coverage, so regions are the finest measure available.)
@@ -114,10 +115,13 @@ Exit codes: `0` all gates passed, `1` a gate failed, `2` usage error.
 
 By default each branch or worktree gets its own simulator, named `HT-<branch>` (for example `HT-feat-my-change`). The first run clones it from the iPhone model pinned as `SIMULATOR_DEVICE` in `scripts/tool-versions.env`, on the newest iOS 26 runtime that has one, else the newest iOS runtime that has one. With no shut-down one on any runtime, it clones the first iPhone on the newest iOS 26 (else iOS) runtime and prints a warning. An existing clone of another model is deleted and re-cloned, unless it is booted. This keeps parallel worktrees, and agents, from fighting over one device. An exported `SIMULATOR_ID` is ignored on purpose; use `--simulator <udid>` to pick a device.
 
-Delete a branch's clone when you're done with the branch:
+`--full` also runs `HealthTrackerIntentsUITests`, which imports `AppIntentsTesting`. That framework links the SDK's iOS release, so the bundle needs a runtime at least the iPhone simulator SDK's version (`xcrun --sdk iphonesimulator --show-sdk-version`): Xcode 27.2's fails to load on iOS 27.0 ("Symbol not found"). On a simulator that meets it, the bundle runs there; otherwise, `--simulator` included, it uses a second clone, `HT-<branch>-ios27`, picked the same way from runtimes at or above that version, newest first (versions compare numerically, so 27.10 beats 27.2). An existing `HT-<branch>-ios27` on an older runtime is deleted and re-cloned, unless it is booted. With no iPhone on a qualifying runtime, the gate prints the version it needs, the `Intents UI tests` row shows `n/a` and the gate fails: install the runtime with `xcodebuild -downloadPlatform iOS` (or Xcode > Settings > Components). The gate shuts down each clone it booted when it exits.
+
+Delete a branch's clones when you're done with the branch:
 
 ```bash
 xcrun simctl delete "HT-feat-my-change"
+xcrun simctl delete "HT-feat-my-change-ios27"
 ```
 
 ## Fixing a red gate
@@ -287,7 +291,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 
 **`lint`** runs on `ubuntu-24.04` (~1 min). It installs the pinned SwiftLint and SwiftFormat (`scripts/ci/install-tools.sh`), checks formatting, lints, and runs the [fitness checks](#fitness-functions) (on PRs also the persisted-shape guard, which only warns). SwiftLint violations show inline on the PR diff; SwiftFormat failures show in the step log. Linux SwiftLint skips the rules that need SourceKit (`custom_rules`, `statement_position`), so this job is a fast pre-filter: the full lint runs again in `test`. It also runs ShellCheck on the scripts and hooks and actionlint on the workflows.
 
-**`test`** runs only after `lint` passes, on `runs-on: xcode-27` (macOS 27). It selects the pinned Xcode (`scripts/ci/select-xcode.sh`) and installs the pinned tools. Then it runs the scripts' own tests (`scripts/tests/run`) and `scripts/quality` with `CI=true`, so `scripts/doctor` fails on any version drift and compiler warnings fail the build (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `GCC_TREAT_WARNINGS_AS_ERRORS`; locally they stay warnings). The gate table appears in the run's summary. Compile errors and test failures are rendered as GitHub annotations (`xcbeautify --renderer github-actions`).
+**`test`** runs only after `lint` passes, on `runs-on: xcode-27` (macOS 27). It selects the pinned Xcode (`scripts/ci/select-xcode.sh`) and installs the pinned tools. Then it runs the scripts' own tests (`scripts/tests/run`), on `--full` runs makes sure a simulator runtime at the SDK's iOS version is installed (`scripts/ci/install-simulator-runtime.sh`: the `xcode-27` image ships only iOS 27.0, so it runs `xcodebuild -downloadPlatform iOS`, a several-minute download, 20-minute step limit; pushes to `main` run `--fast` and skip it), and runs `scripts/quality` with `CI=true`, so `scripts/doctor` fails on any version drift and compiler warnings fail the build (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `GCC_TREAT_WARNINGS_AS_ERRORS`; locally they stay warnings). The gate table appears in the run's summary. Compile errors and test failures are rendered as GitHub annotations (`xcbeautify --renderer github-actions`).
 
 **Cost.** The repo is public, and GitHub Actions is free for public repositories on standard GitHub-hosted runners, macOS included (`xcode-27` is a standard-size image); only larger runners are billed. Measured run times: a PR's `--full` ~23 min, a push to `main` (`--fast`) ~10–14 min, the weekly `--full` ~23 min. To keep feedback fast:
 
@@ -338,7 +342,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `scripts/fitness/` | [Fitness functions](#fitness-functions): the cross-file checks, `run`, and `test-mirror-exceptions.txt` |
 | `scripts/lib/` | Pieces used by `scripts/quality` (coverage math, simulator picking, report table). Each has tests |
 | `scripts/tests/run` | Runs every `scripts/tests/test-*.sh` (the scripts' own tests, no simulator needed) |
-| `scripts/ci/` | CI helpers: `install-tools.sh` (pinned SwiftLint/SwiftFormat, and Periphery on macOS), `select-xcode.sh` (pinned Xcode), `summary.sh` (gate table for the job summary) |
+| `scripts/ci/` | CI helpers: `install-tools.sh` (pinned SwiftLint/SwiftFormat, and Periphery on macOS), `select-xcode.sh` (pinned Xcode), `install-simulator-runtime.sh` (an iOS runtime at the SDK's version, for the intents UI tests), `summary.sh` (gate table for the job summary) |
 | `.github/workflows/` | `ci.yml` (PRs, pushes to `main`), `weekly.yml` (schedule) and `claude-code-review.yml` (AI review of non-draft PRs, on Linux) |
 | `.githooks/` | pre-commit and pre-push hooks |
 | `.claude/hooks/format-swift.sh` | Claude Code hook that formats and lints each edited Swift file |
