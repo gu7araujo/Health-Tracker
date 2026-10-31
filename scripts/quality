@@ -157,8 +157,14 @@ if [ "$MODE" = "full" ]; then
     echo "error: HealthTrackerIntentsUITests needs an iPhone simulator on iOS $intents_min or later (the iphonesimulator SDK's version); install that runtime with: xcodebuild -downloadPlatform iOS" >&2
 fi
 
+shutdown_clones() {
+  local udid
+  for udid in $shutdown_on_exit; do
+    xcrun simctl shutdown "$udid" >/dev/null 2>&1
+  done
+}
 if [ -n "$shutdown_on_exit" ]; then
-  trap 'for udid in $shutdown_on_exit; do xcrun simctl shutdown "$udid" >/dev/null 2>&1; done' EXIT
+  trap shutdown_clones EXIT
   trap 'exit 130' INT
   trap 'exit 143' TERM
 fi
