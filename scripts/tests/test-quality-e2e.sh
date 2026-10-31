@@ -29,8 +29,10 @@ sed "s|/repo/|$REPO/|g" "$FIX/unit-baseline.json" >"$TMP/coverage.json"
 sed "s|/repo/|$REPO/|g" "$FIX/region-export.json" >"$TMP/regions.json"
 cat >"$TMP/simulators.json" <<'EOF'
 {"devices":{"com.apple.CoreSimulator.SimRuntime.iOS-26-5":[
-  {"name":"HT-feat-x","udid":"WORKTREE-UDID","state":"Shutdown"},
-  {"name":"iPhone 17 Pro","udid":"SHARED-UDID","state":"Shutdown"}]}}
+  {"name":"HT-feat-x","udid":"WORKTREE-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-17"},
+  {"name":"iPhone 17 Pro","udid":"SHARED-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro"}],
+ "com.apple.CoreSimulator.SimRuntime.iOS-27-1":[
+  {"name":"iPhone Duo","udid":"DUO-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-Duo"}]}}
 EOF
 printf '{"testNodes":[{"name":"HealthTracker","nodeType":"Test Plan","result":"Passed","children":[{"name":"HealthTrackerTests","nodeType":"Unit test bundle","result":"Passed","children":[]},{"name":"HealthTrackerUITests","nodeType":"UI test bundle","result":"Passed","children":[]}]}]}\n' >"$TMP/tests.json"
 
@@ -43,6 +45,7 @@ case "\$1 \$2" in
   "llvm-cov export") echo "\$*" >>"$TMP/llvm-cov.calls" && cat "$TMP/regions.json" ;;
   "xcresulttool get") cat "$TMP/tests.json" ;;
   "simctl shutdown") echo "\$*" >>"$TMP/simctl.calls" ;;
+  "simctl clone") echo "\$*" >>"$TMP/clone.calls" && echo CLONED-UDID ;;
   *) exit 0 ;;
 esac
 EOF
@@ -103,6 +106,24 @@ run_quality '[]' --fast
 run_quality '[]' --fast --simulator EXPLICIT-UDID
 [[ "$out" == *"on simulator EXPLICIT-UDID"* ]] || fail "--simulator should win, got: $out"
 
+# A first run on the xcode-27 CI image, whose newest runtime (iOS 27.1) has only an iPhone Duo,
+# clones the pinned iPhone 17 from iOS 27.0.
+cp "$TMP/simulators.json" "$TMP/simulators.json.orig"
+cp "$FIX/simulators-duo.json" "$TMP/simulators.json"
+run_quality '[]' --fast
+[ "$(cat "$TMP/clone.calls")" = "simctl clone IPHONE-17 HT-feat-x" ] ||
+  fail "should clone iOS 27.0's iPhone 17 as HT-feat-x, got: $(cat "$TMP/clone.calls" 2>/dev/null)"
+[[ "$out" == *"on simulator CLONED-UDID"* ]] || fail "should test on the new clone, got: $out"
+mv "$TMP/simulators.json.orig" "$TMP/simulators.json"
+
+# The log names the device model and iOS runtime, so a CI log shows which iOS the tests ran on.
+run_quality '[]' --fast
+[[ "$out" == *"on simulator WORKTREE-UDID (iPhone 17, iOS 26.5) "* ]] ||
+  fail "should log the simulator's model and runtime, got: $out"
+run_quality '[]' --fast --simulator DUO-UDID
+[[ "$out" == *"on simulator DUO-UDID (iPhone Duo, iOS 27.1) "* ]] ||
+  fail "should log --simulator's model and runtime, got: $out"
+
 # A simulator scripts/quality booted itself is shut down when it exits (green, red or interrupted),
 # so booted HT-<branch> clones never pile up; the clone itself is kept for reuse.
 for case in green red interrupted; do
@@ -118,12 +139,17 @@ done
 : >"$TMP/simctl.calls"
 run_quality '[]' --fast --simulator EXPLICIT-UDID
 [ ! -s "$TMP/simctl.calls" ] || fail "--simulator's device should stay booted, got: $(cat "$TMP/simctl.calls")"
-sim_state() { sed -i.bak "s/\"WORKTREE-UDID\",\"state\":\"[A-Za-z]*\"/\"WORKTREE-UDID\",\"state\":\"$1\"/" "$TMP/simulators.json"; }
+sim_state() { sed -i.bak "s/\"WORKTREE-UDID\",\"state\":\"[A-Za-z ]*\"/\"WORKTREE-UDID\",\"state\":\"$1\"/" "$TMP/simulators.json"; }
 sim_state Booted
 : >"$TMP/simctl.calls"
 run_quality '[]' --fast
 [[ "$out" == *"on simulator WORKTREE-UDID"* ]] || fail "should still test on an already booted simulator, got: $out"
 [ ! -s "$TMP/simctl.calls" ] || fail "an already booted simulator should stay booted, got: $(cat "$TMP/simctl.calls")"
+# simctl states can hold a space ("Shutting Down"); the log still names the model and runtime.
+sim_state "Shutting Down"
+run_quality '[]' --fast
+[[ "$out" == *"on simulator WORKTREE-UDID (iPhone 17, iOS 26.5) "* ]] ||
+  fail "a two-word state should not garble the simulator's model and runtime, got: $out"
 sim_state Shutdown
 
 # --update-baseline must not lock in coverage from a red run.

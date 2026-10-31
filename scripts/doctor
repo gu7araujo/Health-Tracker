@@ -36,7 +36,7 @@ check SwiftFormat swiftformat "$SWIFTFORMAT_VERSION" "$(swiftformat --version 2>
 check Periphery periphery "$PERIPHERY_VERSION" "$(periphery version 2>/dev/null)" \
   "scripts/ci/install-tools.sh build/tools/bin (scripts/quality runs tools from there first)"
 check Xcode xcodebuild "$XCODE_VERSION" "$(xcodebuild -version 2>/dev/null | awk 'NR == 1 { print $2 }')" \
-  "sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app"
+  "install Xcode $XCODE_VERSION, then sudo xcode-select -s <path to that Xcode.app> (on CI: scripts/ci/select-xcode.sh)"
 
 for tool in xcbeautify jq; do
   command -v "$tool" >/dev/null || report "$tool not installed" "brew install $tool"

@@ -21,11 +21,11 @@ mkdir -p "$TMP/stubs"
 printf '#!/bin/sh\necho "$*" >>"%s"\n' "$TMP/sudo.calls" >"$TMP/stubs/sudo"
 chmod +x "$TMP/stubs/sudo"
 
-# fake_xcode <app name> <version>: an app whose xcodebuild -version reports <version>.
+# fake_xcode <app name> <version> [build]: an app whose xcodebuild -version reports <version> and [build].
 fake_xcode() {
   local bin="$TMP/apps/$1/Contents/Developer/usr/bin"
   mkdir -p "$bin"
-  printf '#!/bin/sh\necho "Xcode %s"\necho "Build version 1A1"\n' "$2" >"$bin/xcodebuild"
+  printf '#!/bin/sh\necho "Xcode %s"\necho "Build version %s"\n' "$2" "${3:-1A1}" >"$bin/xcodebuild"
   chmod +x "$bin/xcodebuild"
 }
 
@@ -38,13 +38,15 @@ select_xcode() {
 # The runner names the pinned version's app after its release stage, beside lookalike versions.
 fake_xcode Xcode_27.app 27.0
 fake_xcode "Xcode_${XCODE_VERSION}0.app" "${XCODE_VERSION}0"
-fake_xcode "Xcode_${XCODE_VERSION}_Release_Candidate.app" "$XCODE_VERSION"
+fake_xcode "Xcode_${XCODE_VERSION}_Release_Candidate.app" "$XCODE_VERSION" 27B48
 select_xcode
 want="$TMP/apps/Xcode_${XCODE_VERSION}_Release_Candidate.app"
 [ "$code" -eq 0 ] || fail "should select the pinned Xcode (got $code): $out"
 [ "$(cat "$TMP/sudo.calls" 2>/dev/null)" = "xcode-select -s $want" ] ||
   fail "should run sudo xcode-select -s $want, got: $(cat "$TMP/sudo.calls" 2>/dev/null)"
-[ "$out" = "$want" ] || fail "should print the selected app, got: $out"
+# The version and build number tell a release candidate from the final release in the CI log.
+[ "$out" = "$want: Xcode $XCODE_VERSION (27B48)" ] ||
+  fail "should print the selected app with its version and build, got: $out"
 
 # No app reports the pinned version: fail and list what is there.
 rm -rf "$TMP/apps/Xcode_${XCODE_VERSION}_Release_Candidate.app"

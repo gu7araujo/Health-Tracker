@@ -23,7 +23,7 @@ This README is the human guide to building, testing and the **quality gate**. AI
 
 ## Setup
 
-**1. Install the tools.** You need Xcode 27.1 with an iOS 26 simulator runtime, plus:
+**1. Install the tools.** You need the Xcode version pinned in `scripts/tool-versions.env`, with an iOS 26 simulator runtime, plus:
 
 ```bash
 brew install swiftlint swiftformat xcbeautify jq
@@ -31,7 +31,7 @@ brew install swiftlint swiftformat xcbeautify jq
 
 and the pinned [Periphery](https://github.com/peripheryapp/periphery) binary for the Unused code gate, which `scripts/bootstrap` (step 2) installs.
 
-The versions are pinned in `scripts/tool-versions.env` (SwiftLint 0.65.0, SwiftFormat 0.61.1, Periphery 3.8.0, Xcode 27.1). Pinning matters because formatter and linter rules change between releases: a different version can flag code that passes on another machine.
+The SwiftLint, SwiftFormat, Periphery and Xcode versions are pinned in `scripts/tool-versions.env`. Pinning matters because formatter and linter rules change between releases: a different version can flag code that passes on another machine.
 
 **2. Bootstrap the clone (once per clone or worktree):**
 
@@ -112,7 +112,7 @@ Exit codes: `0` all gates passed, `1` a gate failed, `2` usage error.
 
 ### Which simulator it uses
 
-By default each branch or worktree gets its own simulator, named `HT-<branch>` (for example `HT-feat-my-change`). The first run clones it from an iPhone on the newest iOS 26 runtime, falling back to the newest iOS runtime installed. This keeps parallel worktrees, and agents, from fighting over one device. An exported `SIMULATOR_ID` is ignored on purpose; use `--simulator <udid>` to pick a device.
+By default each branch or worktree gets its own simulator, named `HT-<branch>` (for example `HT-feat-my-change`). The first run clones it from the iPhone model pinned as `SIMULATOR_DEVICE` in `scripts/tool-versions.env`, on the newest iOS 26 runtime that has one, else the newest iOS runtime that has one. With no shut-down one on any runtime, it clones the first iPhone on the newest iOS 26 (else iOS) runtime and prints a warning. An existing clone of another model is deleted and re-cloned, unless it is booted. This keeps parallel worktrees, and agents, from fighting over one device. An exported `SIMULATOR_ID` is ignored on purpose; use `--simulator <udid>` to pick a device.
 
 Delete a branch's clone when you're done with the branch:
 
@@ -165,7 +165,7 @@ It raises the four `*_UNIT_MIN` values (line and region) to the newly measured c
 
 ## Unused code
 
-The Unused code gate runs [Periphery](https://github.com/peripheryapp/periphery) after the tests, so unused declarations (what AI agents tend to leave behind) fail the gate. `scripts/quality` builds into its own `build/DerivedData`, and Periphery scans that build's index store (`--skip-build`; Periphery's own build mode fails on Xcode 27.1). `.periphery.yml` sets `strict: true` and there is no baseline file: the count must be 0.
+The Unused code gate runs [Periphery](https://github.com/peripheryapp/periphery) after the tests, so unused declarations (what AI agents tend to leave behind) fail the gate. `scripts/quality` builds into its own `build/DerivedData`, and Periphery scans that build's index store (`--skip-build`, so it reuses the test build instead of building the app again). `.periphery.yml` sets `strict: true` and there is no baseline file: the count must be 0.
 
 Re-scan by hand after a gate run (it reads that run's index, so rebuild with `scripts/quality` after editing):
 
@@ -287,7 +287,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 
 **`lint`** runs on `ubuntu-24.04` (~1 min). It installs the pinned SwiftLint and SwiftFormat (`scripts/ci/install-tools.sh`), checks formatting, lints, and runs the [fitness checks](#fitness-functions) (on PRs also the persisted-shape guard, which only warns). SwiftLint violations show inline on the PR diff; SwiftFormat failures show in the step log. Linux SwiftLint skips the rules that need SourceKit (`custom_rules`, `statement_position`), so this job is a fast pre-filter: the full lint runs again in `test`. It also runs ShellCheck on the scripts and hooks and actionlint on the workflows.
 
-**`test`** runs only after `lint` passes, on `runs-on: xcode-27` (macOS 26). It selects the pinned Xcode (`scripts/ci/select-xcode.sh`) and installs the pinned tools. Then it runs the scripts' own tests (`scripts/tests/run`) and `scripts/quality` with `CI=true`, so `scripts/doctor` fails on any version drift and compiler warnings fail the build (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `GCC_TREAT_WARNINGS_AS_ERRORS`; locally they stay warnings). The gate table appears in the run's summary. Compile errors and test failures are rendered as GitHub annotations (`xcbeautify --renderer github-actions`).
+**`test`** runs only after `lint` passes, on `runs-on: xcode-27` (macOS 27). It selects the pinned Xcode (`scripts/ci/select-xcode.sh`) and installs the pinned tools. Then it runs the scripts' own tests (`scripts/tests/run`) and `scripts/quality` with `CI=true`, so `scripts/doctor` fails on any version drift and compiler warnings fail the build (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `GCC_TREAT_WARNINGS_AS_ERRORS`; locally they stay warnings). The gate table appears in the run's summary. Compile errors and test failures are rendered as GitHub annotations (`xcbeautify --renderer github-actions`).
 
 **Cost.** The repo is public, and GitHub Actions is free for public repositories on standard GitHub-hosted runners, macOS included (`xcode-27` is a standard-size image); only larger runners are billed. Measured run times: a PR's `--full` ~23 min, a push to `main` (`--fast`) ~10–14 min, the weekly `--full` ~23 min. To keep feedback fast:
 
@@ -332,7 +332,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `scripts/quality` | The quality gate (see above) |
 | `scripts/bootstrap` | One-time setup per clone or worktree: enables `.githooks`, installs the pinned tools into `build/tools/bin`, runs `doctor` |
 | `scripts/doctor` | Compares installed tools with the pins. Warns locally, fails when `CI=true` |
-| `scripts/tool-versions.env` | Pinned SwiftLint / SwiftFormat / Periphery / Xcode versions |
+| `scripts/tool-versions.env` | Pinned SwiftLint / SwiftFormat / Periphery / Xcode versions and test simulator model |
 | `scripts/quality-thresholds.env` | Coverage thresholds and ratchets |
 | `scripts/coverage-exceptions.txt` | Files grandfathered below the per-file floor |
 | `scripts/fitness/` | [Fitness functions](#fitness-functions): the cross-file checks, `run`, and `test-mirror-exceptions.txt` |

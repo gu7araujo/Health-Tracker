@@ -1,0 +1,11 @@
+{
+  "devices": {
+    "com.apple.CoreSimulator.SimRuntime.iOS-27-0": [
+      { "name": "iPhone 17e", "udid": "IPHONE-17E", "state": "Shutdown", "isAvailable": true, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-17e" },
+      { "name": "iPhone 17", "udid": "IPHONE-17", "state": "Shutdown", "isAvailable": true, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-17" }
+    ],
+    "com.apple.CoreSimulator.SimRuntime.iOS-27-1": [
+      { "name": "iPhone Duo", "udid": "DUO", "state": "Shutdown", "isAvailable": true, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-Duo" }
+    ]
+  }
+}
