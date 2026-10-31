@@ -107,18 +107,16 @@ if [ -z "$SIMULATOR" ]; then
   own_simulator=1
 fi
 # One simctl read gives the device's state and, for the log, its model and runtime: "iPhone 17, iOS 26.5".
-read -r state about < <(xcrun simctl list devices -j | jq -r --arg udid "$SIMULATOR" '[.devices | to_entries[]
-  | (.key | ltrimstr("com.apple.CoreSimulator.SimRuntime.") | sub("-"; " ") | gsub("-"; ".")) as $runtime
+IFS=$'\t' read -r state about < <(xcrun simctl list devices -j | jq -r --arg udid "$SIMULATOR" '[.devices | to_entries[]
+  | (.key | split(".")[-1] | sub("-"; " ") | gsub("-"; ".")) as $runtime
   | .value[] | select(.udid == $udid)
-  | "\(.state) (\(.deviceTypeIdentifier | ltrimstr("com.apple.CoreSimulator.SimDeviceType.") | gsub("-"; " ")), \($runtime))"][0] // empty')
-if [ -n "$own_simulator" ]; then
-  # Shut down the clone this run boots (kept for reuse), so booted clones never pile up; one
-  # already booted is someone's session and stays up.
-  if [ "$state" != "Booted" ]; then
-    trap 'xcrun simctl shutdown "$SIMULATOR" >/dev/null 2>&1' EXIT
-    trap 'exit 130' INT
-    trap 'exit 143' TERM
-  fi
+  | [.state, "(\(.deviceTypeIdentifier | split(".")[-1] | gsub("-"; " ")), \($runtime))"] | @tsv][0] // empty')
+# Shut down the clone this run boots (kept for reuse), so booted clones never pile up; one
+# already booted is someone's session and stays up.
+if [ -n "$own_simulator" ] && [ "$state" != "Booted" ]; then
+  trap 'xcrun simctl shutdown "$SIMULATOR" >/dev/null 2>&1' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
 fi
 
 # Each bundle runs on its own so the Domain/Data ratchets can measure unit-only coverage

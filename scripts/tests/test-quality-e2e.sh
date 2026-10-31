@@ -128,12 +128,17 @@ done
 : >"$TMP/simctl.calls"
 run_quality '[]' --fast --simulator EXPLICIT-UDID
 [ ! -s "$TMP/simctl.calls" ] || fail "--simulator's device should stay booted, got: $(cat "$TMP/simctl.calls")"
-sim_state() { sed -i.bak "s/\"WORKTREE-UDID\",\"state\":\"[A-Za-z]*\"/\"WORKTREE-UDID\",\"state\":\"$1\"/" "$TMP/simulators.json"; }
+sim_state() { sed -i.bak "s/\"WORKTREE-UDID\",\"state\":\"[A-Za-z ]*\"/\"WORKTREE-UDID\",\"state\":\"$1\"/" "$TMP/simulators.json"; }
 sim_state Booted
 : >"$TMP/simctl.calls"
 run_quality '[]' --fast
 [[ "$out" == *"on simulator WORKTREE-UDID"* ]] || fail "should still test on an already booted simulator, got: $out"
 [ ! -s "$TMP/simctl.calls" ] || fail "an already booted simulator should stay booted, got: $(cat "$TMP/simctl.calls")"
+# simctl states can hold a space ("Shutting Down"); the log still names the model and runtime.
+sim_state "Shutting Down"
+run_quality '[]' --fast
+[[ "$out" == *"on simulator WORKTREE-UDID (iPhone 17, iOS 26.5) "* ]] ||
+  fail "a two-word state should not garble the simulator's model and runtime, got: $out"
 sim_state Shutdown
 
 # --update-baseline must not lock in coverage from a red run.
