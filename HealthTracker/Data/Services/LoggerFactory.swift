@@ -15,7 +15,7 @@ import Foundation
 /// - Presentation layer: com.healthtracker.presentation
 ///
 /// Each layer uses categories to identify features (e.g., "Data.Save", "Notifications.Scheduling").
-enum LoggerFactory {
+nonisolated enum LoggerFactory {
     /// Create a logger for the Domain layer (use cases, business logic).
     ///
     /// - Parameter category: Feature identifier (e.g., "Data.Save", "Notifications.Scheduling")

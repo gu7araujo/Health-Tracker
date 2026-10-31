@@ -16,7 +16,7 @@ import UserNotifications
 ///
 /// This file and its `UserNotificationCentering` seam (`UserNotificationCentering.swift`)
 /// are the only files in the project that should import the UserNotifications framework.
-final class NotificationService: NotificationServiceProtocol {
+final nonisolated class NotificationService: NotificationServiceProtocol {
     private let notificationCenter: UserNotificationCentering
     private let logger: LoggerProtocol
 
@@ -114,13 +114,13 @@ final class NotificationService: NotificationServiceProtocol {
         logger.info("All pending notifications canceled")
     }
 
-    nonisolated func cancelNotifications(withIdentifiers identifiers: [String]) {
+    func cancelNotifications(withIdentifiers identifiers: [String]) {
         logger.debug("Canceling notifications: \(identifiers)")
         notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
         logger.info("Canceled \(identifiers.count) notification(s)")
     }
 
-    nonisolated func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
+    func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
         logger.debug("Removing delivered notifications: \(identifiers)")
         notificationCenter.removeDeliveredNotifications(withIdentifiers: identifiers)
         logger.info("Removed \(identifiers.count) delivered notification(s)")
@@ -133,7 +133,7 @@ final class NotificationService: NotificationServiceProtocol {
 ///
 /// This mapping keeps the Domain layer independent of iOS frameworks while allowing
 /// the Data layer to work with platform-specific types.
-private extension NotificationAuthorizationOptions {
+private nonisolated extension NotificationAuthorizationOptions {
     func toUNAuthorizationOptions() -> UNAuthorizationOptions {
         var result: UNAuthorizationOptions = []
         if contains(.alert) { result.insert(.alert) }
@@ -150,7 +150,7 @@ private extension NotificationAuthorizationOptions {
 ///
 /// The @unknown default case ensures forward compatibility with future iOS versions
 /// that might add new authorization status values.
-private extension NotificationAuthorizationStatus {
+private nonisolated extension NotificationAuthorizationStatus {
     static func from(_ unStatus: UNAuthorizationStatus) -> NotificationAuthorizationStatus {
         switch unStatus {
         case .notDetermined:

@@ -33,14 +33,14 @@ exceptions() {
 PROTOCOL_ONLY='import Foundation
 
 /// A protocol { with a brace in its doc comment }.
-protocol Repository {
+nonisolated protocol Repository {
     func load() -> [String]
     func save(
         days: [String]
     ) async throws
 }
 
-// Plain data next to the protocol is still declaration-only.
+// Plain data next to the protocol is still declaration-only, isolation modifier or not.
 struct Options: OptionSet {
     let rawValue: Int
     static let alert = Options(rawValue: 1 << 0)

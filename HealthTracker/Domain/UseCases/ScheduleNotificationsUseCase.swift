@@ -15,7 +15,10 @@ import Foundation
 ///
 /// Debug builds use testable times (2-3 minutes from now) for quick verification.
 /// Release builds use production times (1 PM, 8 PM) matching user requirements.
-final class ScheduleNotificationsUseCase {
+///
+/// `execute()` runs on the concurrent executor, never the main actor: clearing pending
+/// notifications is a synchronous XPC call that can block for minutes (see `CancelNotificationsUseCase`).
+final nonisolated class ScheduleNotificationsUseCase: Sendable {
     private let notificationService: NotificationServiceProtocol
     private let logger: LoggerProtocol
     private let appName: String?
@@ -45,7 +48,7 @@ final class ScheduleNotificationsUseCase {
     /// Release builds use production times (1 PM, 8 PM).
     ///
     /// - Throws: An error if scheduling fails (e.g., system error)
-    func execute() async throws {
+    @concurrent func execute() async throws {
         logger.debug("Scheduling notifications for next 30 days")
 
         // Check authorization (NOTIF-02)

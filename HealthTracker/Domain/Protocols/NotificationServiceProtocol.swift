@@ -14,7 +14,10 @@ import Foundation
 /// This protocol abstracts notification operations without coupling the Domain layer
 /// to iOS UserNotifications framework. Concrete implementations in the Data layer
 /// will handle platform-specific details.
-protocol NotificationServiceProtocol: Sendable {
+///
+/// Nonisolated: the synchronous requirements are blocking XPC calls, so callers run them
+/// off the main actor (the notification use cases' `execute()` is `@concurrent`).
+nonisolated protocol NotificationServiceProtocol: Sendable {
     /// Requests authorization to display notifications.
     ///
     /// This method requests permission from the user to show notifications.
@@ -65,7 +68,7 @@ protocol NotificationServiceProtocol: Sendable {
     /// Use this to prevent future notifications from firing.
     ///
     /// - Parameter identifiers: Array of notification identifiers to cancel
-    nonisolated func cancelNotifications(withIdentifiers identifiers: [String])
+    func cancelNotifications(withIdentifiers identifiers: [String])
 
     /// Removes delivered notifications with the specified identifiers.
     ///
@@ -74,7 +77,7 @@ protocol NotificationServiceProtocol: Sendable {
     /// after the user has taken action.
     ///
     /// - Parameter identifiers: Array of notification identifiers to remove
-    nonisolated func removeDeliveredNotifications(withIdentifiers identifiers: [String])
+    func removeDeliveredNotifications(withIdentifiers identifiers: [String])
 }
 
 // MARK: - Domain Types
@@ -84,7 +87,7 @@ protocol NotificationServiceProtocol: Sendable {
 /// This type mirrors iOS UNAuthorizationOptions but remains independent of
 /// the UserNotifications framework. This allows the Domain layer to compile
 /// without iOS framework dependencies.
-struct NotificationAuthorizationOptions: OptionSet {
+nonisolated struct NotificationAuthorizationOptions: OptionSet {
     let rawValue: Int
 
     /// Permission to display alerts/banners
@@ -102,7 +105,7 @@ struct NotificationAuthorizationOptions: OptionSet {
 /// This enum represents the user's permission state for notifications.
 /// It mirrors iOS UNAuthorizationStatus but remains independent of the
 /// UserNotifications framework.
-enum NotificationAuthorizationStatus {
+nonisolated enum NotificationAuthorizationStatus {
     /// The user has not yet been asked for notification permission
     case notDetermined
 

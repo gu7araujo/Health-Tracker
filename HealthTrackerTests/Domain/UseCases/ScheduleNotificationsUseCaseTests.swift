@@ -47,6 +47,17 @@ struct ScheduleNotificationsUseCaseTests {
         #expect(mockService.cancelAllNotificationsCalled == true)
     }
 
+    /// Called from the main actor, the blocking clear-all system call still runs off the main thread.
+    @Test func execute_cancelsAllOffMainThread() async throws {
+        let mockService = MockNotificationService()
+        mockService.authorizationStatusResult = .authorized
+
+        let useCase = ScheduleNotificationsUseCase(notificationService: mockService, logger: MockLogger())
+        try await useCase.execute()
+
+        #expect(mockService.cancelAllNotificationsRanOnMainThread == false)
+    }
+
     @Test func execute_skipsSchedulingWhenNotAuthorized() async throws {
         let mockService = MockNotificationService()
         let mockLogger = MockLogger()
