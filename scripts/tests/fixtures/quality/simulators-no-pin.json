@@ -1,0 +1,11 @@
+{
+  "devices": {
+    "com.apple.CoreSimulator.SimRuntime.iOS-26-5": [
+      { "name": "HT-feature-x", "udid": "KEPT", "state": "Shutdown", "isAvailable": true, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro" },
+      { "name": "iPhone 16 Pro", "udid": "FALLBACK", "state": "Shutdown", "isAvailable": true, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro" }
+    ],
+    "com.apple.CoreSimulator.SimRuntime.iOS-27-1": [
+      { "name": "iPhone Duo", "udid": "DUO", "state": "Shutdown", "isAvailable": true, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-Duo" }
+    ]
+  }
+}

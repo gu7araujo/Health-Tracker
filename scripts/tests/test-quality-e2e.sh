@@ -45,6 +45,7 @@ case "\$1 \$2" in
   "llvm-cov export") echo "\$*" >>"$TMP/llvm-cov.calls" && cat "$TMP/regions.json" ;;
   "xcresulttool get") cat "$TMP/tests.json" ;;
   "simctl shutdown") echo "\$*" >>"$TMP/simctl.calls" ;;
+  "simctl clone") echo "\$*" >>"$TMP/clone.calls" && echo CLONED-UDID ;;
   *) exit 0 ;;
 esac
 EOF
@@ -104,6 +105,16 @@ run_quality '[]' --fast
 
 run_quality '[]' --fast --simulator EXPLICIT-UDID
 [[ "$out" == *"on simulator EXPLICIT-UDID"* ]] || fail "--simulator should win, got: $out"
+
+# A first run on the xcode-27 CI image, whose newest runtime (iOS 27.1) has only an iPhone Duo,
+# clones the pinned iPhone 17 from iOS 27.0.
+cp "$TMP/simulators.json" "$TMP/simulators.json.orig"
+cp "$FIX/simulators-duo.json" "$TMP/simulators.json"
+run_quality '[]' --fast
+[ "$(cat "$TMP/clone.calls")" = "simctl clone IPHONE-17 HT-feat-x" ] ||
+  fail "should clone iOS 27.0's iPhone 17 as HT-feat-x, got: $(cat "$TMP/clone.calls" 2>/dev/null)"
+[[ "$out" == *"on simulator CLONED-UDID"* ]] || fail "should test on the new clone, got: $out"
+mv "$TMP/simulators.json.orig" "$TMP/simulators.json"
 
 # The log names the device model and iOS runtime, so a CI log shows which iOS the tests ran on.
 run_quality '[]' --fast

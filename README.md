@@ -112,7 +112,7 @@ Exit codes: `0` all gates passed, `1` a gate failed, `2` usage error.
 
 ### Which simulator it uses
 
-By default each branch or worktree gets its own simulator, named `HT-<branch>` (for example `HT-feat-my-change`). The first run clones it from an iPhone on the newest iOS 26 runtime, falling back to the newest iOS runtime installed. This keeps parallel worktrees, and agents, from fighting over one device. An exported `SIMULATOR_ID` is ignored on purpose; use `--simulator <udid>` to pick a device.
+By default each branch or worktree gets its own simulator, named `HT-<branch>` (for example `HT-feat-my-change`). The first run clones it from the iPhone model pinned as `SIMULATOR_DEVICE` in `scripts/tool-versions.env`, on the newest iOS 26 runtime that has one, else the newest iOS runtime that has one. With that model on no runtime, it clones the first iPhone on the newest iOS 26 (else iOS) runtime and prints a warning. An existing clone of another model is deleted and re-cloned. This keeps parallel worktrees, and agents, from fighting over one device. An exported `SIMULATOR_ID` is ignored on purpose; use `--simulator <udid>` to pick a device.
 
 Delete a branch's clone when you're done with the branch:
 
@@ -332,7 +332,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `scripts/quality` | The quality gate (see above) |
 | `scripts/bootstrap` | One-time setup per clone or worktree: enables `.githooks`, installs the pinned tools into `build/tools/bin`, runs `doctor` |
 | `scripts/doctor` | Compares installed tools with the pins. Warns locally, fails when `CI=true` |
-| `scripts/tool-versions.env` | Pinned SwiftLint / SwiftFormat / Periphery / Xcode versions |
+| `scripts/tool-versions.env` | Pinned SwiftLint / SwiftFormat / Periphery / Xcode versions and test simulator model |
 | `scripts/quality-thresholds.env` | Coverage thresholds and ratchets |
 | `scripts/coverage-exceptions.txt` | Files grandfathered below the per-file floor |
 | `scripts/fitness/` | [Fitness functions](#fitness-functions): the cross-file checks, `run`, and `test-mirror-exceptions.txt` |

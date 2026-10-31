@@ -11,7 +11,7 @@ The bash tooling behind the quality gate, the git hooks and CI. Each script's he
 - `ci/` — GitHub Actions steps: pinned tool install, Xcode selection, the job summary.
 - `fitness/` — cross-file checks; `fitness/run` runs them all, except `persisted-shape-guard.sh` (warn-only, needs a base ref).
 - `tests/` — a `test-*.sh` per script or config it covers (fixtures in `tests/fixtures/`); `tests/run` picks up every `test-*.sh`. CI runs it in the macOS `test` job, `quality` does not, so run `scripts/tests/run` yourself after a script change.
-- `tool-versions.env` — pinned SwiftLint, SwiftFormat, Xcode and Periphery versions.
+- `tool-versions.env` — pinned SwiftLint, SwiftFormat, Xcode and Periphery versions, and the iPhone model `lib/simulator.sh` clones for tests.
 - `quality-thresholds.env` — coverage thresholds and ratchets; lowering one is the user's call.
 - `coverage-exceptions.txt`, `fitness/test-mirror-exceptions.txt` — exemption lists; editing either is the user's call.
 

@@ -1,15 +1,16 @@
 {
   "devices": {
     "com.apple.CoreSimulator.SimRuntime.iOS-26-2": [
-      { "name": "iPhone 16", "udid": "OLD-RUNTIME", "state": "Shutdown", "isAvailable": true }
+      { "name": "iPhone 17", "udid": "OLD-RUNTIME", "state": "Shutdown", "isAvailable": true, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-17" }
     ],
     "com.apple.CoreSimulator.SimRuntime.iOS-26-5": [
-      { "name": "iPad Pro", "udid": "IPAD", "state": "Shutdown", "isAvailable": true },
-      { "name": "iPhone 17 Pro", "udid": "BOOTED", "state": "Booted", "isAvailable": true },
-      { "name": "iPhone 17", "udid": "SOURCE", "state": "Shutdown", "isAvailable": true }
+      { "name": "iPad Pro", "udid": "IPAD", "state": "Shutdown", "isAvailable": true, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPad-Pro" },
+      { "name": "iPhone 17 Pro", "udid": "PRO", "state": "Shutdown", "isAvailable": true, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro" },
+      { "name": "iPhone 17", "udid": "BOOTED", "state": "Booted", "isAvailable": true, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-17" },
+      { "name": "iPhone 17", "udid": "SOURCE", "state": "Shutdown", "isAvailable": true, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-17" }
     ],
     "com.apple.CoreSimulator.SimRuntime.iOS-27-0": [
-      { "name": "iPhone 18", "udid": "IOS-27", "state": "Shutdown", "isAvailable": true }
+      { "name": "iPhone 17", "udid": "IOS-27", "state": "Shutdown", "isAvailable": true, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-17" }
     ]
   }
 }
