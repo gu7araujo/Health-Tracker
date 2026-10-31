@@ -56,6 +56,10 @@ run_doctor "$TMP/drift"
 [[ "$out" == *"Xcode 1.0"*"$XCODE_VERSION"* ]] || fail "should report Xcode drift: $out"
 [[ "$out" == *"Periphery 0.3.0"*"$PERIPHERY_VERSION"* ]] || fail "should report Periphery drift: $out"
 [[ "$out" == *"fix:"* ]] || fail "should print a fix command: $out"
+# The Xcode fix names no app path: installs are named Xcode.app, runners use _Release_Candidate etc.
+[[ "$out" == *"install Xcode $XCODE_VERSION, then sudo xcode-select -s <path to that Xcode.app>"*"scripts/ci/select-xcode.sh"* ]] ||
+  fail "should hint to install the pinned Xcode and select it: $out"
+[[ "$out" != *"/Applications/Xcode_"* ]] || fail "should not guess an /Applications/Xcode_<version>.app path: $out"
 
 # Drift in CI: error, exit 1.
 run_doctor "$TMP/drift" true

@@ -29,8 +29,10 @@ sed "s|/repo/|$REPO/|g" "$FIX/unit-baseline.json" >"$TMP/coverage.json"
 sed "s|/repo/|$REPO/|g" "$FIX/region-export.json" >"$TMP/regions.json"
 cat >"$TMP/simulators.json" <<'EOF'
 {"devices":{"com.apple.CoreSimulator.SimRuntime.iOS-26-5":[
-  {"name":"HT-feat-x","udid":"WORKTREE-UDID","state":"Shutdown"},
-  {"name":"iPhone 17 Pro","udid":"SHARED-UDID","state":"Shutdown"}]}}
+  {"name":"HT-feat-x","udid":"WORKTREE-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-17"},
+  {"name":"iPhone 17 Pro","udid":"SHARED-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro"}],
+ "com.apple.CoreSimulator.SimRuntime.iOS-27-1":[
+  {"name":"iPhone Duo","udid":"DUO-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-Duo"}]}}
 EOF
 printf '{"testNodes":[{"name":"HealthTracker","nodeType":"Test Plan","result":"Passed","children":[{"name":"HealthTrackerTests","nodeType":"Unit test bundle","result":"Passed","children":[]},{"name":"HealthTrackerUITests","nodeType":"UI test bundle","result":"Passed","children":[]}]}]}\n' >"$TMP/tests.json"
 
@@ -102,6 +104,14 @@ run_quality '[]' --fast
 
 run_quality '[]' --fast --simulator EXPLICIT-UDID
 [[ "$out" == *"on simulator EXPLICIT-UDID"* ]] || fail "--simulator should win, got: $out"
+
+# The log names the device model and iOS runtime, so a CI log shows which iOS the tests ran on.
+run_quality '[]' --fast
+[[ "$out" == *"on simulator WORKTREE-UDID (iPhone 17, iOS 26.5) "* ]] ||
+  fail "should log the simulator's model and runtime, got: $out"
+run_quality '[]' --fast --simulator DUO-UDID
+[[ "$out" == *"on simulator DUO-UDID (iPhone Duo, iOS 27.1) "* ]] ||
+  fail "should log --simulator's model and runtime, got: $out"
 
 # A simulator scripts/quality booted itself is shut down when it exits (green, red or interrupted),
 # so booted HT-<branch> clones never pile up; the clone itself is kept for reuse.

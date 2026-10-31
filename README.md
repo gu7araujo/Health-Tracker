@@ -23,7 +23,7 @@ This README is the human guide to building, testing and the **quality gate**. AI
 
 ## Setup
 
-**1. Install the tools.** You need Xcode 27.2 with an iOS 26 simulator runtime, plus:
+**1. Install the tools.** You need the Xcode version pinned in `scripts/tool-versions.env`, with an iOS 26 simulator runtime, plus:
 
 ```bash
 brew install swiftlint swiftformat xcbeautify jq
@@ -31,7 +31,7 @@ brew install swiftlint swiftformat xcbeautify jq
 
 and the pinned [Periphery](https://github.com/peripheryapp/periphery) binary for the Unused code gate, which `scripts/bootstrap` (step 2) installs.
 
-The versions are pinned in `scripts/tool-versions.env` (SwiftLint 0.65.0, SwiftFormat 0.61.1, Periphery 3.8.0, Xcode 27.2). Pinning matters because formatter and linter rules change between releases: a different version can flag code that passes on another machine.
+The SwiftLint, SwiftFormat, Periphery and Xcode versions are pinned in `scripts/tool-versions.env`. Pinning matters because formatter and linter rules change between releases: a different version can flag code that passes on another machine.
 
 **2. Bootstrap the clone (once per clone or worktree):**
 

@@ -100,12 +100,20 @@ fitness_out="$(scripts/fitness/run 2>&1)"
 grep -vE '^[0-9]+ violation\(s\)$' <<<"$fitness_out" >&2
 count_row "Fitness" "$(sed -nE 's/^([0-9]+) violation\(s\)$/\1/p' <<<"$fitness_out")"
 
+own_simulator=""
 if [ -z "$SIMULATOR" ]; then
   branch="$(git rev-parse --abbrev-ref HEAD)"
   SIMULATOR="$("$LIB/simulator.sh" "HT-${branch//\//-}")" || exit 1
+  own_simulator=1
+fi
+# One simctl read gives the device's state and, for the log, its model and runtime: "iPhone 17, iOS 26.5".
+read -r state about < <(xcrun simctl list devices -j | jq -r --arg udid "$SIMULATOR" '[.devices | to_entries[]
+  | (.key | ltrimstr("com.apple.CoreSimulator.SimRuntime.") | sub("-"; " ") | gsub("-"; ".")) as $runtime
+  | .value[] | select(.udid == $udid)
+  | "\(.state) (\(.deviceTypeIdentifier | ltrimstr("com.apple.CoreSimulator.SimDeviceType.") | gsub("-"; " ")), \($runtime))"][0] // empty')
+if [ -n "$own_simulator" ]; then
   # Shut down the clone this run boots (kept for reuse), so booted clones never pile up; one
   # already booted is someone's session and stays up.
-  state="$(xcrun simctl list devices -j | jq -r --arg udid "$SIMULATOR" '[.devices[][] | select(.udid == $udid)][0].state')"
   if [ "$state" != "Booted" ]; then
     trap 'xcrun simctl shutdown "$SIMULATOR" >/dev/null 2>&1' EXIT
     trap 'exit 130' INT
@@ -122,7 +130,7 @@ if [ "$MODE" = "full" ]; then
   bundles+=(HealthTrackerUITests)
 fi
 
-echo "Tests: ${bundles[*]} on simulator $SIMULATOR (full log: build/xcodebuild.log)"
+echo "Tests: ${bundles[*]} on simulator $SIMULATOR${about:+ $about} (full log: build/xcodebuild.log)"
 # On GitHub Actions, compile errors and test failures become inline PR annotations.
 beautify=(xcbeautify --quieter --disable-logging)
 [ "${GITHUB_ACTIONS:-}" = "true" ] && beautify+=(--renderer github-actions)
