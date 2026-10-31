@@ -102,3 +102,51 @@
 "day_status_reason.workout_none" = "no workout";
 "day_status_reason.mood_neutral" = "neutral mood";
 "day_status_reason.mood_sad" = "sad mood";
+
+/* App Intents: Log Water */
+"intent_log_water_title" = "Log Water";
+"intent_log_water_description" = "Adds water to today's total.";
+"intent_param_water_amount" = "Amount";
+"intent_log_water_summary ${amount}" = "Log ${amount} of water";
+"intent_log_water_dialog %@" = "Logged. You've had %@ L of water today.";
+"intent_log_water_nothing_added %@" = "Nothing logged. You've had %@ L of water today, and the daily max is 5 L.";
+
+/* App Intents: Log Mood */
+"intent_log_mood_title" = "Log Mood";
+"intent_log_mood_description" = "Sets today's mood.";
+"intent_param_mood" = "Mood";
+"intent_param_mood_prompt" = "How are you feeling today?";
+"intent_log_mood_summary ${mood}" = "Log mood as ${mood}";
+"intent_log_mood_dialog %@" = "Mood logged: %@.";
+
+/* App Intents: Add Meal */
+"intent_add_meal_title" = "Add Meal";
+"intent_add_meal_description" = "Adds a meal to today. Separate items with commas.";
+"intent_param_meal_items" = "Items";
+"intent_param_meal_items_prompt" = "What did you eat?";
+"intent_param_meal_size" = "Size";
+"intent_param_meal_satisfaction" = "Satisfaction";
+"intent_add_meal_summary ${items}" = "Add meal: ${items}";
+"intent_add_meal_dialog %@" = "Meal logged: %@.";
+
+/* App Intents: Add Workout */
+"intent_add_workout_title" = "Add Workout";
+"intent_add_workout_description" = "Adds a workout to today.";
+"intent_param_workout_name" = "Workout";
+"intent_param_workout_name_prompt" = "What workout did you do?";
+"intent_param_workout_minutes" = "Minutes";
+"intent_param_workout_intensity" = "Intensity";
+"intent_add_workout_summary ${name}" = "Add workout: ${name}";
+"intent_add_workout_dialog %@" = "Workout logged: %@.";
+
+/* App Intents: Day Status */
+"intent_day_status_title" = "Day Status";
+"intent_day_status_description" = "Tells you today's health status and why.";
+"intent_day_status_no_data" = "Nothing logged today yet.";
+"intent_day_status_incomplete" = "Log at least two categories to get today's status.";
+
+/* App Intents: Enum Types */
+"intent_type_mood" = "Mood";
+"intent_type_meal_size" = "Meal Size";
+"intent_type_meal_satisfaction" = "Satisfaction";
+"intent_type_workout_intensity" = "Workout Intensity";

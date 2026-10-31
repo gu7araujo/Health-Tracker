@@ -9,7 +9,7 @@ Fallback for when the Xcode MCP test tools don't work. Pipe every command throug
 
 ## 1. Resolve a simulator id
 
-Every `test` command needs a destination. List booted/available simulators and pick an iOS 26 one:
+Every `test` command needs a destination. List booted/available simulators and pick an iOS 26 one. `HealthTrackerIntentsUITests` deploys to iOS 27, so xcodebuild skips it on iOS 26 ("Cannot test target…"), and its `AppIntentsTesting` needs a runtime at the SDK's version (`xcrun --sdk iphonesimulator --show-sdk-version`; on iOS 27.0, Xcode 27.2's fails with "Symbol not found"): pick a simulator on that iOS to run it:
 ```bash
 xcrun simctl list devices
 ```
@@ -36,6 +36,9 @@ xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<s
 
 # UI tests only (slow)
 xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerUITests | xcbeautify
+
+# App Intents UI tests only (needs a simulator on the SDK's iOS version, e.g. 27.2)
+xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<ios-27-simulator-id>' -only-testing:HealthTrackerIntentsUITests | xcbeautify
 
 # A single file or test
 xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerTests/DayDataTests | xcbeautify

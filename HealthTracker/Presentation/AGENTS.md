@@ -1,6 +1,6 @@
 # Presentation Layer
 
-The SwiftUI UI: an `@Observable` ViewModel that owns the screen's mutable state, stateless section views that render it, and reusable Liquid Glass components. The only layer that touches SwiftUI. It reaches the domain solely through use cases — never a repository or data source directly. Constructing a repository or data source here fails SwiftLint rule `presentation_no_data_layer`; the production convenience init (below) is the composition root and carries its `swiftlint:disable:next`.
+The SwiftUI UI: an `@Observable` ViewModel that owns the screen's mutable state, stateless section views that render it, and reusable Liquid Glass components. The only layer that touches SwiftUI. It reaches the domain solely through use cases — never a repository or data source directly. Constructing a repository or data source here fails SwiftLint rule `presentation_no_data_layer`; the production convenience init (below) and `Intents/IntentUseCaseFactory` are the composition roots and carry its `swiftlint:disable:next`.
 
 ## State & Data Flow
 
@@ -51,6 +51,18 @@ Group keys by feature area with snake_case prefixes:
 | `day_status_explanation.*` / `day_status_reason.*` | `DayData.statusExplanation` strings |
 | `*_section` / `empty_*` | Section headings / empty-state messages |
 | `add_*` / `edit_*` | Modal titles and actions |
+| `intent_*` | App Intents titles, parameters, summaries, dialogs |
+
+## App Intents
+
+`Intents/` holds the Siri/Shortcuts/Spotlight entry points (`LogWaterIntent`, `LogMoodIntent`, `AddMealIntent`, `AddWorkoutIntent`, `GetDayStatusIntent`) and `HealthTrackerShortcuts`. Like views, they reach the domain only through use cases.
+
+- **Isolation.** Don't mark intent or `AppEnum` types `nonisolated`. They already infer nonisolated because the protocols refine `Sendable`, and an explicit `nonisolated struct` breaks the build on its `@Parameter` vars. Mark `perform()`, `run(with:on:)`, and `registerUndo(on:…)` `@MainActor`. That's where the use cases and `undoManager` live.
+- **Testable core.** `perform()` stays thin: it builds live use cases from `IntentUseCaseFactory`, then calls `run(with:on:)`, `registerUndo(on:useCase:change:)`, and `cancelTodaysNotifications()`. Tests drive `run`/`registerUndo` with `MockHealthDataRepository` and a real `UndoManager` (`UndoManager.registerAndUndo`). `perform()` itself is covered end to end by `HealthTrackerIntentsUITests`, which `scripts/quality --full` runs on iOS 27 and counts toward the per-file floor. There's no `@Dependency`, because an unregistered one is a `fatalError` on a cold Siri launch.
+- **One write, last.** Resolve every parameter, including any `needsValueError` re-ask, before the single save. `perform()` can restart from the top, so nothing may be saved before it.
+- **Every write posts `healthDataDidChange`.** Writes and undos go through `UpdateDayDataUseCase.executeAndNotify`. `MainView` reloads on that notification and on scene activation, so its in-memory days can't overwrite an intent's write.
+- **Frozen contract.** Intent type names, `AppEnum` raw values (explicit strings in `IntentEnums.swift`, guarded by tests), and App Shortcut phrases are persisted by Shortcuts and Siri. You may add to them, but never rename or remove. `AppEnum`s mirror domain enums so Domain stays framework-free.
+- **Strings.** Titles, parameters, and dialogs use literal `intent_*` keys in `Localizable.strings`. Summaries are keyed with `${param}` (`"intent_log_water_summary ${amount}"`), and interpolated dialogs with `%@`. Phrases are keyed by their English source in `AppShortcuts.strings` (en and pt-BR), and every phrase needs `\(.applicationName)`.
 
 ## Rules
 

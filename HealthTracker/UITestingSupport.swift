@@ -23,11 +23,13 @@ enum UITestingSupport {
         environment["XCTestConfigurationFilePath"] != nil
     }
 
-    /// Production repository, or one backed by a fresh temp directory per launch when UI testing.
+    /// One temp directory per launch, so the app and the App Intents it runs share the same isolated store.
+    private static let directory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("uitest-\(UUID().uuidString)", isDirectory: true)
+
+    /// Production repository, or one backed by this launch's temp directory when UI testing.
     static func makeRepository() -> HealthDataRepositoryProtocol {
         guard isActive else { return HealthDataRepository() }
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("uitest-\(UUID().uuidString)", isDirectory: true)
         return HealthDataRepository(dataSource: ICloudDriveDataSource(directoryOverride: directory))
     }
 }

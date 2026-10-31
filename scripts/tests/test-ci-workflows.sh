@@ -3,7 +3,7 @@
 # scripts/ci/summary.sh unconditionally, so a run that stops before build/quality.json is
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
 # wiring, the test job's PR filter, NUL-safe xargs, weekly/ci test-step parity, the weekly
-# failure issue, action pinning.
+# failure issue, the simulator runtime step, step and job timeouts, action pinning.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
 # checks on scripts/tests/fixtures/ci-workflows to prove they still catch what they are for).
 set -uo pipefail
@@ -84,12 +84,12 @@ grep -q 'draft' <<<"$test_job" && fail "ci.yml test job: draft PRs run test too;
 grep -qF "github.actor != 'dependabot[bot]'" <<<"$test_if" || fail "ci.yml test job: Dependabot PRs must skip test"
 grep -qE '^[^#]*ready_for_review' "$CI" && fail "ci.yml: no ready_for_review trigger; the draft's run already checked the commit"
 
-# test_steps <workflow>: the test job's steps, with the quality mode spelled --full and without
-# weekly.yml's red-run notification.
+# test_steps <workflow>: the test job's steps, with the quality mode spelled --full (ci.yml's
+# --full-only condition dropped) and without weekly.yml's red-run notification.
 test_steps() {
   awk '/^  test:/ { job = 1; next } job && /^  [a-z]/ { exit } job && /^    steps:/ { steps = 1; next } steps { print }' "$1" |
     awk '/^ *- name: Notify on failure *$/ { skip = 1; next } skip && /^      - / { skip = 0 } !skip' |
-    sed 's|scripts/quality "\$MODE"|scripts/quality --full|'
+    sed -E -e 's|scripts/quality "\$MODE"|scripts/quality --full|' -e "/^ *if: env.MODE == '--full'( +#.*)? *\$/d"
 }
 # The weekly run copies ci.yml's test job steps (see weekly.yml); they must not drift apart.
 WEEKLY="$WORKFLOWS/weekly.yml"
@@ -113,7 +113,25 @@ for workflow in "$CI" "$WEEKLY"; do
   job_timeout="$(sed -nE 's/^    timeout-minutes: ([0-9]+) *$/\1/p' <<<"$job")"
   [ -n "$gate_timeout" ] && [ -n "$job_timeout" ] && [ "$gate_timeout" -lt "$job_timeout" ] ||
     fail "$(basename "$workflow"): the Quality gate step needs a timeout-minutes below the test job's ($job_timeout)"
+  # --full runs HealthTrackerIntentsUITests, which needs a simulator runtime at the SDK's version
+  # that the runner image can lack: a Simulator runtime step installs it right before the gate. Its
+  # timeout plus the gate's stays below the job's, so either step can time out and the if: failure()
+  # steps still run.
+  runtime="$(awk '/^ *- name: Simulator runtime *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$job")"
+  before_gate="$(awk '/^ *- name: Quality gate *$/ { print prev; exit } /^      - / { prev = $0 }' <<<"$job")"
+  [[ "$before_gate" =~ ^\ *-\ name:\ Simulator\ runtime\ *$ ]] &&
+    grep -qE '^ *run: scripts/ci/install-simulator-runtime.sh *$' <<<"$runtime" ||
+    fail "$(basename "$workflow"): the test job needs a 'Simulator runtime' step running scripts/ci/install-simulator-runtime.sh right before Quality gate"
+  [ -n "$runtime" ] || continue
+  runtime_timeout="$(sed -nE 's/^ *timeout-minutes: ([0-9]+) *$/\1/p' <<<"$runtime")"
+  [ -n "$runtime_timeout" ] && [ -n "$gate_timeout" ] && [ -n "$job_timeout" ] &&
+    [ $((runtime_timeout + gate_timeout)) -lt "$job_timeout" ] ||
+    fail "$(basename "$workflow"): the Simulator runtime and Quality gate step timeouts (${runtime_timeout:-none} + ${gate_timeout:-none}) must sum below the test job's ($job_timeout)"
 done
+# Pushes to main run --fast, which has no intents run: they skip the download.
+runtime="$(awk '/^ *- name: Simulator runtime *$/ { found = 1; next } found && /^ *- / { exit } found { print }' "$CI")"
+grep -qE "^ *if: env.MODE == '--full'( +#.*)? *\$" <<<"$runtime" ||
+  fail "ci.yml: the Simulator runtime step must run only when MODE is --full (if: env.MODE == '--full')"
 
 # The AI review costs per run: draft PRs skip it. Fork PRs get no secrets, so they skip it too.
 grep -qxF "    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository" \
@@ -153,9 +171,18 @@ if [ $# -eq 0 ]; then
   must "$XARGS/quoted-hash.yml:6:"
   must "$XARGS/second-xargs.yml:6:"
   must "FAIL: pipe a NUL-separated list (grep -Z ... | xargs -0): $tmp/xargs/producer.yml:6:"
-  fixture timeouts 2
+  fixture timeouts 4
   must "ci.yml: the Quality gate step needs a timeout-minutes below the test job's (45)"
   must "weekly.yml: the Quality gate step needs a timeout-minutes below the test job's (30)"
+  must "ci.yml: the Simulator runtime and Quality gate step timeouts (20 + 45) must sum below the test job's (45)"
+  must "weekly.yml: the Simulator runtime and Quality gate step timeouts (20 + 45) must sum below the test job's (30)"
+  fixture runtime 3
+  must "ci.yml: the Simulator runtime step must run only when MODE is --full"
+  must "ci.yml: the Simulator runtime and Quality gate step timeouts (30 + 45) must sum below the test job's (75)"
+  must "weekly.yml: the Simulator runtime and Quality gate step timeouts (30 + 45) must sum below the test job's (75)"
+  fixture runtime-order 2
+  must "weekly.yml: the test job needs a 'Simulator runtime' step running scripts/ci/install-simulator-runtime.sh right before Quality gate"
+  must "weekly.yml's test steps drifted from ci.yml's"
   fixture draft 2
   must "ci.yml test job: draft PRs run test too; drop the draft condition"
   must "ci.yml: no ready_for_review trigger"

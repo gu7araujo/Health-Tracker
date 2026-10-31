@@ -1,0 +1,26 @@
+# Must fail the runtime checks on ci.yml, and only those: the Simulator runtime step also runs on
+# --fast pushes, and its timeout plus the gate's (30 + 45) leaves nothing of the job's 75.
+jobs:
+  lint:
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - name: Fitness
+        run: scripts/fitness/run
+      - name: Persisted shape
+        if: github.event_name == 'pull_request'
+        run: scripts/fitness/persisted-shape-guard.sh HEAD^1
+  test:
+    if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
+    timeout-minutes: 75
+    steps:
+      - name: Simulator runtime
+        timeout-minutes: 30
+        run: scripts/ci/install-simulator-runtime.sh
+      - name: Quality gate
+        timeout-minutes: 45
+        run: scripts/quality "$MODE" --json
+      - name: Summary
+        if: always()
+        run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"

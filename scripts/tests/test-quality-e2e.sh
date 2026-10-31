@@ -31,21 +31,26 @@ cat >"$TMP/simulators.json" <<'EOF'
 {"devices":{"com.apple.CoreSimulator.SimRuntime.iOS-26-5":[
   {"name":"HT-feat-x","udid":"WORKTREE-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-17"},
   {"name":"iPhone 17 Pro","udid":"SHARED-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro"}],
+ "com.apple.CoreSimulator.SimRuntime.iOS-27-0":[
+  {"name":"iPhone 17","udid":"IOS27-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-17"}],
  "com.apple.CoreSimulator.SimRuntime.iOS-27-1":[
   {"name":"iPhone Duo","udid":"DUO-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-Duo"}]}}
 EOF
-printf '{"testNodes":[{"name":"HealthTracker","nodeType":"Test Plan","result":"Passed","children":[{"name":"HealthTrackerTests","nodeType":"Unit test bundle","result":"Passed","children":[]},{"name":"HealthTrackerUITests","nodeType":"UI test bundle","result":"Passed","children":[]}]}]}\n' >"$TMP/tests.json"
+printf '{"testNodes":[{"name":"HealthTracker","nodeType":"Test Plan","result":"Passed","children":[{"name":"HealthTrackerTests","nodeType":"Unit test bundle","result":"Passed","children":[]},{"name":"HealthTrackerUITests","nodeType":"UI test bundle","result":"Passed","children":[]},{"name":"HealthTrackerIntentsUITests","nodeType":"UI test bundle","result":"Passed","children":[]}]}]}\n' >"$TMP/tests.json"
 
 mkdir -p "$TMP/bin"
 cat >"$TMP/bin/xcrun" <<EOF
 #!/bin/sh
 case "\$1 \$2" in
   "simctl list") cat "$TMP/simulators.json" ;;
+  "--sdk iphonesimulator") echo "\${SDK_VERSION:-27.0}" ;;
   "xccov view") cat "$TMP/coverage.json" ;;
   "llvm-cov export") echo "\$*" >>"$TMP/llvm-cov.calls" && cat "$TMP/regions.json" ;;
   "xcresulttool get") cat "$TMP/tests.json" ;;
   "simctl shutdown") echo "\$*" >>"$TMP/simctl.calls" ;;
   "simctl clone") echo "\$*" >>"$TMP/clone.calls" && echo CLONED-UDID ;;
+  "simctl bootstatus") echo "\$*" >>"$TMP/boot.calls" ;;
+  "xcresulttool merge") echo "\$*" >>"$TMP/merge.calls" ;;
   *) exit 0 ;;
 esac
 EOF
@@ -197,6 +202,134 @@ done
   ! grep -q -- '-only-testing:HealthTrackerTests.*-only-testing:HealthTrackerUITests' "$TMP/xcodebuild.calls" ||
   fail "--full should run unit and UI tests as separate xcodebuild runs, got: $(cat "$TMP/xcodebuild.calls")"
 
+# --full also runs HealthTrackerIntentsUITests, which needs iOS 27 (AppIntentsTesting), into its own
+# bundle and an "Intents UI tests" row right after "UI tests". The gate's iOS 26.5 simulator cannot
+# load it, so a second clone, HT-<branch>-ios27, is fetched, booted first, and shut down on exit.
+: >"$TMP/xcodebuild.calls"
+: >"$TMP/clone.calls"
+: >"$TMP/boot.calls"
+: >"$TMP/simctl.calls"
+: >"$TMP/merge.calls"
+run_quality '[]' --full
+grep -qE '^Intents UI tests +0  <= 0 +✓$' <<<"$out" || fail "--full should report a passing Intents UI tests row, got: $out"
+[ "$(grep -E '^(UI tests|Intents UI tests|Unused code) ' <<<"$out" | cut -c1-11 | tr '\n' '|')" = \
+  "UI tests   |Intents UI |Unused code|" ] || fail "the Intents UI tests row should come right after UI tests, got: $out"
+[ "$(cat "$TMP/clone.calls")" = "simctl clone IOS27-UDID HT-feat-x-ios27" ] ||
+  fail "should clone iOS 27.0's iPhone 17 as HT-feat-x-ios27, got: $(cat "$TMP/clone.calls")"
+grep -q -- '-destination platform=iOS Simulator,id=CLONED-UDID -only-testing:HealthTrackerIntentsUITests .*-resultBundlePath build/Intents.xcresult' \
+  "$TMP/xcodebuild.calls" || fail "should run the intents bundle on the iOS 27 clone, got: $(cat "$TMP/xcodebuild.calls")"
+! grep -q -- 'id=CLONED-UDID -only-testing:HealthTracker\(UI\)\{0,1\}Tests ' "$TMP/xcodebuild.calls" ||
+  fail "unit and UI tests should stay on the gate's simulator, got: $(cat "$TMP/xcodebuild.calls")"
+grep -q 'bootstatus CLONED-UDID -b' "$TMP/boot.calls" || fail "should boot the iOS 27 clone first, got: $(cat "$TMP/boot.calls")"
+[ "$(sort "$TMP/simctl.calls" | tr '\n' '|')" = "simctl shutdown CLONED-UDID|simctl shutdown WORKTREE-UDID|" ] ||
+  fail "should shut down both simulators it booted, got: $(cat "$TMP/simctl.calls")"
+grep -q -- '--output-path build/Test.xcresult build/Unit.xcresult build/UI.xcresult build/Intents.xcresult$' "$TMP/merge.calls" ||
+  fail "app coverage should merge the unit, UI and intents runs, got: $(cat "$TMP/merge.calls")"
+[[ "$out" == *"HealthTrackerIntentsUITests on simulator CLONED-UDID"* ]] ||
+  fail "should log the simulator the intents run uses, got: $out"
+# --fast never needs it.
+: >"$TMP/clone.calls"
+run_quality '[]' --fast
+[ ! -s "$TMP/clone.calls" ] || fail "--fast should not clone an iOS 27 simulator, got: $(cat "$TMP/clone.calls")"
+! grep -q 'Intents UI tests' <<<"$out" || fail "--fast should not report an Intents UI tests row, got: $out"
+
+# A gate simulator already on iOS 27+ runs the intents bundle too: no second clone.
+: >"$TMP/xcodebuild.calls"
+: >"$TMP/clone.calls"
+run_quality '[]' --full --simulator DUO-UDID
+[ ! -s "$TMP/clone.calls" ] || fail "an iOS 27 --simulator should not need a clone, got: $(cat "$TMP/clone.calls")"
+grep -q -- 'id=DUO-UDID -only-testing:HealthTrackerIntentsUITests ' "$TMP/xcodebuild.calls" ||
+  fail "should run the intents bundle on the iOS 27 --simulator, got: $(cat "$TMP/xcodebuild.calls")"
+
+# An iOS 26 --simulator still gets the iOS 27 clone; only the clone this run booted is shut down.
+: >"$TMP/xcodebuild.calls"
+: >"$TMP/clone.calls"
+: >"$TMP/simctl.calls"
+run_quality '[]' --full --simulator WORKTREE-UDID
+[ "$(cat "$TMP/clone.calls")" = "simctl clone IOS27-UDID HT-feat-x-ios27" ] ||
+  fail "an iOS 26 --simulator should still fetch the iOS 27 clone, got: $(cat "$TMP/clone.calls")"
+grep -q -- 'id=CLONED-UDID -only-testing:HealthTrackerIntentsUITests ' "$TMP/xcodebuild.calls" ||
+  fail "should run the intents bundle on the iOS 27 clone, got: $(cat "$TMP/xcodebuild.calls")"
+[ "$(cat "$TMP/simctl.calls")" = "simctl shutdown CLONED-UDID" ] ||
+  fail "should shut down only the clone it booted, got: $(cat "$TMP/simctl.calls")"
+
+# An iOS 27 clone already booted (someone's session) stays up.
+cp "$TMP/simulators.json" "$TMP/simulators.json.orig"
+jq '.devices["com.apple.CoreSimulator.SimRuntime.iOS-27-0"] += [{"name":"HT-feat-x-ios27","udid":"IOS27-CLONE","state":"Booted","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-17"}]' \
+  "$TMP/simulators.json.orig" >"$TMP/simulators.json"
+: >"$TMP/simctl.calls"
+run_quality '[]' --full
+grep -q -- 'id=IOS27-CLONE -only-testing:HealthTrackerIntentsUITests ' "$TMP/xcodebuild.calls" ||
+  fail "should reuse the existing HT-feat-x-ios27, got: $(cat "$TMP/xcodebuild.calls")"
+[ "$(cat "$TMP/simctl.calls")" = "simctl shutdown WORKTREE-UDID" ] ||
+  fail "an already booted iOS 27 clone should stay booted, got: $(cat "$TMP/simctl.calls")"
+
+# No iOS 27+ iPhone at all: the gate fails with an n/a row and says why, rather than skipping it.
+jq '.devices |= with_entries(select(.key | test("iOS-27") | not))' "$TMP/simulators.json.orig" >"$TMP/simulators.json"
+: >"$TMP/xcodebuild.calls"
+run_quality '[]' --full
+[ "$code" -eq 1 ] || fail "--full without an iOS 27 simulator should fail the gate (got $code)"
+grep -qE '^Intents UI tests +n/a  <= 0 +✗$' <<<"$out" || fail "should report an n/a Intents UI tests row, got: $out"
+[[ "$out" == *"error: "*"HealthTrackerIntentsUITests"*"iOS 27"* ]] || fail "should say the intents run needs iOS 27, got: $out"
+! grep -q 'HealthTrackerIntentsUITests' "$TMP/xcodebuild.calls" ||
+  fail "should not run the intents bundle without a simulator, got: $(cat "$TMP/xcodebuild.calls")"
+mv "$TMP/simulators.json.orig" "$TMP/simulators.json"
+
+# The intents run needs a runtime at least the iphonesimulator SDK's version, not just iOS 27:
+# Xcode 27.2's AppIntentsTesting fails to load on iOS 27.0 (missing iOS 27.2 symbols).
+cp "$TMP/simulators.json" "$TMP/simulators.json.orig"
+jq '.devices["com.apple.CoreSimulator.SimRuntime.iOS-27-2"] = [{"name":"iPhone 17","udid":"IOS272-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-17"}]' \
+  "$TMP/simulators.json.orig" >"$TMP/simulators.json"
+: >"$TMP/xcodebuild.calls"
+: >"$TMP/clone.calls"
+SDK_VERSION=27.2 run_quality '[]' --full
+[ "$(cat "$TMP/clone.calls")" = "simctl clone IOS272-UDID HT-feat-x-ios27" ] ||
+  fail "with the 27.2 SDK, should clone iOS 27.2's iPhone 17, got: $(cat "$TMP/clone.calls")"
+grep -q -- 'id=CLONED-UDID -only-testing:HealthTrackerIntentsUITests ' "$TMP/xcodebuild.calls" ||
+  fail "should run the intents bundle on the iOS 27.2 clone, got: $(cat "$TMP/xcodebuild.calls")"
+# An iOS 27.1 --simulator is iOS 27+ but below the 27.2 SDK: the intents run gets the clone instead.
+: >"$TMP/xcodebuild.calls"
+: >"$TMP/clone.calls"
+SDK_VERSION=27.2 run_quality '[]' --full --simulator DUO-UDID
+[ "$(cat "$TMP/clone.calls")" = "simctl clone IOS272-UDID HT-feat-x-ios27" ] ||
+  fail "an iOS 27.1 --simulator should not run the 27.2 SDK's intents bundle, got: $(cat "$TMP/clone.calls")"
+grep -q -- 'id=CLONED-UDID -only-testing:HealthTrackerIntentsUITests ' "$TMP/xcodebuild.calls" ||
+  fail "should run the intents bundle on the iOS 27.2 clone, got: $(cat "$TMP/xcodebuild.calls")"
+grep -q -- 'id=DUO-UDID -only-testing:HealthTrackerUITests ' "$TMP/xcodebuild.calls" ||
+  fail "UI tests should stay on --simulator, got: $(cat "$TMP/xcodebuild.calls")"
+# One on the SDK's version is reused, and versions compare numerically (27.10 >= 27.2).
+: >"$TMP/xcodebuild.calls"
+: >"$TMP/clone.calls"
+SDK_VERSION=27.2 run_quality '[]' --full --simulator IOS272-UDID
+[ ! -s "$TMP/clone.calls" ] || fail "an iOS 27.2 --simulator should not need a clone, got: $(cat "$TMP/clone.calls")"
+grep -q -- 'id=IOS272-UDID -only-testing:HealthTrackerIntentsUITests ' "$TMP/xcodebuild.calls" ||
+  fail "should run the intents bundle on the iOS 27.2 --simulator, got: $(cat "$TMP/xcodebuild.calls")"
+jq '.devices["com.apple.CoreSimulator.SimRuntime.iOS-27-10"] = [{"name":"iPhone 17","udid":"IOS2710-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-17"}]' \
+  "$TMP/simulators.json.orig" >"$TMP/simulators.json"
+: >"$TMP/xcodebuild.calls"
+: >"$TMP/clone.calls"
+SDK_VERSION=27.2 run_quality '[]' --full --simulator IOS2710-UDID
+[ ! -s "$TMP/clone.calls" ] || fail "an iOS 27.10 --simulator meets the 27.2 SDK, got: $(cat "$TMP/clone.calls")"
+# A booted HT-<branch>-ios27 below the SDK's version is kept by simulator.sh, but not used.
+jq '.devices["com.apple.CoreSimulator.SimRuntime.iOS-27-0"] += [{"name":"HT-feat-x-ios27","udid":"STALE-CLONE","state":"Booted","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-17"}]' \
+  "$TMP/simulators.json.orig" >"$TMP/simulators.json"
+: >"$TMP/xcodebuild.calls"
+SDK_VERSION=27.2 run_quality '[]' --full
+grep -qE '^Intents UI tests +n/a  <= 0 +✗$' <<<"$out" || fail "a booted iOS 27.0 clone should give an n/a row, got: $out"
+! grep -q 'HealthTrackerIntentsUITests' "$TMP/xcodebuild.calls" ||
+  fail "should not run the intents bundle on an iOS 27.0 clone, got: $(cat "$TMP/xcodebuild.calls")"
+# No iPhone on iOS 27.2+: fail with n/a, naming the version needed and how to install it.
+cp "$TMP/simulators.json.orig" "$TMP/simulators.json"
+: >"$TMP/xcodebuild.calls"
+SDK_VERSION=27.2 run_quality '[]' --full
+[ "$code" -eq 1 ] || fail "--full without an iOS 27.2 simulator should fail the gate (got $code)"
+grep -qE '^Intents UI tests +n/a  <= 0 +✗$' <<<"$out" || fail "should report an n/a Intents UI tests row, got: $out"
+[[ "$out" == *"error: HealthTrackerIntentsUITests"*"iOS 27.2"*"xcodebuild -downloadPlatform iOS"* ]] ||
+  fail "should name the iOS version needed and the fix, got: $out"
+! grep -q 'HealthTrackerIntentsUITests' "$TMP/xcodebuild.calls" ||
+  fail "should not run the intents bundle without a simulator, got: $(cat "$TMP/xcodebuild.calls")"
+mv "$TMP/simulators.json.orig" "$TMP/simulators.json"
+
 # Locally xcbeautify keeps its terminal renderer; on GitHub Actions it emits inline PR annotations.
 : >"$TMP/xcbeautify.calls"
 run_quality '[]' --fast
@@ -222,7 +355,7 @@ grep -q -- 'SWIFT_TREAT_WARNINGS_AS_ERRORS=YES GCC_TREAT_WARNINGS_AS_ERRORS=YES'
 # is the one this run just wrote: build/DerivedData/Index.noindex/DataStore.
 : >"$TMP/xcodebuild.calls"
 run_quality '[]' --full
-[ "$(grep -c -- '-derivedDataPath build/DerivedData' "$TMP/xcodebuild.calls")" -eq 2 ] ||
+[ "$(grep -c -- '-derivedDataPath build/DerivedData' "$TMP/xcodebuild.calls")" -eq 3 ] ||
   fail "every xcodebuild test run should pass -derivedDataPath build/DerivedData, got: $(cat "$TMP/xcodebuild.calls")"
 
 # Unused code: a "<= 0" gate on Periphery's findings, read from the index the unit-test run built,

@@ -1,0 +1,19 @@
+# Must fail only the timeout sum: the same steps as runtime/ci.yml, so no drift.
+jobs:
+  test:
+    timeout-minutes: 75
+    permissions:
+      issues: write
+    steps:
+      - name: Simulator runtime
+        timeout-minutes: 30
+        run: scripts/ci/install-simulator-runtime.sh
+      - name: Quality gate
+        timeout-minutes: 45
+        run: scripts/quality --full --json
+      - name: Summary
+        if: always()
+        run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
+      - name: Notify on failure
+        if: failure() && github.event_name == 'schedule'
+        run: gh issue create --title "Weekly quality gate failed"

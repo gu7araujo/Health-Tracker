@@ -51,4 +51,21 @@ struct MainViewModelLoadTests {
         #expect(viewModel.days.count == 1)
         #expect(viewModel.days[0].meals.isEmpty)
     }
+
+    /// Regression: an App Intent writes the store while the app holds a stale in-memory copy.
+    /// Reloading must pick up that write (so the next save doesn't overwrite it) and keep the selected date.
+    @Test func loadData_again_picksUpExternalWriteAndKeepsSelectedDate() throws {
+        let (viewModel, mockRepository) = createViewModel()
+        viewModel.selectedDate = TestDataBuilder.fixedDatePlusOne
+        viewModel.loadData()
+        #expect(viewModel.currentDayData?.water == nil)
+
+        let written = try #require(RecordedDayData(DayData(date: TestDataBuilder.fixedDatePlusOne, water: 0.25)))
+        mockRepository.loadAllDaysResult = [written]
+        viewModel.loadData()
+
+        #expect(viewModel.selectedDate == TestDataBuilder.fixedDatePlusOne)
+        #expect(viewModel.currentDayData?.water == 0.25)
+        #expect(viewModel.days.count == 1)
+    }
 }

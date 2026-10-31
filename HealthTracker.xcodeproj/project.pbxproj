@@ -14,6 +14,13 @@
 			remoteGlobalIDString = B756C6112EA3F8900057DE0C;
 			remoteInfo = HealthTracker;
 		};
+		EC658769308568E300022BC8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B756C60A2EA3F8900057DE0C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B756C6112EA3F8900057DE0C;
+			remoteInfo = HealthTracker;
+		};
 		ECEB15CD2FF6B999004F0A48 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = B756C60A2EA3F8900057DE0C /* Project object */;
@@ -26,6 +33,7 @@
 /* Begin PBXFileReference section */
 		B72D843A2F472FBA002027B5 /* HealthTrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B756C6122EA3F8900057DE0C /* HealthTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC658762308568E300022BC8 /* HealthTrackerIntentsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthTrackerIntentsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		ECEB15C72FF6B999004F0A48 /* HealthTrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthTrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -39,6 +47,15 @@
 				Presentation/AGENTS.md,
 			);
 			target = B756C6112EA3F8900057DE0C /* HealthTracker */;
+		};
+		EC65876B308568E300022BC8 /* Exceptions for "HealthTrackerUITests" folder in "HealthTrackerIntentsUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Support/AccessibilityID.swift,
+				Support/EnglishLabel.swift,
+				Support/HealthTrackerUITestCase.swift,
+			);
+			target = EC658761308568E300022BC8 /* HealthTrackerIntentsUITests */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -56,8 +73,16 @@
 			path = HealthTracker;
 			sourceTree = "<group>";
 		};
+		EC658763308568E300022BC8 /* HealthTrackerIntentsUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HealthTrackerIntentsUITests;
+			sourceTree = "<group>";
+		};
 		ECEB15C82FF6B999004F0A48 /* HealthTrackerUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EC65876B308568E300022BC8 /* Exceptions for "HealthTrackerUITests" folder in "HealthTrackerIntentsUITests" target */,
+			);
 			path = HealthTrackerUITests;
 			sourceTree = "<group>";
 		};
@@ -72,6 +97,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B756C60F2EA3F8900057DE0C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EC65875F308568E300022BC8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -94,6 +126,7 @@
 				B756C6142EA3F8900057DE0C /* HealthTracker */,
 				B72D843B2F472FBA002027B5 /* HealthTrackerTests */,
 				ECEB15C82FF6B999004F0A48 /* HealthTrackerUITests */,
+				EC658763308568E300022BC8 /* HealthTrackerIntentsUITests */,
 				B756C6132EA3F8900057DE0C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -104,6 +137,7 @@
 				B756C6122EA3F8900057DE0C /* HealthTracker.app */,
 				B72D843A2F472FBA002027B5 /* HealthTrackerTests.xctest */,
 				ECEB15C72FF6B999004F0A48 /* HealthTrackerUITests.xctest */,
+				EC658762308568E300022BC8 /* HealthTrackerIntentsUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -157,6 +191,29 @@
 			productReference = B756C6122EA3F8900057DE0C /* HealthTracker.app */;
 			productType = "com.apple.product-type.application";
 		};
+		EC658761308568E300022BC8 /* HealthTrackerIntentsUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EC658768308568E300022BC8 /* Build configuration list for PBXNativeTarget "HealthTrackerIntentsUITests" */;
+			buildPhases = (
+				EC65875E308568E300022BC8 /* Sources */,
+				EC65875F308568E300022BC8 /* Frameworks */,
+				EC658760308568E300022BC8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EC65876A308568E300022BC8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				EC658763308568E300022BC8 /* HealthTrackerIntentsUITests */,
+			);
+			name = HealthTrackerIntentsUITests;
+			packageProductDependencies = (
+			);
+			productName = HealthTrackerIntentsUITests;
+			productReference = EC658762308568E300022BC8 /* HealthTrackerIntentsUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		ECEB15C62FF6B999004F0A48 /* HealthTrackerUITests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = ECEB15D12FF6B999004F0A48 /* Build configuration list for PBXNativeTarget "HealthTrackerUITests" */;
@@ -187,7 +244,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2660;
+				LastSwiftUpdateCheck = 2710;
 				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					B72D84392F472FBA002027B5 = {
@@ -196,6 +253,10 @@
 					};
 					B756C6112EA3F8900057DE0C = {
 						CreatedOnToolsVersion = 26.0.1;
+					};
+					EC658761308568E300022BC8 = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = B756C6112EA3F8900057DE0C;
 					};
 					ECEB15C62FF6B999004F0A48 = {
 						CreatedOnToolsVersion = 26.6;
@@ -221,6 +282,7 @@
 				B756C6112EA3F8900057DE0C /* HealthTracker */,
 				B72D84392F472FBA002027B5 /* HealthTrackerTests */,
 				ECEB15C62FF6B999004F0A48 /* HealthTrackerUITests */,
+				EC658761308568E300022BC8 /* HealthTrackerIntentsUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -234,6 +296,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B756C6102EA3F8900057DE0C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EC658760308568E300022BC8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -288,6 +357,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		EC65875E308568E300022BC8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		ECEB15C32FF6B999004F0A48 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -302,6 +378,11 @@
 			isa = PBXTargetDependency;
 			target = B756C6112EA3F8900057DE0C /* HealthTracker */;
 			targetProxy = B72D843E2F472FBA002027B5 /* PBXContainerItemProxy */;
+		};
+		EC65876A308568E300022BC8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B756C6112EA3F8900057DE0C /* HealthTracker */;
+			targetProxy = EC658769308568E300022BC8 /* PBXContainerItemProxy */;
 		};
 		ECEB15CE2FF6B999004F0A48 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -562,6 +643,48 @@
 			};
 			name = Release;
 		};
+		EC658766308568E300022BC8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DW48KKFN9M;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gustavo.HealthTrackerIntentsUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HealthTracker;
+			};
+			name = Debug;
+		};
+		EC658767308568E300022BC8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DW48KKFN9M;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gustavo.HealthTrackerIntentsUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HealthTracker;
+			};
+			name = Release;
+		};
 		ECEB15CF2FF6B999004F0A48 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -630,6 +753,15 @@
 			buildConfigurations = (
 				B756C61E2EA3F8920057DE0C /* Debug */,
 				B756C61F2EA3F8920057DE0C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EC658768308568E300022BC8 /* Build configuration list for PBXNativeTarget "HealthTrackerIntentsUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC658766308568E300022BC8 /* Debug */,
+				EC658767308568E300022BC8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

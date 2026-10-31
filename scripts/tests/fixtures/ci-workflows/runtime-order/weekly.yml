@@ -1,0 +1,20 @@
+# Must fail with pass/ci.yml: the Simulator runtime step comes after the Quality gate, too late for
+# the intents run, which also drifts from ci.yml's order.
+jobs:
+  test:
+    timeout-minutes: 75
+    permissions:
+      issues: write
+    steps:
+      - name: Quality gate
+        timeout-minutes: 45
+        run: scripts/quality --full --json
+      - name: Simulator runtime
+        timeout-minutes: 20
+        run: scripts/ci/install-simulator-runtime.sh
+      - name: Summary
+        if: always()
+        run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
+      - name: Notify on failure
+        if: failure() && github.event_name == 'schedule'
+        run: gh issue create --title "Weekly quality gate failed"

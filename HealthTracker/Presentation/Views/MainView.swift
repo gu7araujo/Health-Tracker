@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct MainView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var viewModel = MainViewModel(repository: UITestingSupport.makeRepository())
     @State private var addingSection: HealthSection?
     // periphery:ignore - used only via $binding (iOS 27 @State macro)
@@ -63,6 +64,13 @@ struct MainView: View {
             }
         }
         .onFirstAppear { viewModel.loadData() }
+        // App Intents write the store outside the view model; reload so a later save can't overwrite them
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { viewModel.loadData() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .healthDataDidChange)) { _ in
+            viewModel.loadData()
+        }
         .sheet(item: $addingSection) { section in
             AddEditModal(viewModel: viewModel, section: section, mealId: nil, workoutId: nil)
                 .presentationDetents([.medium])

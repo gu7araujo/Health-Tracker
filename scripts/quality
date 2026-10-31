@@ -8,7 +8,10 @@ Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-b
 
   --fast             Format, lint, fitness checks, unit tests, unused code (Periphery), Domain/Data
                      unit line and region coverage ratchets (default).
-  --full             Everything in --fast, plus UI tests, app coverage and per-file floor.
+  --full             Everything in --fast, plus UI tests, app coverage and per-file floor. The App
+                     Intents UI tests need a runtime at least the iphonesimulator SDK's version
+                     (iOS 27.2 with Xcode 27.2): on an older simulator they run on a second clone,
+                     "HT-<branch>-ios27". Install a missing runtime: xcodebuild -downloadPlatform iOS.
   --json             Also write build/quality.json.
   --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
                      (an exported SIMULATOR_ID is ignored so worktrees never share a device).
@@ -100,35 +103,79 @@ fitness_out="$(scripts/fitness/run 2>&1)"
 grep -vE '^[0-9]+ violation\(s\)$' <<<"$fitness_out" >&2
 count_row "Fitness" "$(sed -nE 's/^([0-9]+) violation\(s\)$/\1/p' <<<"$fitness_out")"
 
+# sim_info <udid>: one simctl read gives the device's state, for the log its model and runtime, and
+# its runtime's version: "Shutdown<TAB>(iPhone 17, iOS 26.5)<TAB>26.5".
+sim_info() {
+  xcrun simctl list devices -j | jq -r --arg udid "$1" '[.devices | to_entries[]
+  | (.key | split(".")[-1] | sub("-"; " ") | gsub("-"; ".")) as $runtime
+  | ([.key | capture("iOS-(?<v>[0-9]+(-[0-9]+)*)").v | gsub("-"; ".")][0] // "") as $version
+  | .value[] | select(.udid == $udid)
+  | [.state, "(\(.deviceTypeIdentifier | split(".")[-1] | gsub("-"; " ")), \($runtime))", $version] | @tsv][0] // empty'
+}
+
+# version_ge <a> <b>: whether dotted version <a> is at least <b>, numerically (27.10 >= 27.2).
+version_ge() {
+  [ -n "$1" ] && jq -ne --arg a "$1" --arg b "$2" '($a | split(".") | map(tonumber)) >= ($b | split(".") | map(tonumber))' >/dev/null
+}
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+branch="${branch//\//-}"
+# Clones this run boots (kept for reuse) are shut down on exit, so booted clones never pile up;
+# one already booted is someone's session and stays up.
+shutdown_on_exit=""
 own_simulator=""
 if [ -z "$SIMULATOR" ]; then
-  branch="$(git rev-parse --abbrev-ref HEAD)"
-  SIMULATOR="$("$LIB/simulator.sh" "HT-${branch//\//-}")" || exit 1
+  SIMULATOR="$("$LIB/simulator.sh" "HT-$branch")" || exit 1
   own_simulator=1
 fi
-# One simctl read gives the device's state and, for the log, its model and runtime: "iPhone 17, iOS 26.5".
-IFS=$'\t' read -r state about < <(xcrun simctl list devices -j | jq -r --arg udid "$SIMULATOR" '[.devices | to_entries[]
-  | (.key | split(".")[-1] | sub("-"; " ") | gsub("-"; ".")) as $runtime
-  | .value[] | select(.udid == $udid)
-  | [.state, "(\(.deviceTypeIdentifier | split(".")[-1] | gsub("-"; " ")), \($runtime))"] | @tsv][0] // empty')
-# Shut down the clone this run boots (kept for reuse), so booted clones never pile up; one
-# already booted is someone's session and stays up.
+IFS=$'\t' read -r state about version < <(sim_info "$SIMULATOR")
 if [ -n "$own_simulator" ] && [ "$state" != "Booted" ]; then
-  trap 'xcrun simctl shutdown "$SIMULATOR" >/dev/null 2>&1' EXIT
+  shutdown_on_exit+=" $SIMULATOR"
+fi
+
+# HealthTrackerIntentsUITests imports AppIntentsTesting, which links the SDK's iOS release (Xcode
+# 27.2's fails to load on iOS 27.0), so it needs a runtime at least the iphonesimulator SDK's
+# version: when the gate's simulator is older, --full runs it on a second clone, HT-<branch>-ios27.
+INTENTS_SIMULATOR=""
+intents_about=""
+if [ "$MODE" = "full" ]; then
+  intents_min="$(xcrun --sdk iphonesimulator --show-sdk-version)"
+  if version_ge "$version" "$intents_min"; then
+    INTENTS_SIMULATOR="$SIMULATOR"
+  elif INTENTS_SIMULATOR="$("$LIB/simulator.sh" "HT-$branch-ios27" "$intents_min")"; then
+    IFS=$'\t' read -r intents_state intents_about intents_version < <(sim_info "$INTENTS_SIMULATOR")
+    # simulator.sh keeps a booted clone even below the minimum, where the bundle cannot load.
+    if [ "$intents_state" = "Booted" ]; then
+      version_ge "$intents_version" "$intents_min" || INTENTS_SIMULATOR=""
+    else
+      shutdown_on_exit+=" $INTENTS_SIMULATOR"
+    fi
+  else
+    INTENTS_SIMULATOR=""
+  fi
+  [ -n "$INTENTS_SIMULATOR" ] ||
+    echo "error: HealthTrackerIntentsUITests needs an iPhone simulator on iOS $intents_min or later (the iphonesimulator SDK's version); install that runtime with: xcodebuild -downloadPlatform iOS" >&2
+fi
+
+if [ -n "$shutdown_on_exit" ]; then
+  trap 'for udid in $shutdown_on_exit; do xcrun simctl shutdown "$udid" >/dev/null 2>&1; done' EXIT
   trap 'exit 130' INT
   trap 'exit 143' TERM
 fi
 
 # Each bundle runs on its own so the Domain/Data ratchets can measure unit-only coverage
-# in --full too; --full then merges both runs into $RESULT for app coverage and the floor.
+# in --full too; --full then merges all three runs into $RESULT for app coverage and the floor.
 UNIT_RESULT="$RESULT"
 bundles=(HealthTrackerTests)
+gate_bundles="HealthTrackerTests"
 if [ "$MODE" = "full" ]; then
   UNIT_RESULT="build/Unit.xcresult"
-  bundles+=(HealthTrackerUITests)
+  bundles+=(HealthTrackerUITests HealthTrackerIntentsUITests)
+  gate_bundles+=" HealthTrackerUITests"
+  [ "$INTENTS_SIMULATOR" = "$SIMULATOR" ] && gate_bundles+=" HealthTrackerIntentsUITests"
 fi
 
-echo "Tests: ${bundles[*]} on simulator $SIMULATOR${about:+ $about} (full log: build/xcodebuild.log)"
+echo "Tests: $gate_bundles on simulator $SIMULATOR${about:+ $about} (full log: build/xcodebuild.log)"
 # On GitHub Actions, compile errors and test failures become inline PR annotations.
 beautify=(xcbeautify --quieter --disable-logging)
 [ "${GITHUB_ACTIONS:-}" = "true" ] && beautify+=(--renderer github-actions)
@@ -137,20 +184,37 @@ build_settings=(-enableCodeCoverage YES)
 [ "${CI:-}" = "true" ] && build_settings+=(SWIFT_TREAT_WARNINGS_AS_ERRORS=YES GCC_TREAT_WARNINGS_AS_ERRORS=YES)
 # Every test run replaces the coverage profile; clearing it first means a stale one never counts.
 PROFILE_DATA="build/DerivedData/Build/ProfileData"
-rm -rf "$RESULT" build/Unit.xcresult build/UI.xcresult "$PROFILE_DATA"
+rm -rf "$RESULT" build/Unit.xcresult build/UI.xcresult build/Intents.xcresult "$PROFILE_DATA"
 : >build/xcodebuild.log
 # Boot and wait first: launching on a still-booting clone fails every test with "Application failed preflight checks".
 xcrun simctl bootstatus "$SIMULATOR" -b >/dev/null
 for bundle in "${bundles[@]}"; do
   name="Unit tests"
   bundle_result="$UNIT_RESULT"
-  if [ "$bundle" = "HealthTrackerUITests" ]; then
-    name="UI tests"
-    bundle_result="build/UI.xcresult"
+  destination="$SIMULATOR"
+  case "$bundle" in
+    HealthTrackerUITests)
+      name="UI tests"
+      bundle_result="build/UI.xcresult"
+      ;;
+    HealthTrackerIntentsUITests)
+      name="Intents UI tests"
+      bundle_result="build/Intents.xcresult"
+      destination="$INTENTS_SIMULATOR"
+      ;;
+  esac
+  # No simulator on the SDK's iOS for the intents run: unmeasured, so the gate fails rather than skips it.
+  if [ -z "$destination" ]; then
+    count_row "$name" ""
+    continue
+  fi
+  if [ "$destination" != "$SIMULATOR" ]; then
+    echo "Tests: $bundle on simulator $destination${intents_about:+ $intents_about}"
+    xcrun simctl bootstatus "$destination" -b >/dev/null
   fi
   xcodebuild test \
     -scheme HealthTracker \
-    -destination "platform=iOS Simulator,id=$SIMULATOR" \
+    -destination "platform=iOS Simulator,id=$destination" \
     "-only-testing:$bundle" \
     -parallel-testing-enabled NO \
     -derivedDataPath build/DerivedData \
@@ -203,7 +267,7 @@ percent_row "Domain unit region coverage" "$domain_regions" "$DOMAIN_REGION_UNIT
 percent_row "Data unit region coverage" "$data_regions" "$DATA_REGION_UNIT_MIN"
 
 if [ "$MODE" = "full" ]; then
-  if xcrun xcresulttool merge --output-path "$RESULT" "$UNIT_RESULT" build/UI.xcresult >/dev/null 2>&1 &&
+  if xcrun xcresulttool merge --output-path "$RESULT" "$UNIT_RESULT" build/UI.xcresult build/Intents.xcresult >/dev/null 2>&1 &&
     xcrun xccov view --report --json "$RESULT" >build/coverage.json 2>/dev/null; then
     rows+="$("$LIB/evaluate-coverage.sh" full build/coverage.json "$ROOT" \
       scripts/quality-thresholds.env scripts/coverage-exceptions.txt)"$'\n'
