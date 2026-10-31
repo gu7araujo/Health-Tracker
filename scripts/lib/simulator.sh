@@ -3,7 +3,8 @@
 # never touch Xcode's shared clone pool. Runtimes are preferred newest iOS 26.x first, then newest
 # iOS. The clone comes from a shut-down SIMULATOR_DEVICE (scripts/tool-versions.env) on the first
 # runtime that has one; with none anywhere, from the first shut-down iPhone on the preferred runtime,
-# with a warning. An existing <name> of another model than that device is deleted and re-cloned.
+# with a warning. An existing <name> of another model than that device is deleted and re-cloned,
+# unless it is booted.
 #
 # Usage: simulator.sh <name>
 set -euo pipefail
@@ -25,14 +26,20 @@ first() {
 }
 IFS=$'\t' read -r pinned pinned_type < <(first '.name == $pin') || true
 
-IFS=$'\t' read -r existing existing_type < <(jq -r --arg name "$NAME" \
-  '[.devices[][] | select(.name == $name)][0] // empty | [.udid, .deviceTypeIdentifier] | @tsv' <<<"$devices") || true
+IFS=$'\t' read -r existing existing_type existing_state < <(jq -r --arg name "$NAME" \
+  '[.devices[][] | select(.name == $name)][0] // empty | [.udid, .deviceTypeIdentifier, .state] | @tsv' <<<"$devices") || true
 if [ -n "${existing:-}" ]; then
   if [ -z "${pinned:-}" ] || [ "$existing_type" = "$pinned_type" ]; then
     echo "$existing"
     exit 0
   fi
-  echo "Deleting simulator $NAME: it is not a $SIMULATOR_DEVICE (SIMULATOR_DEVICE in scripts/tool-versions.env)" >&2
+  # A booted clone is someone's session (see scripts/quality): keep it rather than tear it down.
+  if [ "$existing_state" = "Booted" ]; then
+    echo "warning: simulator $NAME is Booted, so it is kept although its model is not $SIMULATOR_DEVICE (SIMULATOR_DEVICE in scripts/tool-versions.env)" >&2
+    echo "$existing"
+    exit 0
+  fi
+  echo "Deleting simulator $NAME: its model is not $SIMULATOR_DEVICE (SIMULATOR_DEVICE in scripts/tool-versions.env)" >&2
   xcrun simctl delete "$existing"
 fi
 

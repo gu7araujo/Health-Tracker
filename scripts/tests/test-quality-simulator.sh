@@ -34,10 +34,12 @@ chmod +x "$TMP/bin/xcrun"
 source "$ROOT/scripts/tool-versions.env"
 [ "$SIMULATOR_DEVICE" = "iPhone 17" ] || fail "fixtures expect SIMULATOR_DEVICE=\"iPhone 17\", got: $SIMULATOR_DEVICE"
 
-# pick <fixture> <name> -> sets out, err, code
+# pick <fixture> <name> -> sets out, err, code. <fixture> is relative to $FIX, or absolute.
 pick() {
   : >"$TMP/clones"
-  out="$(PATH="$TMP/bin:$PATH" SIM_FIXTURE="$FIX/$1" CLONE_LOG="$TMP/clones" "$SIMULATOR" "$2" 2>"$TMP/err")"
+  local fixture="$1"
+  [[ "$fixture" == /* ]] || fixture="$FIX/$fixture"
+  out="$(PATH="$TMP/bin:$PATH" SIM_FIXTURE="$fixture" CLONE_LOG="$TMP/clones" "$SIMULATOR" "$2" 2>"$TMP/err")"
   code=$?
   err="$(cat "$TMP/err")"
 }
@@ -76,6 +78,13 @@ pick simulators-existing-other-model.json HT-feature-x
 [ "$out" = "CLONED" ] || fail "should print the new clone's udid, got: $out"
 [ "$(cat "$TMP/clones")" = "$(printf 'delete EXISTING\nSOURCE HT-feature-x')" ] ||
   fail "should delete EXISTING, then clone SOURCE, got: $(cat "$TMP/clones")"
+
+# HT-<branch> exists as another model but is booted (someone's session): keep it, and warn.
+jq '.devices[][0].state = "Booted"' "$FIX/simulators-existing-other-model.json" >"$TMP/booted-other.json"
+pick "$TMP/booted-other.json" HT-feature-x
+[ "$out" = "EXISTING" ] || fail "should reuse a booted EXISTING of another model, got: $out"
+[ ! -s "$TMP/clones" ] || fail "should not delete a booted clone, got: $(cat "$TMP/clones")"
+[[ "$err" == *"warning: "*"Booted"*"iPhone 17"* ]] || fail "should warn that the booted clone is kept, got: $err"
 
 # HT-<branch> exists and no runtime has the pinned device: keep it.
 pick simulators-no-pin.json HT-feature-x

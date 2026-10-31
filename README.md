@@ -112,7 +112,7 @@ Exit codes: `0` all gates passed, `1` a gate failed, `2` usage error.
 
 ### Which simulator it uses
 
-By default each branch or worktree gets its own simulator, named `HT-<branch>` (for example `HT-feat-my-change`). The first run clones it from the iPhone model pinned as `SIMULATOR_DEVICE` in `scripts/tool-versions.env`, on the newest iOS 26 runtime that has one, else the newest iOS runtime that has one. With that model on no runtime, it clones the first iPhone on the newest iOS 26 (else iOS) runtime and prints a warning. An existing clone of another model is deleted and re-cloned. This keeps parallel worktrees, and agents, from fighting over one device. An exported `SIMULATOR_ID` is ignored on purpose; use `--simulator <udid>` to pick a device.
+By default each branch or worktree gets its own simulator, named `HT-<branch>` (for example `HT-feat-my-change`). The first run clones it from the iPhone model pinned as `SIMULATOR_DEVICE` in `scripts/tool-versions.env`, on the newest iOS 26 runtime that has one, else the newest iOS runtime that has one. With no shut-down one on any runtime, it clones the first iPhone on the newest iOS 26 (else iOS) runtime and prints a warning. An existing clone of another model is deleted and re-cloned, unless it is booted. This keeps parallel worktrees, and agents, from fighting over one device. An exported `SIMULATOR_ID` is ignored on purpose; use `--simulator <udid>` to pick a device.
 
 Delete a branch's clone when you're done with the branch:
 
