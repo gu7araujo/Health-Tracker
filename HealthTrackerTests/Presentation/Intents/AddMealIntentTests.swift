@@ -113,4 +113,14 @@ struct AddMealIntentTests {
             summary.listedParameters(of: AddMealIntent.self) == [\AddMealIntent.$size, \AddMealIntent.$satisfaction]
         )
     }
+
+    @Test func dialog_readsInTheAppsLanguageInAnyHost() {
+        let expected = String(localized: "intent_add_meal_dialog \("Rice, beans")")
+
+        #expect(AddMealIntent.dialog(for: "Rice, beans").readByForeignHost == expected)
+    }
+
+    @Test func itemsPrompt_readsInTheAppsLanguageInAnyHost() {
+        #expect(AddMealIntent.itemsPrompt.readByForeignHost == String(localized: "intent_param_meal_items_prompt"))
+    }
 }

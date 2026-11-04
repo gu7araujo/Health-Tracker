@@ -13,7 +13,7 @@ struct AddWorkoutIntent: AppIntent, UndoableIntent {
     static let description: IntentDescription? = IntentDescription("intent_add_workout_description")
     static let supportedModes: IntentModes = .background
 
-    @Parameter(title: "intent_param_workout_name", requestValueDialog: "intent_param_workout_name_prompt")
+    @Parameter(title: "intent_param_workout_name", requestValueDialog: IntentDialog(AddWorkoutIntent.namePrompt))
     var name: String
 
     /// Same 1–300 range `Workout.Duration` clamps to.
@@ -36,7 +36,16 @@ struct AddWorkoutIntent: AppIntent, UndoableIntent {
         let change = try run(with: useCase, on: .now)
         registerUndo(on: undoManager, useCase: useCase, change: change)
         await IntentUseCaseFactory.cancelTodaysNotifications()
-        return .result(dialog: "intent_add_workout_dialog \(change.after.workouts.last?.description ?? "")")
+        return .result(dialog: IntentDialog(Self.dialog(for: change.after.workouts.last?.description ?? "")))
+    }
+
+    /// Resolved in the app, so Siri and Shortcuts read it in the app's language (see `resolvedInApp`).
+    static var namePrompt: LocalizedStringResource {
+        LocalizedStringResource("intent_param_workout_name_prompt").resolvedInApp
+    }
+
+    static func dialog(for workout: String) -> LocalizedStringResource {
+        LocalizedStringResource("intent_add_workout_dialog \(workout)").resolvedInApp
     }
 
     /// The intent's single write. A blank name re-asks before anything is saved, so the restart can't double-log.
@@ -45,7 +54,7 @@ struct AddWorkoutIntent: AppIntent, UndoableIntent {
     func run(with useCase: UpdateDayDataUseCase, on date: Date) throws -> DayDataChange {
         let description = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !description.isEmpty else {
-            throw $name.needsValueError("intent_param_workout_name_prompt")
+            throw $name.needsValueError(IntentDialog(Self.namePrompt))
         }
         let workout = Workout(
             description: description,

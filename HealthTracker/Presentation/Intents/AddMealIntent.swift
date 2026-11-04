@@ -14,7 +14,7 @@ struct AddMealIntent: AppIntent, UndoableIntent {
     static let supportedModes: IntentModes = .background
 
     /// Comma-separated, like the items typed in the add-meal modal.
-    @Parameter(title: "intent_param_meal_items", requestValueDialog: "intent_param_meal_items_prompt")
+    @Parameter(title: "intent_param_meal_items", requestValueDialog: IntentDialog(AddMealIntent.itemsPrompt))
     var items: String
 
     @Parameter(title: "intent_param_meal_size", default: .small)
@@ -37,7 +37,16 @@ struct AddMealIntent: AppIntent, UndoableIntent {
         let change = try run(with: useCase, on: .now)
         registerUndo(on: undoManager, useCase: useCase, change: change)
         await IntentUseCaseFactory.cancelTodaysNotifications()
-        return .result(dialog: "intent_add_meal_dialog \(change.after.meals.last?.description ?? "")")
+        return .result(dialog: IntentDialog(Self.dialog(for: change.after.meals.last?.description ?? "")))
+    }
+
+    /// Resolved in the app, so Siri and Shortcuts read it in the app's language (see `resolvedInApp`).
+    static var itemsPrompt: LocalizedStringResource {
+        LocalizedStringResource("intent_param_meal_items_prompt").resolvedInApp
+    }
+
+    static func dialog(for meal: String) -> LocalizedStringResource {
+        LocalizedStringResource("intent_add_meal_dialog \(meal)").resolvedInApp
     }
 
     /// The intent's single write. Blank items re-ask before anything is saved, so the restart can't double-log.
@@ -48,7 +57,7 @@ struct AddMealIntent: AppIntent, UndoableIntent {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         guard !parsedItems.isEmpty else {
-            throw $items.needsValueError("intent_param_meal_items_prompt")
+            throw $items.needsValueError(IntentDialog(Self.itemsPrompt))
         }
         let quantity = size.quantity
         let meal = Meal(

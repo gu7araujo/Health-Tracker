@@ -90,4 +90,14 @@ struct LogMoodIntentTests {
         #expect(summary.sentenceFormat == "intent_log_mood_summary ${parameter0}")
         #expect(summary.sentenceParameters(of: LogMoodIntent.self) == [\LogMoodIntent.$mood])
     }
+
+    @Test func dialog_readsInTheAppsLanguageInAnyHost() {
+        let expected = String(localized: "intent_log_mood_dialog \(Mood.sad.localizedName)")
+
+        #expect(LogMoodIntent.dialog(for: .sad).readByForeignHost == expected)
+    }
+
+    @Test func moodPrompt_readsInTheAppsLanguageInAnyHost() {
+        #expect(LogMoodIntent.moodPrompt.readByForeignHost == String(localized: "intent_param_mood_prompt"))
+    }
 }

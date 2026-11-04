@@ -89,4 +89,14 @@ struct AddWorkoutIntentTests {
         let listed: [PartialKeyPath<AddWorkoutIntent>] = [\AddWorkoutIntent.$minutes, \AddWorkoutIntent.$intensity]
         #expect(summary.listedParameters(of: AddWorkoutIntent.self) == listed)
     }
+
+    @Test func dialog_readsInTheAppsLanguageInAnyHost() {
+        let expected = String(localized: "intent_add_workout_dialog \("Swimming")")
+
+        #expect(AddWorkoutIntent.dialog(for: "Swimming").readByForeignHost == expected)
+    }
+
+    @Test func namePrompt_readsInTheAppsLanguageInAnyHost() {
+        #expect(AddWorkoutIntent.namePrompt.readByForeignHost == String(localized: "intent_param_workout_name_prompt"))
+    }
 }

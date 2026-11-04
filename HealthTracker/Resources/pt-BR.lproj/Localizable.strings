@@ -107,7 +107,8 @@
 "intent_log_water_title" = "Registrar água";
 "intent_log_water_description" = "Adiciona água ao total de hoje.";
 "intent_param_water_amount" = "Quantidade";
-"intent_log_water_summary ${amount}" = "Registrar ${amount} de água";
+"intent_param_water_amount_prompt" = "Quantos mL de água você bebeu?";
+"intent_log_water_summary ${amount}" = "Registrar ${amount} mL de água";
 "intent_log_water_dialog %@" = "Registrado. Você bebeu %@ L de água hoje.";
 "intent_log_water_nothing_added %@" = "Nada registrado. Você bebeu %@ L de água hoje, e o máximo diário é 5 L.";
 

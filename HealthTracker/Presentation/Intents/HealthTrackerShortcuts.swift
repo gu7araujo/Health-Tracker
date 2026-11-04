@@ -5,6 +5,8 @@
 //  Zero-setup Siri, Spotlight, and Action button entry points (5 of the 10 allowed).
 //  Phrases are a public contract once shipped: add new ones, never rename or remove.
 //  Each phrase needs `\(.applicationName)`, and its translations live in `AppShortcuts.strings`.
+//  Spotlight shows only a few shortcuts for a search of the app's name, starting from this order: most common first.
+//  No phrase interpolates an `AppEnum`: each case would become its own Spotlight result and crowd the others out.
 //
 
 import AppIntents
@@ -21,19 +23,16 @@ struct HealthTrackerShortcuts: AppShortcutsProvider {
             systemImageName: "drop.fill"
         )
         AppShortcut(
-            intent: LogMoodIntent(),
-            phrases: [
-                "I'm feeling \(\.$mood) in \(.applicationName)",
-                "Log my mood in \(.applicationName)"
-            ],
-            shortTitle: "intent_log_mood_title",
-            systemImageName: "face.smiling"
-        )
-        AppShortcut(
             intent: AddMealIntent(),
             phrases: ["Log a meal in \(.applicationName)"],
             shortTitle: "intent_add_meal_title",
             systemImageName: "fork.knife"
+        )
+        AppShortcut(
+            intent: LogMoodIntent(),
+            phrases: ["Log my mood in \(.applicationName)"],
+            shortTitle: "intent_log_mood_title",
+            systemImageName: "face.smiling"
         )
         AppShortcut(
             intent: AddWorkoutIntent(),

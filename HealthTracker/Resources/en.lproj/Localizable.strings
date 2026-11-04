@@ -107,7 +107,8 @@
 "intent_log_water_title" = "Log Water";
 "intent_log_water_description" = "Adds water to today's total.";
 "intent_param_water_amount" = "Amount";
-"intent_log_water_summary ${amount}" = "Log ${amount} of water";
+"intent_param_water_amount_prompt" = "How many mL of water did you drink?";
+"intent_log_water_summary ${amount}" = "Log ${amount} mL of water";
 "intent_log_water_dialog %@" = "Logged. You've had %@ L of water today.";
 "intent_log_water_nothing_added %@" = "Nothing logged. You've had %@ L of water today, and the daily max is 5 L.";
 

@@ -17,14 +17,14 @@ struct LogWaterIntentTests {
         useCase = UpdateDayDataUseCase(repository: mockRepository, logger: MockLogger())
     }
 
-    private func makeIntent(amount: Measurement<UnitVolume>) -> LogWaterIntent {
+    private func makeIntent(amount: Int) -> LogWaterIntent {
         let intent = LogWaterIntent()
         intent.amount = amount
         return intent
     }
 
     @Test func run_addsAmountInLitersToStoredTotal() throws {
-        let intent = makeIntent(amount: Measurement(value: 250, unit: .milliliters))
+        let intent = makeIntent(amount: 250)
         mockRepository.dayDataForDateResult[TestDataBuilder.fixedDate] = RecordedDayData(
             DayData(date: TestDataBuilder.fixedDate, water: 1.0)
         )
@@ -36,9 +36,9 @@ struct LogWaterIntentTests {
         #expect(mockRepository.dayDataForDateCalledWith == TestDataBuilder.fixedDate)
     }
 
-    @Test func run_convertsOtherVolumeUnitsToLiters() throws {
-        // 8 US fl oz ≈ 236.6 mL → 0.24 L after rounding
-        let intent = makeIntent(amount: Measurement(value: 8, unit: .fluidOunces))
+    @Test func run_roundsMillilitersToTheNearestCentiliter() throws {
+        // 236 mL → 0.24 L after rounding
+        let intent = makeIntent(amount: 236)
 
         try intent.run(with: useCase, on: TestDataBuilder.fixedDate)
 
@@ -47,7 +47,7 @@ struct LogWaterIntentTests {
     }
 
     @Test func run_atTheCap_throwsWithoutSaving() throws {
-        let intent = makeIntent(amount: Measurement(value: 250, unit: .milliliters))
+        let intent = makeIntent(amount: 250)
         mockRepository.dayDataForDateResult[TestDataBuilder.fixedDate] = RecordedDayData(
             DayData(date: TestDataBuilder.fixedDate, water: 5.0)
         )
@@ -64,7 +64,7 @@ struct LogWaterIntentTests {
     }
 
     @Test func run_zeroAmount_throwsWithoutSaving() throws {
-        let intent = makeIntent(amount: Measurement(value: 0, unit: .milliliters))
+        let intent = makeIntent(amount: 0)
         mockRepository.dayDataForDateResult[TestDataBuilder.fixedDate] = RecordedDayData(
             DayData(date: TestDataBuilder.fixedDate, water: 1.0)
         )
@@ -78,7 +78,7 @@ struct LogWaterIntentTests {
     }
 
     @Test func registerUndo_restoresPreviousTotal() throws {
-        let intent = makeIntent(amount: Measurement(value: 500, unit: .milliliters))
+        let intent = makeIntent(amount: 500)
         mockRepository.dayDataForDateResult[TestDataBuilder.fixedDate] = RecordedDayData(
             DayData(date: TestDataBuilder.fixedDate, water: 1.0)
         )
@@ -94,7 +94,7 @@ struct LogWaterIntentTests {
     }
 
     @Test func registerUndo_keepsWaterLoggedSince() throws {
-        let intent = makeIntent(amount: Measurement(value: 500, unit: .milliliters))
+        let intent = makeIntent(amount: 500)
         mockRepository.dayDataForDateResult[TestDataBuilder.fixedDate] = RecordedDayData(
             DayData(date: TestDataBuilder.fixedDate, water: 1.0)
         )
@@ -114,7 +114,7 @@ struct LogWaterIntentTests {
 
     @Test func registerUndo_atTheCap_removesOnlyWhatWasAdded() throws {
         // 4.8 L + 0.5 L clamps to 5 L, so the intent only added 0.2 L
-        let intent = makeIntent(amount: Measurement(value: 500, unit: .milliliters))
+        let intent = makeIntent(amount: 500)
         mockRepository.dayDataForDateResult[TestDataBuilder.fixedDate] = RecordedDayData(
             DayData(date: TestDataBuilder.fixedDate, water: 4.8)
         )
@@ -130,7 +130,7 @@ struct LogWaterIntentTests {
     }
 
     @Test func registerUndo_withNoPriorWater_dropsTheNowEmptyDay() throws {
-        let intent = makeIntent(amount: Measurement(value: 250, unit: .milliliters))
+        let intent = makeIntent(amount: 250)
         let change = try intent.run(with: useCase, on: TestDataBuilder.fixedDate)
         mockRepository.dayDataForDateResult[TestDataBuilder.fixedDate] = mockRepository.saveDayDataCalledWith
 
@@ -146,5 +146,35 @@ struct LogWaterIntentTests {
 
         #expect(summary.sentenceFormat == "intent_log_water_summary ${parameter0}")
         #expect(summary.sentenceParameters(of: LogWaterIntent.self) == [\LogWaterIntent.$amount])
+    }
+
+    /// An unset amount shows its title in the summary, so the unit must not be in both.
+    @Test(arguments: ["en", "pt-BR"])
+    func parameterSummary_withUnsetAmount_namesTheUnitOnce(localization: String) throws {
+        let path = try #require(Bundle.main.path(forResource: localization, ofType: "lproj"))
+        let bundle = try #require(Bundle(path: path))
+        let title = bundle.localizedString(forKey: "intent_param_water_amount", value: nil, table: nil)
+        let summary = bundle.localizedString(forKey: "intent_log_water_summary ${amount}", value: nil, table: nil)
+
+        let placeholder = summary.replacingOccurrences(of: "${amount}", with: title)
+
+        #expect(placeholder.components(separatedBy: "mL").count == 2, "\(placeholder)")
+    }
+
+    @Test func dialog_readsInTheAppsLanguageInAnyHost() {
+        let total = 1.25.formatted(.number.precision(.fractionLength(0 ... 2)))
+        let expected = String(localized: "intent_log_water_dialog \(total)")
+
+        #expect(LogWaterIntent.dialog(total: 1.25).readByForeignHost == expected)
+    }
+
+    @Test func nothingAddedError_readsInTheAppsLanguageInAnyHost() {
+        let expected = String(localized: "intent_log_water_nothing_added \("5")")
+
+        #expect(LogWaterIntent.NothingAddedError(total: 5).localizedStringResource.readByForeignHost == expected)
+    }
+
+    @Test func amountPrompt_readsInTheAppsLanguageInAnyHost() {
+        #expect(LogWaterIntent.amountPrompt.readByForeignHost == String(localized: "intent_param_water_amount_prompt"))
     }
 }

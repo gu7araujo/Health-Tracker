@@ -13,7 +13,7 @@ struct LogMoodIntent: AppIntent, UndoableIntent {
     static let description: IntentDescription? = IntentDescription("intent_log_mood_description")
     static let supportedModes: IntentModes = .background
 
-    @Parameter(title: "intent_param_mood", requestDisambiguationDialog: "intent_param_mood_prompt")
+    @Parameter(title: "intent_param_mood", requestDisambiguationDialog: IntentDialog(LogMoodIntent.moodPrompt))
     var mood: MoodAppEnum
 
     static var parameterSummary: some ParameterSummary {
@@ -26,7 +26,17 @@ struct LogMoodIntent: AppIntent, UndoableIntent {
         let change = run(with: useCase, on: .now)
         registerUndo(on: undoManager, useCase: useCase, change: change)
         await IntentUseCaseFactory.cancelTodaysNotifications()
-        return .result(dialog: "intent_log_mood_dialog \(mood.mood.localizedName)")
+        return .result(dialog: IntentDialog(Self.dialog(for: mood)))
+    }
+
+    /// Resolved in the app, so Siri and Shortcuts read it in the app's language (see `resolvedInApp`).
+    static var moodPrompt: LocalizedStringResource {
+        LocalizedStringResource("intent_param_mood_prompt").resolvedInApp
+    }
+
+    @MainActor
+    static func dialog(for mood: MoodAppEnum) -> LocalizedStringResource {
+        LocalizedStringResource("intent_log_mood_dialog \(mood.mood.localizedName)").resolvedInApp
     }
 
     /// The intent's single write; everything it needs is resolved before it runs, so a restart can't double-log.

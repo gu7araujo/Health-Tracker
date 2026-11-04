@@ -13,13 +13,14 @@ struct LogWaterIntent: AppIntent, UndoableIntent {
     static let description: IntentDescription? = IntentDescription("intent_log_water_description")
     static let supportedModes: IntentModes = .background
 
+    /// Whole milliliters with no default, so every run asks. A plain number: the system's volume prompt
+    /// mis-reads its own units (a picked "ml" arrives as megaliters, and "0,3" L as 0).
     @Parameter(
         title: "intent_param_water_amount",
-        defaultValue: 250,
-        defaultUnit: .milliliters,
-        supportsNegativeNumbers: false
+        inclusiveRange: (1, 5000),
+        requestValueDialog: IntentDialog(LogWaterIntent.amountPrompt)
     )
-    var amount: Measurement<UnitVolume>
+    var amount: Int
 
     static var parameterSummary: some ParameterSummary {
         Summary("intent_log_water_summary \(\.$amount)")
@@ -31,7 +32,16 @@ struct LogWaterIntent: AppIntent, UndoableIntent {
         let change = try run(with: useCase, on: .now)
         registerUndo(on: undoManager, useCase: useCase, change: change)
         await IntentUseCaseFactory.cancelTodaysNotifications()
-        return .result(dialog: "intent_log_water_dialog \(Self.formatted(change.after.water ?? 0))")
+        return .result(dialog: IntentDialog(Self.dialog(total: change.after.water ?? 0)))
+    }
+
+    /// Resolved in the app, so Siri and Shortcuts read it in the app's language (see `resolvedInApp`).
+    static var amountPrompt: LocalizedStringResource {
+        LocalizedStringResource("intent_param_water_amount_prompt").resolvedInApp
+    }
+
+    static func dialog(total liters: Double) -> LocalizedStringResource {
+        LocalizedStringResource("intent_log_water_dialog \(formatted(liters))").resolvedInApp
     }
 
     /// The intent's single write; everything it needs is resolved before it runs, so a restart can't double-log.
@@ -39,7 +49,7 @@ struct LogWaterIntent: AppIntent, UndoableIntent {
     @MainActor
     @discardableResult
     func run(with useCase: UpdateDayDataUseCase, on date: Date) throws -> DayDataChange {
-        let liters = amount.converted(to: .liters).value
+        let liters = Double(amount) / 1000
         let change = useCase.executeAndNotify(for: date) { $0.addWater(liters: liters) }
         guard change.after != change.before else { throw NothingAddedError(total: change.after.water ?? 0) }
         return change
@@ -57,7 +67,7 @@ struct LogWaterIntent: AppIntent, UndoableIntent {
         let total: Double
 
         var localizedStringResource: LocalizedStringResource {
-            "intent_log_water_nothing_added \(LogWaterIntent.formatted(total))"
+            LocalizedStringResource("intent_log_water_nothing_added \(LogWaterIntent.formatted(total))").resolvedInApp
         }
     }
 

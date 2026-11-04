@@ -20,10 +20,24 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
 
     @MainActor
     func testLogWaterShowsInApp() async throws {
-        try await run("LogWaterIntent", ["amount": Measurement(value: 500, unit: UnitVolume.milliliters)])
+        try await run("LogWaterIntent", ["amount": 500])
 
         let label = element(AccessibilityID.waterValueLabel)
         XCTAssertTrue(waitForLabel(of: label, toStartWith: "0.5"), "got \(label.label)")
+    }
+
+    @MainActor
+    func testLogWaterWithoutAmountAsksForItAndSavesNothing() async throws {
+        do {
+            try await run("LogWaterIntent")
+            XCTFail("Expected LogWaterIntent to ask for its amount")
+        } catch {
+            // The test runner can't answer the question, so it surfaces as an error naming the parameter
+            XCTAssertTrue(error.localizedDescription.contains("'amount'"), "got \(error)")
+        }
+
+        let label = assertExists(element(AccessibilityID.waterValueLabel)).label
+        XCTAssertTrue(label.hasPrefix("0.0"), "got \(label)")
     }
 
     @MainActor
@@ -82,7 +96,7 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
         let empty = try await dayStatus()
         XCTAssertEqual(empty, "Nothing logged today yet.")
 
-        try await run("LogWaterIntent", ["amount": Measurement(value: 250, unit: UnitVolume.milliliters)])
+        try await run("LogWaterIntent", ["amount": 250])
         let oneCategory = try await dayStatus()
         XCTAssertEqual(oneCategory, "Log at least two categories to get today's status.")
 
@@ -97,7 +111,7 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
     @MainActor
     func testIntentWriteWhileBackgroundedSurvivesAnInAppEdit() async throws {
         XCUIDevice.shared.press(.home)
-        try await run("LogWaterIntent", ["amount": Measurement(value: 500, unit: UnitVolume.milliliters)])
+        try await run("LogWaterIntent", ["amount": 500])
         app.activate()
 
         let water = element(AccessibilityID.waterValueLabel)
