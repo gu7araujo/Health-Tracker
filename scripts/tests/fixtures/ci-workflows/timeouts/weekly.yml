@@ -5,6 +5,9 @@ jobs:
     permissions:
       issues: write
     steps:
+      - name: Simulator runtime
+        timeout-minutes: 20
+        run: scripts/ci/install-simulator-runtime.sh
       - name: Quality gate
         timeout-minutes: 45
         run: scripts/quality --full --json

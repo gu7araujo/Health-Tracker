@@ -5,10 +5,12 @@ HealthTracker is a modern iOS 26.0 health tracking app built with SwiftUI and Sw
 ## Repo Map
 
 Deep maps + layer rules: `HealthTracker/Domain/AGENTS.md`, `HealthTracker/Data/AGENTS.md`,
-`HealthTracker/Presentation/AGENTS.md`, `HealthTrackerTests/AGENTS.md`, `HealthTrackerUITests/AGENTS.md`, `scripts/AGENTS.md`
+`HealthTracker/Presentation/AGENTS.md`, `HealthTrackerTests/AGENTS.md`, `HealthTrackerUITests/AGENTS.md` (also covers `HealthTrackerIntentsUITests`), `scripts/AGENTS.md`
 
 - `HealthTracker/UITestingSupport.swift` — the `-uiTesting` launch-argument hook: temp-dir repository, skips migration and permission prompts. It also detects the unit-test host (`XCTestConfigurationFilePath`), which skips that startup and renders no `MainView`.
-- `HealthTracker/Resources/` — localizable strings for `en` and `pt-BR`.
+- `HealthTracker/Resources/` — localizable strings for `en` and `pt-BR`, plus `AppShortcuts.strings` (Siri phrases).
+- `HealthTracker/Presentation/Intents/` — App Intents and App Shortcuts (Siri, Shortcuts, Spotlight); conventions in `Presentation/AGENTS.md`.
+- `HealthTrackerIntentsUITests/` — runs those intents end to end with `AppIntentsTesting`; its own target because it needs iOS 27.
 
 ## Apple Documentation
 
@@ -57,7 +59,7 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
 
 1. **Open your worktree's project first:** `XcodeOpenWorkspace` with the absolute path `<worktree>/HealthTracker.xcodeproj`. Done when it returns a `workspaceIdentifier`. Xcode rejects tool calls for a project it hasn't opened ("Unknown workspace identifier"), and a new agent's first open asks the user to approve it in Xcode.
 2. **Pass that `workspaceIdentifier` on every Xcode MCP call.** The main checkout and each worktree are all open as `HealthTracker.xcodeproj`; the identifier is what keeps a build or test on your branch.
-3. **Build and run unit tests freely** (`BuildProject`, `RunSomeTests` on `HealthTrackerTests`): each worktree builds into its own DerivedData.
+3. **Build and run unit tests freely** (`BuildProject`, `RunSomeTests` on `HealthTrackerTests`): each worktree builds into its own DerivedData. Tests run on the workspace's active run destination, which Xcode shuts down to clone, so before your first test call switch it (`XcodeListRunDestinations`, `XcodeSwitchRunDestination`) to an `HT-<branch>` simulator of your own, leaving the user's selected simulator as it was.
 4. **Run UI tests through the MCP from one agent at a time** — `HealthTrackerUITests`, and `RunAllTests`, which includes them. Concurrent runs share Xcode's simulator-clone pool: when one run finishes, the other's clones get torn down and rebuilt, stretching a ~4 min suite past 15 min or stalling it outright, even with each worktree on its own run destination. Iterate on unit tests; run the full suite once at the end.
 5. **Read results from the tool response** (pass/fail counts, errors) or `GetBuildLog` with your `workspaceIdentifier`. The artifact files it points to (`fullLogPath`, test console logs, `.xcresult`) are named by timestamp and overwritten when two runs finish in the same second.
 6. **On the `xcodebuild` fallback, test on a simulator of your own** — the `cli-test` skill's parallel setup. Isolated from the shared clone pool, UI tests can run in parallel there; for ad-hoc `xcodebuild` runs leave `-derivedDataPath` at its default, which already separates worktrees by path (`scripts/quality` always builds into its own `build/DerivedData`).

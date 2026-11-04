@@ -1,10 +1,13 @@
 # Must pass: ci.yml's test steps, a Notify on failure step that opens an issue, issues: write.
 jobs:
   test:
-    timeout-minutes: 60
+    timeout-minutes: 75
     permissions:
       issues: write
     steps:
+      - name: Simulator runtime
+        timeout-minutes: 20
+        run: scripts/ci/install-simulator-runtime.sh
       - name: Quality gate
         timeout-minutes: 45
         run: scripts/quality --full --json

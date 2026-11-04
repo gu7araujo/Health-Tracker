@@ -14,8 +14,12 @@ jobs:
         run: scripts/fitness/persisted-shape-guard.sh HEAD^1
   test:
     if: github.event_name != 'workflow_dispatch'
-    timeout-minutes: 60
+    timeout-minutes: 75
     steps:
+      - name: Simulator runtime
+        if: env.MODE == '--full'
+        timeout-minutes: 20
+        run: scripts/ci/install-simulator-runtime.sh
       - name: Quality gate
         timeout-minutes: 45
         run: scripts/quality "$MODE" --json

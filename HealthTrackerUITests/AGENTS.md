@@ -10,6 +10,16 @@ The shared machinery every suite leans on, all on `HealthTrackerUITestCase`:
 - **Lookup + waits** — `element(_:)` resolves any element by identifier; `assertExists` / `assertNotExists` / `assertSelected` poll for a condition; `scrollTo` swipes an off-screen row into view. All time out rather than sleep.
 - **Flow helpers** — `openAddModal`, `addMeal`, `addWorkout`, `saveModal`, `cancelModal`, `selectMenuOption`, `setDurationWheels`, `tapSwipeAction`. Compose a flow from these rather than re-scripting taps.
 
+## App Intents Suite
+
+`HealthTrackerIntentsUITests/AppIntentsUITests.swift` runs the intents the way Siri does, through `AppIntentsTesting`, in a **separate target that deploys to iOS 27**. Any file importing that framework stops a whole test bundle from loading on iOS 26, which is why it isn't in this target. `scripts/quality --full` runs it on a simulator at the iPhone simulator SDK's iOS version or later, since `AppIntentsTesting` links that release (Xcode 27.2's fails to load on iOS 27.0), using a second clone, `HT-<branch>-ios27`, when the gate's own is older, and counts it in app coverage and the per-file floor.
+
+- **Shares this folder's `Support/`.** The three files are members of both targets, so a new `Support` file needs both checkboxes.
+- **Isolated store.** `setUp` launches the app with `-uiTesting` first. The intents then run inside that process, and `IntentUseCaseFactory` builds them from `UITestingSupport.makeRepository()`, which keeps one temp directory per launch. Without a launched app, the system would cold-launch it and the intents would hit the real store.
+- **Persisted names are the API.** Intents, `AppEnum`s, and raw values are addressed as strings (`"LogWaterIntent"`, `"MoodAppEnum"`, `"sad"`), so a rename of the frozen contract fails here.
+- **`continueAfterFailure = true`.** In an `async` XCTest, stopping on failure kills the runner, and xcodebuild then stalls on the restart.
+- **No dialogs.** The runner can't read spoken dialogs or answer a re-ask (a `needsValueError` surfaces as an error naming the parameter). Assert through the app's UI and `GetDayStatusIntent`'s returned value.
+
 ## Rules
 
 Black-box and isolated — each test drives the shipping app through its accessibility surface, nothing else.

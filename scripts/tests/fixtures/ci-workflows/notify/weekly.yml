@@ -2,10 +2,13 @@
 # and only comments (the issue opens in another job), and 'issues: write' sits in a comment.
 jobs:
   test:
-    timeout-minutes: 60
+    timeout-minutes: 75
     permissions:
       issues: read # not issues: write
     steps:
+      - name: Simulator runtime
+        timeout-minutes: 20
+        run: scripts/ci/install-simulator-runtime.sh
       - name: Quality gate
         timeout-minutes: 45
         run: scripts/quality --full --json

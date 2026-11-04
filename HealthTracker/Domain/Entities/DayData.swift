@@ -34,6 +34,15 @@ struct DayData: Codable, Equatable, Identifiable {
         self.mood = mood
     }
 
+    // MARK: - Water Operations
+
+    /// Adds to the day's water total, clamped to the slider's 0–5 L range and rounded to 2 decimals.
+    /// A 0 L total leaves water unrecorded, matching how the slider treats 0.
+    mutating func addWater(liters: Double) {
+        let total = (min(max((water ?? 0) + liters, 0), 5) * 100).rounded() / 100
+        water = total > 0 ? total : nil
+    }
+
     // MARK: - Meal Operations
 
     mutating func addMeal(_ meal: Meal) {

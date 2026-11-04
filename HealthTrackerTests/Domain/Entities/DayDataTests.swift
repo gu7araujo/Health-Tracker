@@ -320,6 +320,41 @@ struct DayDataTests {
         #expect(dayData.status == .poor) // Any large meal triggers poor
     }
 
+    // MARK: - Water Operations
+
+    @Test func addWater_toNil_startsFromZero() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addWater(liters: 0.25)
+        #expect(dayData.water == 0.25)
+    }
+
+    @Test func addWater_addsToExistingTotal() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate, water: 1.5)
+        dayData.addWater(liters: 0.25)
+        #expect(dayData.water == 1.75)
+    }
+
+    @Test func addWater_clampsAtFiveLiters() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate, water: 4.9)
+        dayData.addWater(liters: 0.25)
+        #expect(dayData.water == 5.0)
+    }
+
+    @Test func addWater_roundsToTwoDecimals() {
+        var dayData = DayData(date: TestDataBuilder.fixedDate, water: 0.1)
+        dayData.addWater(liters: 0.2) // 0.30000000000000004 in raw Double math
+        #expect(dayData.water == 0.3)
+        dayData.addWater(liters: 0.333)
+        #expect(dayData.water == 0.63)
+    }
+
+    @Test func addWater_zeroTotal_leavesWaterUnrecorded() {
+        // Mirrors MainViewModel.updateWater: 0 L means "no water logged", not a recorded zero
+        var dayData = DayData(date: TestDataBuilder.fixedDate)
+        dayData.addWater(liters: 0)
+        #expect(dayData.water == nil)
+    }
+
     // MARK: - Meal CRUD Operations
 
     @Test func addMeal_increasesMealCount() {
