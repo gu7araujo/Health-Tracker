@@ -1,6 +1,6 @@
 ---
 name: device-interaction
-description: "Verify app behavior on device or simulator via screenshots, UI hierarchy, and touch interactions."
+description: "Verify app or iPhone behavior on device or simulator via screenshots, UI hierarchy, and touch interactions."
 ---
 # Device Interaction
 
@@ -27,7 +27,7 @@ Agent tool:
 ```
 DeviceInteractionStartWorkspaceSession (workspace-backed; do this early, runs in the background)
   → DeviceInteractionInstallAndRun (after each code change; includes building)
-    → DeviceEventSynthesize (interact + observe, repeatable)
+    → DeviceInteractionSynthesize (interact + observe, repeatable)
   → DeviceInteractionEndSession (when done — keeping sessions open is resource-heavy)
 ```
 
@@ -58,7 +58,7 @@ Omit both parameters to leave the scheme's arguments and environment unchanged.
 
 **ALWAYS** report UI issues that might be caused by code: overlapping or unreadable text, unexpectedly cropped image/text, wrong colors etc.
 
-## DeviceEventSynthesize tool
+## DeviceInteractionSynthesize tool
 
 This tool allows performing an interaction and observing the state of a device.
 
@@ -84,7 +84,7 @@ Warning: Elements marked `isRemoteLeafPlaceholder` do not report child elements 
 
 When windows from more than one application overlap on screen, each element line is annotated with a `activationBundleId: <bundle-identifier>` suffix.
 
-If an element line carries a `activationBundleId`, **any interaction with it requires activating that application first** by passing `activationBundleId` parameter to the DeviceEventSynthesize tool.
+If an element line carries a `activationBundleId`, **any interaction with it requires activating that application first** by passing `activationBundleId` parameter to the DeviceInteractionSynthesize tool.
 
 Tip: you can pass `activationBundleId` with no `interactionCommand`.
 **Application activation is expensive so use that only if necessary.**
@@ -157,7 +157,7 @@ The `interactionCommand` parameter accepts a command syntax:
 
 Before any interaction, always capture and read the hierarchy (and screenshot). After any interaction, capture again and verify the result. For complex components (like toggles or switches), look at nested elements (like `Switch` or `Slider`) — nearby elements might correspond to the actual control. When done, report findings to the main agent.
 
-- To capture without interacting, use DeviceEventSynthesize with an empty interactionCommand.
+- To capture without interacting, use DeviceInteractionSynthesize with an empty interactionCommand.
 - Never guess positions from screenshots alone — use hierarchy hitPoint coordinates; screenshot estimation is only a fallback after a hitPoint is tried and fails.
 - If not confident or thumbnail resolution is insufficient, analyze the full-size screenshot.
 
