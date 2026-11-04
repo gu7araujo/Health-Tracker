@@ -1,3 +1,7 @@
+Closes #
+
+<!-- The issue this PR does (`Part of #<n>` for part of it). Delete the line when there is none. -->
+
 ## Summary
 
 <!-- What changed and why. -->

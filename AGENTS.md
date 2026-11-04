@@ -100,4 +100,5 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
 - The pre-push hook runs `scripts/quality --fast`; run `CI=true scripts/quality --full` before marking a PR ready. Never push a broken build or failing tests.
 - Branch first (`git switch -c <type>/<name>`): the hooks refuse commits on `main`.
 - Use the `gh` CLI for GitHub work — pull requests, issues, reviews, checks, releases, API calls.
+- A task that outlives the session becomes a GitHub issue, closed by the PR that does it: `issue-tracking` skill.
 - Once a feature or batch of related PRs is merged, run the `retro` skill over the batch and report its table alongside the requested work (it doesn't block it); implementing any of its proposals needs the user's go-ahead.

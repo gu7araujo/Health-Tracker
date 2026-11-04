@@ -1,0 +1,3 @@
+interface:
+  display_name: "Issue Tracking"
+  short_description: "File, pick up and close GitHub Issues"

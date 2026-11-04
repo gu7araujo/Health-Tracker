@@ -56,10 +56,12 @@ Report the table to the user, most valuable proposal first, then stop:
 
 End with the class-4 rows listed again under "Your call", and ask which proposals to implement.
 
-**Done when:** the user has the table, and has said which rows to implement (or none).
+Once the user answers, file each approved row and each "Your call" row as its own issue through the `issue-tracking` skill, labelled `retro`, its area labels, and `your-call` for a "Your call" row; each issue links the retro's evidence.
 
-No retro log file: the report goes to the user, and each implemented proposal's PR body starts with `Retro: #<n>`, so `gh pr list --state all --search '"Retro:" in:body' --limit 200` lists past retros; a declined proposal comes back only if its catch recurs, which is reason enough to raise it again.
+**Done when:** the user has the table and has said which rows to implement (or none), and each approved and "Your call" row is an issue whose number is in the report.
+
+No retro log file: the issues are the log, so `gh issue list --label retro --state all` lists past retro work. A declined proposal gets no issue and comes back only if its catch recurs, which is reason enough to raise it again.
 
 ## 4. Implement the approved rows
 
-Each approved row is its own branch and draft PR, through the root `AGENTS.md` Workflow: the failing test first, `scripts/quality --full` green, then ready. Thresholds, exception lists, the lint baseline, `swiftlint:disable` and `periphery:ignore` change only in a row the user approved by number, called out under "Threshold or rule changes". The user merges.
+Each approved row's issue is its own branch and draft PR whose body starts with `Closes #<issue>`, through the root `AGENTS.md` Workflow: the failing test first, `scripts/quality --full` green, then ready. Thresholds, exception lists, the lint baseline, `swiftlint:disable` and `periphery:ignore` change only in a row the user approved by number, called out under "Threshold or rule changes". The user merges.
