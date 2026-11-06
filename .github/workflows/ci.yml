@@ -2,13 +2,13 @@ name: CI
 
 # The repo is public, so standard GitHub-hosted runners (xcode-27 included) cost nothing; the
 # limits below save wall-clock time (--full ~23 min). The Linux lint job gates the macOS test job,
-# superseded runs are cancelled, and docs/agent-config-only changes skip CI. .claude/hooks and
-# .claude/settings*.json still trigger it (scripts/tests covers them). Draft PRs run test too,
-# so marking a PR ready (no ready_for_review trigger) needs no run of its own.
+# superseded runs are cancelled, and docs/agent-config-only changes (push's paths-ignore) skip
+# lint and test. .claude/hooks and .claude/settings*.json still run them (scripts/tests covers
+# them). Every PR runs, so the ci-gate job, the CI check the ruleset requires, always reports.
+# Draft PRs run test too, so marking a PR ready (no ready_for_review trigger) needs no run of its own.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths-ignore: ['**/*.md', '.agents/**', '.claude/skills/**', '.codex/**']
   push:
     branches: [main]
     paths-ignore: ['**/*.md', '.agents/**', '.claude/skills/**', '.codex/**']
@@ -23,7 +23,32 @@ permissions:
   contents: read
 
 jobs:
+  # code=false when a PR changes only docs or agent config: lint and test skip, ci-gate passes.
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.detect.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request' # other events run everything without a diff
+        with:
+          persist-credentials: false
+          # The PR checkout is a merge commit; depth 2 brings its first parent, the PR base.
+          fetch-depth: 2
+      - name: Detect code changes
+        id: detect
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ] &&
+            git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/docs-only.sh; then
+            echo "code=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "code=true" >>"$GITHUB_OUTPUT"
+          fi
+
   lint:
+    needs: changes
+    if: needs.changes.outputs.code != 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
@@ -59,12 +84,14 @@ jobs:
           ./actionlint -color
 
   test:
-    needs: lint
+    needs: [changes, lint]
     # Dependabot PRs only bump pinned actions, so they skip the macOS job: actionlint validates
     # the bump, and the --fast run on main after merge exercises actions/checkout. Accepted risk:
     # upload-artifact runs only if: failure(), so a broken bump of it shows up only when a later
     # test fails.
-    if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
+    if: >-
+      needs.changes.outputs.code != 'false' &&
+      (github.event_name != 'pull_request' || github.actor != 'dependabot[bot]')
     runs-on: xcode-27
     # Simulator runtime (20) + Quality gate (45) + ~10 for checkout, tools and script tests.
     timeout-minutes: 75
@@ -104,3 +131,19 @@ jobs:
             build/*.xcresult
             build/xcodebuild.log
           retention-days: 7
+
+  ci-gate:
+    # GitHub counts a skipped required job as passing, so requiring lint and test would pass a PR
+    # whose changes job crashed. The ruleset requires ci-gate instead: it always runs, and fails
+    # when a job it needs failed or was cancelled. Skipped is fine: docs-only PRs, Dependabot's test.
+    if: always()
+    needs: [changes, lint, test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check results
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "changes, lint, test: $RESULTS"
+          case " $RESULTS " in *" failure "* | *" cancelled "*) exit 1 ;; esac

@@ -1,7 +1,19 @@
 # Must fail every lint-job check, and only those: fetch-depth: 2 and the fitness step sit in the
 # build job, not lint; Persisted shape runs on push, against HEAD^2. The test job is pass/ci.yml's.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', '.agents/**', '.claude/skills/**', '.codex/**']
 jobs:
+  changes:
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/docs-only.sh
   lint:
+    needs: changes
+    if: needs.changes.outputs.code != 'false'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Persisted shape
@@ -15,7 +27,10 @@ jobs:
       - name: Fitness
         run: scripts/fitness/run
   test:
-    if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
+    needs: [changes, lint]
+    if: >-
+      needs.changes.outputs.code != 'false' &&
+      (github.event_name != 'pull_request' || github.actor != 'dependabot[bot]')
     timeout-minutes: 75
     steps:
       - name: Simulator runtime
@@ -28,3 +43,10 @@ jobs:
       - name: Summary
         if: always()
         run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
+  ci-gate:
+    if: always()
+    needs: [changes, lint, test]
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: case " $RESULTS " in *" failure "* | *" cancelled "*) exit 1 ;; esac

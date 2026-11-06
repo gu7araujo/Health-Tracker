@@ -1,0 +1,49 @@
+# Must fail the ci-gate checks, and only those: without if: always() a crashed dependency skips the
+# gate (a skipped required check passes), it ignores test, and a cancelled job passes it.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', '.agents/**', '.claude/skills/**', '.codex/**']
+jobs:
+  changes:
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/docs-only.sh
+  lint:
+    needs: changes
+    if: needs.changes.outputs.code != 'false'
+    steps:
+      # uses: foo/bar@v4 in a comment is not an action.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - name: Fitness
+        run: scripts/fitness/run
+      - name: Persisted shape
+        if: github.event_name == 'pull_request'
+        run: scripts/fitness/persisted-shape-guard.sh HEAD^1
+  test:
+    needs: [changes, lint]
+    if: >-
+      needs.changes.outputs.code != 'false' &&
+      (github.event_name != 'pull_request' || github.actor != 'dependabot[bot]')
+    timeout-minutes: 75
+    steps:
+      - name: Simulator runtime
+        if: env.MODE == '--full'
+        timeout-minutes: 20
+        run: scripts/ci/install-simulator-runtime.sh
+      - name: Quality gate
+        timeout-minutes: 45
+        run: scripts/quality "$MODE" --json
+      - name: Summary
+        if: always()
+        run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
+  ci-gate:
+    needs: [changes, lint]
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: case " $RESULTS " in *" failure "*) exit 1 ;; esac

@@ -103,7 +103,7 @@ CI (`.github/workflows/ci.yml`) runs the same gate. CI installs the pinned tools
 Read a red run:
 
 ```bash
-gh pr checks <n>                  # which job is red: lint (Linux) or test (macOS)
+gh pr checks <n>                  # which job is red: changes, lint (Linux) or test (macOS); ci-gate mirrors them
 gh run view <run-id> --log-failed # the failing step's log
 ```
 

@@ -1,7 +1,19 @@
 # Must fail: the Quality gate step's timeout equals the test job's, so a hang cancels the job.
 # Must pass the step parity check: "$MODE" counts as --full, the same steps as weekly.yml.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', '.agents/**', '.claude/skills/**', '.codex/**']
 jobs:
+  changes:
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/docs-only.sh
   lint:
+    needs: changes
+    if: needs.changes.outputs.code != 'false'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -12,7 +24,10 @@ jobs:
         if: github.event_name == 'pull_request'
         run: scripts/fitness/persisted-shape-guard.sh HEAD^1
   test:
-    if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
+    needs: [changes, lint]
+    if: >-
+      needs.changes.outputs.code != 'false' &&
+      (github.event_name != 'pull_request' || github.actor != 'dependabot[bot]')
     timeout-minutes: 45
     steps:
       - name: Simulator runtime
@@ -25,3 +40,10 @@ jobs:
       - name: Summary
         if: always()
         run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
+  ci-gate:
+    if: always()
+    needs: [changes, lint, test]
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: case " $RESULTS " in *" failure "* | *" cancelled "*) exit 1 ;; esac
