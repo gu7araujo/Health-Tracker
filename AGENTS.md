@@ -20,10 +20,12 @@ For current, version-accurate Apple API docs (especially fast-moving iOS 26 APIs
 
 The core loop is **red → green**: write a failing test, then make it pass. Follow it always: tdd skill.
 
-1. Before coding, state how you'll verify the change — which unit/UI test, which bash command, screenshot, skill, or tool, etc.
+1. Before coding, state how you'll verify the change — which unit/UI test, which bash command, screenshot, skill, or tool, etc - something runnable.
 2. Write that test first and watch it fail (**red**).
-3. Implement the minimum code to pass it (**green**).
-4. Run `scripts/quality --full` (`--fast` for a change touching only docs or agent config, as defined in Quality Gates) and iterate until it exits 0 — that's the bar for a task being done (see [Quality Gates](#quality-gates)).
+3. Implement the minimum code to pass it (**green**). On app or test code, then run the `simplify` skill over the diff: it edits the tree, so it belongs to writing the change, and review checks its edits with the rest.
+4. Run `scripts/quality --fast` and iterate until it exits 0, so reviewers only see a diff that already passes the gates.
+5. Review the diff with the passes its risk tier calls for, in rounds that converge: see [Reviewing](#reviewing). Verify each finding against the code before fixing it.
+6. Run `scripts/quality --full` (`--fast` for a change touching only docs or agent config, as defined in Quality Gates) and iterate until it exits 0 — that's the bar for a task being done (see [Quality Gates](#quality-gates)).
 
 Every bug fix starts with a regression test that reproduces the bug. Aim for near-total coverage: every public function, file, and edge case earns a test. Prefer Xcode MCP tools when they fit, and follow the plan when we have one.
 
@@ -34,6 +36,37 @@ Keep every change **tight**:
 - **Surgical.** Every changed line traces to the request. Match surrounding style, leave adjacent code alone, and remove only the orphans your own change creates. Flag unrelated dead code rather than deleting it.
 
 Leave the system committable — build green, tests passing.
+
+### Reviewing
+
+**Passes, by the riskiest path the diff touches** (a diff of only `paths-ignore` files is Docs, even under a High path):
+
+| Tier | Diff touches | Passes |
+|---|---|---|
+| Docs | only docs or agent config (CI's `paths-ignore`) | `code-review` at `low` |
+| Standard | app or test code | `code-review` at `high`, then Codex |
+| High | persisted types (`Domain/Entities/`, `Data/`), the frozen intent contract (`Presentation/Intents/`), `HealthTracker.entitlements`, `Info.plist`, and the guardrails (`.github/`, `.githooks/`, `scripts/`, `.claude/settings.json`, `.claude/hooks/`, `.swiftlint.yml`, `.periphery.yml`) | Standard with `code-review` at `xhigh`, plus `security-review` |
+
+Run every Claude pass, in every round and on every task, in a subagent with fresh context (the Agent tool), briefed as [Delegating](#delegating) says. The session that wrote the change doesn't review it.
+
+Codex runs when `codex` is on the `PATH` (cloud sessions lack it: say so in the report): `codex review -c model_reasoning_effort="xhigh" --uncommitted`, or `--base main` once committed; it accepts no custom prompt alongside `--uncommitted`, and runs for minutes, so give it a 600000 ms timeout.
+
+**Rounds converge.** Round 1 runs every pass of the tier. Later rounds re-review only the fixes, with `code-review` at the tier's level on the lines they changed. After three rounds that still produce findings, stop and rethink the approach with the user instead of starting a fourth. A finding rejected as a false positive stays rejected when a later pass reports it again.
+
+**Each pass** (Claude or Codex):
+
+- **Criteria:** the conventions in this file, and the `<rule_N>` blocks and conventions in the `AGENTS.md` of each layer the diff touches; read those first, as they don't load on their own. A broken rule is a finding.
+- **Report bugs and rule breaks.** Format, lint, unused code and the fitness checks belong to `scripts/quality`, which enforces them; leave those, `build/` and `.swiftlint-baseline.json` to it.
+- **Mark pre-existing problems** (in lines the diff doesn't touch) as such: they become a GitHub issue (`issue-tracking` skill), and the PR stays on its own change.
+- **Format:** open with the finding count, or "No issues"; cite `file:line` for every finding.
+
+### Delegating
+
+On a task spanning several files, layers or PRs, the main session is the **orchestrator**: it keeps the plan, the decisions and the thread with the user, and hands legwork to subagents (the Agent tool) so their file dumps, build logs and test output stay out of its context window.
+
+- **Delegate any step whose output you need back only as a conclusion**: a broad code search (`Explore`), digging through a long build or test log, a review pass, an independent slice of the plan. Keep in the main session the work that needs the user's judgement or the conversation's history.
+- **Brief each subagent as a cold start**: the goal, the files, the constraints, its done-criterion, and the shape of the report to return (a summary, a findings list, the gate table).
+- **Run independent slices, or a staged pipeline (implement → review → verify), as a Workflow.** Agents that build or test follow [Parallel agents](#parallel-agents), with at most three building at once.
 
 ## Building Systems
 
@@ -74,7 +107,7 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
 - The Domain/Data ratchets measure line and region coverage. A region is a code path inside a line (the default of `?? 0`, one side of `&&`), so a line counts as covered while one of its regions never ran. Lowering any ratchet is the user's call (below).
 - The Unused code gate runs Periphery (`.periphery.yml`, strict, no baseline) on the index of the gate's own test build (`build/DerivedData`) and fails on any unused declaration.
 - The Fitness gate (`scripts/fitness/run`) checks the cross-file rules linked from the layer `AGENTS.md` files (localization parity, test mirror, UI-test accessibility IDs); pre-commit and CI `lint` run it too.
-- A task is **done** when `scripts/quality --full` exits 0. A change touching only docs or agent config (the paths under `paths-ignore` in `.github/workflows/ci.yml`; CI skips it) is **done** when `scripts/quality --fast` exits 0. Paste that run's gate table in your final report and PR.
+- A task is **done** when `scripts/quality --full` exits 0. A change touching only docs or agent config (the paths under `paths-ignore` in `.github/workflows/ci.yml`; CI skips its `lint` and `test`) is **done** when `scripts/quality --fast` exits 0. Paste that run's gate table in your final report and PR.
 - Fix a red gate in code or tests. Lowering a threshold, editing `scripts/coverage-exceptions.txt` or `scripts/fitness/test-mirror-exceptions.txt`, or adding a `swiftlint:disable` or `// periphery:ignore` is a decision for the user: call each one out explicitly in the report and PR.
 - Lint enforces size/complexity limits and the layer rules as SwiftLint rules (all in `.swiftlint.yml`). `.swiftlint-baseline.json` freezes the pre-existing violations, so only new ones fail. Regenerating the baseline to absorb a new violation is the user's call, like lowering a threshold. Burning one down is fixing it and regenerating the baseline in the same commit, from the repo root (the `jq` keeps paths repo-relative):
 
@@ -84,9 +117,9 @@ One agent per worktree; a single running Xcode serves every worktree's Xcode MCP
   ```
 - Each `.swift` file you edit or write is formatted in place and linted by a Claude Code hook; fix the violations it reports.
 - The git hooks refuse commits and pushes to `main` and run `--fast` before every push. Let them run: no `--no-verify`, no `SKIP_QUALITY`. The push takes ~2 min, past the Bash tool's 120 s default, so run `git push` with a 600000 ms timeout.
-- Open PRs as **draft**. Every push to a PR runs CI, drafts included. A docs-only PR gets no CI run: stop with the link once `--fast` is green. Mark any other PR ready only after a green local `CI=true scripts/quality --full` (`CI=true` turns compiler warnings into errors and makes `doctor` fatal, as CI does: run `scripts/bootstrap` first and fix what it reports): push, wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run (until then `gh pr checks` has nothing to watch), then `gh pr checks <n> --watch`. Green: `gh pr ready <n>` (it starts no new run) and stop there with the link; the user approves and merges every PR. Red: follow the `quality-gate` skill's CI section, which reads and reproduces each red run before the next push.
+- Open PRs as **draft**. Every push to a PR runs CI, drafts included. A docs-only PR runs only `changes` and `ci-gate` (~30 s): stop with the link once `--fast` is green. Mark any other PR ready only after a green local `CI=true scripts/quality --full` (`CI=true` turns compiler warnings into errors and makes `doctor` fatal, as CI does: run `scripts/bootstrap` first and fix what it reports): push, wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run (until then `gh pr checks` has nothing to watch), then `gh pr checks <n> --watch`. Green: `gh pr ready <n>` (it starts no new run) and stop there with the link; the user approves and merges every PR. Red: follow the `quality-gate` skill's CI section, which reads and reproduces each red run before the next push.
 
-**CI** (GitHub Actions; the repo is public, so its standard runners, macOS included, are free). The Linux `lint` job runs format, lint, fitness, ShellCheck and actionlint on every PR and push that touches more than docs or agent config. PRs, drafts included, also run `test` (`scripts/quality --full` on `runs-on: xcode-27`, ~23 min); Dependabot PRs run only `lint`. Pushes to `main` run `--fast` (~10–14 min), and the weekly schedule runs `--full` (~23 min). A red check is read and reproduced through the `quality-gate` skill's CI section.
+**CI** (GitHub Actions; the repo is public, so its standard runners, macOS included, are free). The Linux `lint` job runs format, lint, fitness, ShellCheck and actionlint on every PR and push that touches more than docs or agent config: on a PR, the `changes` job (`scripts/ci/docs-only.sh`) decides. `ci-gate`, the CI check the ruleset requires, always runs and fails when `changes`, `lint` or `test` failed or was cancelled. PRs, drafts included, also run `test` (`scripts/quality --full` on `runs-on: xcode-27`, ~23 min); Dependabot PRs run only `lint`. Pushes to `main` run `--fast` (~10–14 min), and the weekly schedule runs `--full` (~23 min). A red check is read and reproduced through the `quality-gate` skill's CI section.
 
 ## Data Migrations
 

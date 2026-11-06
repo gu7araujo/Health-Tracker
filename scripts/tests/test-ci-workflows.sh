@@ -2,8 +2,9 @@
 # Fitness test for .github/workflows: every Summary step runs under if: always() and calls
 # scripts/ci/summary.sh unconditionally, so a run that stops before build/quality.json is
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
-# wiring, the test job's PR filter, NUL-safe xargs, weekly/ci test-step parity, the weekly
-# failure issue, the simulator runtime step, step and job timeouts, action pinning.
+# wiring, the test job's PR filter, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
+# test-step parity, the weekly failure issue, the simulator runtime step, step and job timeouts,
+# action pinning.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
 # checks on scripts/tests/fixtures/ci-workflows to prove they still catch what they are for).
 set -uo pipefail
@@ -84,10 +85,41 @@ grep -q 'draft' <<<"$test_job" && fail "ci.yml test job: draft PRs run test too;
 grep -qF "github.actor != 'dependabot[bot]'" <<<"$test_if" || fail "ci.yml test job: Dependabot PRs must skip test"
 grep -qE '^[^#]*ready_for_review' "$CI" && fail "ci.yml: no ready_for_review trigger; the draft's run already checked the commit"
 
+# Every PR runs CI, so the required ci-gate check always reports: a docs-only PR runs only the
+# changes job, which skips lint and test. Pushes to main still skip docs-only changes outright.
+on_block="$(awk '/^on:/ { found = 1; next } found && /^[^ ]/ { exit } found { print }' "$CI")"
+trigger() { awk -v t="  $1:" '$0 == t { found = 1; next } found && /^  [a-z]/ { exit } found { print }' <<<"$on_block"; }
+grep -q 'paths-ignore' <<<"$(trigger pull_request)" &&
+  fail "ci.yml: the pull_request trigger takes no paths-ignore; the changes job decides what runs"
+grep -qE '^    paths-ignore: ' <<<"$(trigger push)" ||
+  fail "ci.yml: the push trigger needs paths-ignore (scripts/ci/docs-only.sh mirrors it)"
+# Rename detection would list only a rename's new path: code moved to a .md would read as docs-only.
+changes="$(awk '/^  changes:/ { found = 1; next } found && /^  [a-z]/ { exit } found { print }' "$CI")"
+grep -qF 'git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/docs-only.sh' <<<"$changes" ||
+  fail "ci.yml changes job: must pipe 'git diff --no-renames --name-only -z HEAD^1 HEAD' to scripts/ci/docs-only.sh"
+grep -qE '^    needs: changes *$' <<<"$lint" || fail "ci.yml lint job: needs: changes"
+# != 'false': only an explicit docs-only answer skips them, never a missing or mistyped output.
+grep -qxF "    if: needs.changes.outputs.code != 'false'" <<<"$lint" ||
+  fail "ci.yml lint job: must run unless needs.changes.outputs.code == 'false'"
+grep -qE '^    needs: \[changes, lint\] *$' <<<"$test_job" || fail "ci.yml test job: needs: [changes, lint]"
+# Exact, so an && / || precedence slip cannot run test on docs-only PRs.
+[ "$(tr -s ' \n' ' ' <<<"$test_if")" = " if: >- needs.changes.outputs.code != 'false' && (github.event_name != 'pull_request' || github.actor != 'dependabot[bot]') " ] ||
+  fail "ci.yml test job: if: must be needs.changes.outputs.code != 'false' && (<the Dependabot filter>)"
+# GitHub counts a skipped required job as passing, so the ruleset requires ci-gate alone: it always
+# runs and fails when a job it needs failed or was cancelled (skipped is fine: docs-only, Dependabot).
+ci_gate="$(awk '/^  ci-gate:/ { found = 1; next } found && /^  [a-z]/ { exit } found { print }' "$CI")"
+grep -qE '^    if: always\(\) *$' <<<"$ci_gate" || fail "ci.yml ci-gate job: needs if: always(), or a failed dependency skips it"
+grep -qE '^    needs: \[changes, lint, test\] *$' <<<"$ci_gate" || fail "ci.yml ci-gate job: needs: [changes, lint, test]"
+for result in failure cancelled; do
+  grep -qw "$result" <<<"$(grep -vE '^ *#' <<<"$ci_gate")" || fail "ci.yml ci-gate job: must fail when a job it needs is $result"
+done
+grep -qE '^[^#]*\) exit 1 ;; esac *$' <<<"$ci_gate" || fail "ci.yml ci-gate job: the failure/cancelled case must exit 1"
+
 # test_steps <workflow>: the test job's steps, with the quality mode spelled --full (ci.yml's
-# --full-only condition dropped) and without weekly.yml's red-run notification.
+# --full-only condition dropped), without blank lines (ci.yml's test job is not its last) and
+# without weekly.yml's red-run notification.
 test_steps() {
-  awk '/^  test:/ { job = 1; next } job && /^  [a-z]/ { exit } job && /^    steps:/ { steps = 1; next } steps { print }' "$1" |
+  awk '/^  test:/ { job = 1; next } job && /^  [a-z]/ { exit } job && /^    steps:/ { steps = 1; next } steps && NF { print }' "$1" |
     awk '/^ *- name: Notify on failure *$/ { skip = 1; next } skip && /^      - / { skip = 0 } !skip' |
     sed -E -e 's|scripts/quality "\$MODE"|scripts/quality --full|' -e "/^ *if: env.MODE == '--full'( +#.*)? *\$/d"
 }
@@ -183,10 +215,12 @@ if [ $# -eq 0 ]; then
   fixture runtime-order 2
   must "weekly.yml: the test job needs a 'Simulator runtime' step running scripts/ci/install-simulator-runtime.sh right before Quality gate"
   must "weekly.yml's test steps drifted from ci.yml's"
-  fixture draft 2
+  fixture draft 3
+  must "ci.yml test job: if: must be"
   must "ci.yml test job: draft PRs run test too; drop the draft condition"
   must "ci.yml: no ready_for_review trigger"
-  fixture dependabot 1
+  fixture dependabot 2
+  must "ci.yml test job: if: must be"
   must "ci.yml test job: Dependabot PRs must skip test"
   fixture drift 1
   must "weekly.yml's test steps drifted from ci.yml's"
@@ -208,6 +242,22 @@ if [ $# -eq 0 ]; then
   must "FAIL: weekly.yml: needs a 'Notify on failure' step with if: failure()"
   must "FAIL: weekly.yml: 'Notify on failure' should open an issue"
   must "FAIL: weekly.yml: opening an issue needs 'issues: write'"
+  fixture triggers 2
+  must "FAIL: ci.yml: the pull_request trigger takes no paths-ignore"
+  must "FAIL: ci.yml: the push trigger needs paths-ignore"
+  fixture renames 1
+  must "FAIL: ci.yml changes job: must pipe 'git diff --no-renames"
+  fixture changes 4
+  must "FAIL: ci.yml lint job: needs: changes"
+  must "FAIL: ci.yml lint job: must run unless needs.changes.outputs.code == 'false'"
+  must "FAIL: ci.yml test job: needs: [changes, lint]"
+  must "FAIL: ci.yml test job: if: must be"
+  fixture gate 3
+  must "FAIL: ci.yml ci-gate job: needs if: always()"
+  must "FAIL: ci.yml ci-gate job: needs: [changes, lint, test]"
+  must "FAIL: ci.yml ci-gate job: must fail when a job it needs is cancelled"
+  fixture gate-exit 1
+  must "FAIL: ci.yml ci-gate job: the failure/cancelled case must exit 1"
   fixture claude 2
   must "FAIL: claude-code-review.yml: the job must"
   must "FAIL: claude.yml: the job must"

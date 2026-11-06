@@ -272,7 +272,7 @@ Enabled by `scripts/bootstrap`. They live in `.githooks/`.
 - runs `scripts/fitness/persisted-shape-guard.sh origin/main`, which only warns (also with `SKIP_QUALITY=1`);
 - runs `scripts/quality --fast`, and blocks the push if a gate is red.
 
-Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). CI still runs the gate on every push to an open PR, drafts included, unless the push touches only docs or agent config. Use it rarely, and run `--full` before marking the PR ready.
+Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). CI still runs the gate on every push to an open PR, drafts included, unless the PR touches only docs or agent config. Use it rarely, and run `--full` before marking the PR ready.
 
 ## Xcode build phase
 
@@ -289,15 +289,19 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 | Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full`; a red run opens an issue "Weekly quality gate failed" (or comments on the open one) |
 | Manual (**Run workflow** in the Actions tab) | ✅ (`ci.yml`) | `scripts/quality --full` |
 
+**`changes`** runs first, on `ubuntu-24.04` (seconds). On a PR it feeds the changed files to `scripts/ci/docs-only.sh`; when every one is docs or agent config, `lint` and `test` are skipped. Other events always run them.
+
 **`lint`** runs on `ubuntu-24.04` (~1 min). It installs the pinned SwiftLint and SwiftFormat (`scripts/ci/install-tools.sh`), checks formatting, lints, and runs the [fitness checks](#fitness-functions) (on PRs also the persisted-shape guard, which only warns). SwiftLint violations show inline on the PR diff; SwiftFormat failures show in the step log. Linux SwiftLint skips the rules that need SourceKit (`custom_rules`, `statement_position`), so this job is a fast pre-filter: the full lint runs again in `test`. It also runs ShellCheck on the scripts and hooks and actionlint on the workflows.
 
 **`test`** runs only after `lint` passes, on `runs-on: xcode-27` (macOS 27). It selects the pinned Xcode (`scripts/ci/select-xcode.sh`) and installs the pinned tools. Then it runs the scripts' own tests (`scripts/tests/run`), on `--full` runs makes sure a simulator runtime at the SDK's iOS version is installed (`scripts/ci/install-simulator-runtime.sh`: the `xcode-27` image ships only iOS 27.0, so it runs `xcodebuild -downloadPlatform iOS`, a several-minute download, 20-minute step limit; pushes to `main` run `--fast` and skip it), and runs `scripts/quality` with `CI=true`, so `scripts/doctor` fails on any version drift and compiler warnings fail the build (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `GCC_TREAT_WARNINGS_AS_ERRORS`; locally they stay warnings). The gate table appears in the run's summary. Compile errors and test failures are rendered as GitHub annotations (`xcbeautify --renderer github-actions`).
+
+**`ci-gate`** always runs last and fails when `changes`, `lint` or `test` failed or was cancelled; a skipped job (docs-only PRs, `test` on Dependabot's) is fine. It is the check the `main` ruleset requires: GitHub counts a skipped required job as passing, so requiring `lint` and `test` themselves would pass a PR whose `changes` job crashed.
 
 **Cost.** The repo is public, and GitHub Actions is free for public repositories on standard GitHub-hosted runners, macOS included (`xcode-27` is a standard-size image); only larger runners are billed. Measured run times: a PR's `--full` ~23 min, a push to `main` (`--fast`) ~10–14 min, the weekly `--full` ~23 min. To keep feedback fast:
 
 - the macOS job waits for the Linux `lint` job;
 - a new push to a PR cancels the run it replaces (runs on `main` are never cancelled);
-- changes that touch only docs or agent config (the `paths-ignore` list in `ci.yml`) skip CI;
+- changes that touch only docs or agent config (the `paths-ignore` list in `ci.yml`) skip `lint` and `test`: a PR runs only `changes` and `ci-gate`, a push to `main` runs nothing;
 - marking a PR ready starts no run: the draft's run already checked that commit;
 - pushes to `main` run `--fast`, since the PR already ran `--full`;
 - Dependabot PRs run only `lint`.
@@ -312,7 +316,7 @@ gh run download <run-id> -n xcresult-<run-id> -D build/ci   # test results and x
 
 The artifact is uploaded only when `test` fails, and kept for 7 days. Open `build/ci/Test.xcresult` in Xcode, or reproduce locally with `CI=true scripts/quality --full`, which stops first on any drift from `scripts/tool-versions.env`, the versions CI uses.
 
-The `main` ruleset requires a PR but no status checks, so look at them before you approve and merge.
+The `main` ruleset requires a PR and the `claude-review` and `ci-gate` checks; `ci-gate` stands in for `changes`, `lint` and `test`, so still read a red one before you approve and merge.
 
 **Dependabot** (`.github/dependabot.yml`) opens one grouped PR a month that bumps the GitHub Actions; it runs only the `lint` job. Actions are pinned by commit SHA, with the version in a comment. Review and merge these like any other PR.
 
@@ -325,6 +329,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
   - `--no-verify` / `-n` and `git -c core.hooksPath`;
   - `SKIP_QUALITY=`;
   - pushes to `main` and force-pushes;
+  - `git reset --hard`;
   - `gh pr merge`.
 - A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately. If SwiftFormat or SwiftLint can't run, the hook reports that as an error instead of passing.
 - Agents open PRs as **draft**; every push runs CI, drafts included. They run `CI=true scripts/quality --full` locally, push, wait for the checks, and mark the PR ready once they are green. If `test` goes red, the agent reproduces it locally, fixes it and pushes again; a failure it can't reproduce locally, or a red run after a fix that was green locally, comes to you as a report instead. You review and merge.
@@ -342,7 +347,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `scripts/fitness/` | [Fitness functions](#fitness-functions): the cross-file checks, `run`, and `test-mirror-exceptions.txt` |
 | `scripts/lib/` | Pieces used by `scripts/quality` (coverage math, simulator picking, report table). Each has tests |
 | `scripts/tests/run` | Runs every `scripts/tests/test-*.sh` (the scripts' own tests, no simulator needed) |
-| `scripts/ci/` | CI helpers: `install-tools.sh` (pinned SwiftLint/SwiftFormat, and Periphery on macOS), `select-xcode.sh` (pinned Xcode), `install-simulator-runtime.sh` (an iOS runtime at the SDK's version, for the intents UI tests), `summary.sh` (gate table for the job summary) |
+| `scripts/ci/` | CI helpers: `install-tools.sh` (pinned SwiftLint/SwiftFormat, and Periphery on macOS), `select-xcode.sh` (pinned Xcode), `install-simulator-runtime.sh` (an iOS runtime at the SDK's version, for the intents UI tests), `summary.sh` (gate table for the job summary), `docs-only.sh` (whether a PR touches only docs or agent config, for the `changes` job) |
 | `.github/workflows/` | `ci.yml` (PRs, pushes to `main`), `weekly.yml` (schedule) and `claude-code-review.yml` (AI review of non-draft PRs, on Linux) |
 | `.githooks/` | pre-commit and pre-push hooks |
 | `.claude/hooks/format-swift.sh` | Claude Code hook that formats and lints each edited Swift file |
