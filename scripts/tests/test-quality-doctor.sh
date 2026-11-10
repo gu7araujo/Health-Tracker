@@ -108,7 +108,7 @@ run_doctor "$LSP"
 mv "$TMP/repo/buildServer.json" "$TMP/buildServer.json.aside"
 run_doctor "$LSP"
 [ "$code" -eq 0 ] || fail "missing buildServer.json should exit 0 (got $code)"
-[[ "$out" == *"warning: buildServer.json missing"*"fix: scripts/bootstrap"* ]] ||
+[[ "$out" == *"warning: buildServer.json missing or without a build_root"*"fix: scripts/bootstrap"* ]] ||
   fail "should warn that buildServer.json is missing, with the fix: $out"
 run_doctor "$LSP" true
 [ "$code" -eq 0 ] || fail "missing buildServer.json should not fail CI, which runs no LSP (got $code): $out"
@@ -127,12 +127,20 @@ run_doctor "$LSP"
   fail "should warn that no build is behind buildServer.json: $out"
 write_build_server "$TMP/DerivedData/HealthTracker-abc"
 
+# A buildServer.json that is not xcode-build-server's (no build_root) counts as missing.
+echo '{}' >"$TMP/repo/buildServer.json"
+run_doctor "$LSP"
+[[ "$out" == *"warning: buildServer.json missing or without a build_root"*"fix: scripts/bootstrap"* ]] ||
+  fail "should warn that buildServer.json has no build_root: $out"
+
 # xcode-build-server writes JSON with non-ASCII characters escaped (a home directory like João).
 accented="$TMP/DerivedData/$(printf 'Jo\303\243o')"
 mkdir -p "$accented/Logs/Build" && touch "$accented/Logs/Build/1.xcactivitylog"
 write_build_server "$TMP/DerivedData/Jo\\u00e3o"
 run_doctor "$LSP"
 [[ "$out" != *warning* ]] || fail "an escaped non-ASCII build_root should be decoded: $out"
+out="$(PATH="$LSP:/usr/bin:/bin" CI="" LC_ALL=en_US.ISO8859-1 "$DOCTOR" 2>&1)"
+[[ "$out" != *warning* ]] || fail "a non-UTF-8 locale should not garble a non-ASCII build_root: $out"
 write_build_server "$TMP/DerivedData/HealthTracker-abc"
 
 mv "$LSP/xcode-build-server" "$TMP/xcode-build-server.aside"

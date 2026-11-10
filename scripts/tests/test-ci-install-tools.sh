@@ -126,6 +126,19 @@ grep -qx "$xbs_url" "$TMP/curl.calls" || fail "macOS should fetch $xbs_url, got:
 install Darwin arm64 XBS_VERSION=0.1.0
 [ "$code" -ne 0 ] || fail "an xcode-build-server that is not the pinned version should fail the install"
 
+# A symlinked bin dir (one install shared across worktrees): the link still reaches the sources.
+mkdir -p "$TMP/shared/tools/bin" && ln -s "$TMP/shared/tools/bin" "$TMP/linked-bin"
+out="$(env -u CI -u GITHUB_PATH FAKE_OS=Darwin FAKE_ARCH=arm64 PATH="$TMP/stubs:$PATH" "$SCRIPT" "$TMP/linked-bin" 2>&1)" ||
+  fail "install into a symlinked bin dir should succeed: $out"
+[ "$("$TMP/linked-bin/xcode-build-server" 2>&1)" = launcher ] ||
+  fail "xcode-build-server should run through a symlinked bin dir"
+
+# A relative bin dir is not looked up in CDPATH (scripts/bootstrap passes build/tools/bin).
+mkdir -p "$TMP/elsewhere/rel/bin" "$TMP/cwd"
+out="$(cd "$TMP/cwd" && env -u CI -u GITHUB_PATH CDPATH="$TMP/elsewhere" FAKE_OS=Darwin FAKE_ARCH=arm64 PATH="$TMP/stubs:$PATH" "$SCRIPT" rel/bin 2>&1)" ||
+  fail "install into a relative bin dir should ignore CDPATH: $out"
+[ -f "$TMP/cwd/rel/libexec/xcode-build-server/misc.py" ] || fail "a relative bin dir should resolve against the current directory, not CDPATH"
+
 # CI runs no LSP, so it skips the download.
 install Darwin arm64 CI=true
 [ "$code" -eq 0 ] || fail "macOS CI install should succeed (got $code): $out"

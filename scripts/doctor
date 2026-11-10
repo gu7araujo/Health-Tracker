@@ -47,11 +47,11 @@ done
 if [ "$level" = "warning" ] && [ "$(uname -s)" = Darwin ]; then
   build_server="$(dirname "$0")/../buildServer.json"
   command -v xcode-build-server >/dev/null || report "xcode-build-server not installed" "scripts/bootstrap"
-  if [ ! -f "$build_server" ]; then
-    report "buildServer.json missing (swift-lsp diagnostics are unreliable without it)" "scripts/bootstrap"
+  # Parsed as JSON, printed as UTF-8: xcode-build-server escapes non-ASCII path characters (\uXXXX).
+  build_root="$(PYTHONIOENCODING=utf-8 python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("build_root", ""))' "$build_server" 2>/dev/null)"
+  if [ -z "$build_root" ]; then
+    report "buildServer.json missing or without a build_root (swift-lsp diagnostics are unreliable without it)" "scripts/bootstrap"
   else
-    # Parsed as JSON: xcode-build-server escapes non-ASCII path characters (\uXXXX).
-    build_root="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("build_root", ""))' "$build_server" 2>/dev/null)"
     build_fix="build the app once (Xcode or the Xcode MCP BuildProject); swift-lsp reads that build's settings and index"
     if [ ! -d "$build_root" ]; then
       report "buildServer.json points at $build_root, which does not exist" "scripts/bootstrap, then $build_fix"

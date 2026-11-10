@@ -82,7 +82,7 @@ fi
 xbs=""
 if [ -n "$periphery" ] && [ "${CI:-}" != "true" ]; then
   # The physical parent of <bin-dir>: where the relative link below resolves, even through a symlink.
-  xbs="$(cd "$BIN/.." && pwd -P)/libexec/xcode-build-server"
+  xbs="$(CDPATH='' cd -P -- "$BIN" && cd .. && pwd -P)/libexec/xcode-build-server"
   archive="v$XCODE_BUILD_SERVER_VERSION.tar.gz"
   curl -fsSL --retry 3 -o "$work/$archive" \
     "https://github.com/SolaWing/xcode-build-server/archive/refs/tags/$archive"
