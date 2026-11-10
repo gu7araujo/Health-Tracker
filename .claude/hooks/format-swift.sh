@@ -2,9 +2,31 @@
 # Claude Code PostToolUse hook: formats the edited Swift file with SwiftFormat,
 # then lints it. Violations, and any tool that fails to run, go to stderr with
 # exit 2 so the agent sees them.
+#
+# Edit/Write name the file by absolute path (`file_path`). The Xcode MCP write
+# tools pass `filePath`, a project-structure path (`<project name>/<path inside
+# the checkout>`), so the checkout comes from an absolute `workspaceIdentifier`,
+# or else from the session's `cwd`. A path that resolves to no file is skipped.
+# An opaque identifier (`workspace-…`) can't be mapped to a checkout from here:
+# when it names another checkout than `cwd`'s, the hook checks `cwd`'s file of
+# the same path instead of the one written.
 set -uo pipefail
 
-file="$(jq -r '.tool_input.file_path // empty')"
+input="$(cat)"
+field() { jq -r "$1 // empty" <<<"$input"; }
+
+file="$(field .tool_input.file_path)"
+if [ -z "$file" ]; then
+  xcode_path="$(field .tool_input.filePath)"
+  workspace="$(field .tool_input.workspaceIdentifier)"
+  if [[ "$workspace" == /* ]]; then
+    checkout="$(dirname "$workspace")"
+  else
+    checkout="$(git -C "$(field .cwd)" rev-parse --show-toplevel 2>/dev/null)"
+  fi
+  [[ -n "$xcode_path" && -n "$checkout" ]] || exit 0
+  file="$checkout/${xcode_path#*/}"
+fi
 [[ "$file" == *.swift && -f "$file" ]] || exit 0
 
 # Run from the repo root so SwiftLint picks up .swiftlint.yml.
