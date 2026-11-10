@@ -127,11 +127,24 @@ run_doctor "$LSP"
   fail "should warn that no build is behind buildServer.json: $out"
 write_build_server "$TMP/DerivedData/HealthTracker-abc"
 
+# xcode-build-server writes JSON with non-ASCII characters escaped (a home directory like João).
+accented="$TMP/DerivedData/$(printf 'Jo\303\243o')"
+mkdir -p "$accented/Logs/Build" && touch "$accented/Logs/Build/1.xcactivitylog"
+write_build_server "$TMP/DerivedData/Jo\\u00e3o"
+run_doctor "$LSP"
+[[ "$out" != *warning* ]] || fail "an escaped non-ASCII build_root should be decoded: $out"
+write_build_server "$TMP/DerivedData/HealthTracker-abc"
+
 mv "$LSP/xcode-build-server" "$TMP/xcode-build-server.aside"
 run_doctor "$LSP"
 [[ "$out" == *"warning: xcode-build-server not installed"*"fix: scripts/bootstrap"* ]] ||
   fail "should warn that xcode-build-server is missing: $out"
 run_doctor "$LSP" true
 [ "$code" -eq 0 ] || fail "missing xcode-build-server should not fail CI (got $code): $out"
+
+# Off macOS there is no Xcode to serve, and install-tools.sh installs no xcode-build-server.
+printf '#!/bin/sh\necho Linux\n' >"$LSP/uname" && chmod +x "$LSP/uname"
+run_doctor "$LSP"
+[[ "$out" != *xcode-build-server* ]] || fail "Linux should skip the swift-lsp checks: $out"
 
 [ "$failures" -eq 0 ]

@@ -8,6 +8,7 @@
 #   is appended to it so later steps find the tools. Supports macOS and Linux x86_64.
 #   Locally, `scripts/ci/install-tools.sh build/tools/bin` installs them where scripts/quality
 #   looks first, so a fresh clone needs no Homebrew for them.
+#   xcode-build-server's sources go beside <bin-dir>, into <bin-dir>/../libexec/xcode-build-server.
 set -euo pipefail
 
 # shellcheck source=../tool-versions.env
@@ -80,7 +81,8 @@ fi
 # libexec beside <bin-dir>; its launcher, linked into <bin-dir>, imports the modules next to its real path.
 xbs=""
 if [ -n "$periphery" ] && [ "${CI:-}" != "true" ]; then
-  xbs="$(dirname "$BIN")/libexec/xcode-build-server"
+  # The physical parent of <bin-dir>: where the relative link below resolves, even through a symlink.
+  xbs="$(cd "$BIN/.." && pwd -P)/libexec/xcode-build-server"
   archive="v$XCODE_BUILD_SERVER_VERSION.tar.gz"
   curl -fsSL --retry 3 -o "$work/$archive" \
     "https://github.com/SolaWing/xcode-build-server/archive/refs/tags/$archive"

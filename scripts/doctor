@@ -43,14 +43,15 @@ for tool in xcbeautify jq; do
   command -v "$tool" >/dev/null || report "$tool not installed" "brew install $tool"
 done
 
-# swift-lsp reads its build settings through xcode-build-server; CI runs no LSP.
-if [ "$level" = "warning" ]; then
+# swift-lsp reads its build settings through xcode-build-server; CI runs no LSP, and the tool is macOS only.
+if [ "$level" = "warning" ] && [ "$(uname -s)" = Darwin ]; then
   build_server="$(dirname "$0")/../buildServer.json"
   command -v xcode-build-server >/dev/null || report "xcode-build-server not installed" "scripts/bootstrap"
   if [ ! -f "$build_server" ]; then
     report "buildServer.json missing (swift-lsp diagnostics are unreliable without it)" "scripts/bootstrap"
   else
-    build_root="$(sed -n 's/.*"build_root": "\(.*\)".*/\1/p' "$build_server")"
+    # Parsed as JSON: xcode-build-server escapes non-ASCII path characters (\uXXXX).
+    build_root="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("build_root", ""))' "$build_server" 2>/dev/null)"
     build_fix="build the app once (Xcode or the Xcode MCP BuildProject); swift-lsp reads that build's settings and index"
     if [ ! -d "$build_root" ]; then
       report "buildServer.json points at $build_root, which does not exist" "scripts/bootstrap, then $build_fix"

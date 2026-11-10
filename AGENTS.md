@@ -52,7 +52,7 @@ On a task spanning several files, layers or PRs, the main session is the **orche
 - Build, test and preview through the Xcode MCP tools. When they are unavailable or failing, fall back to `xcodebuild`: `cli-build` skill to build, `cli-test` skill to run tests.
 - Apple API docs: use the Xcode MCP `DocumentationSearch` tool (a `query`, optionally `frameworks`) over training memory, especially for iOS 26 APIs like Liquid Glass.
 - After a UI change, render the view's `#Preview` with the Xcode MCP `RenderPreview` tool and review the snapshot in light, dark and a large Dynamic Type size. Add a `#Preview` first when the view has none.
-- After `scripts/bootstrap` and one build, use the `LSP` tool for go-to-definition and find-references. Its diagnostics are real; fix them rather than ignoring them.
+- After `scripts/bootstrap` and one Xcode build (the Xcode MCP `BuildProject`; `scripts/quality` builds into its own `build/DerivedData`, which the LSP doesn't read), use the `LSP` tool for go-to-definition and find-references. Its diagnostics are real; fix them rather than ignoring them.
 - To see how code behaves without writing a test, run a `print`-based snippet with the Xcode MCP `RunCodeSnippet` tool (e.g. construct a `DayData` and print its `status`).
 - The project uses `PBXFileSystemSynchronizedRootGroup`: adding or deleting a source file needs no `project.pbxproj` edit. A file under `HealthTracker/` that must stay out of the app bundle (an `AGENTS.md`) needs a `membershipExceptions` entry there.
 
