@@ -22,6 +22,15 @@ It tests on `--simulator <udid>` when given; otherwise it reuses or clones a sim
 
  Delete both clones when the branch is done: `xcrun simctl delete "HT-<branch with / replaced by ->"` and `xcrun simctl delete "HT-<branch with / replaced by ->-ios27"`.
 
+**In a cloud session** (a Linux container: no `xcrun`, Xcode MCP disconnected), the Mac-only gates run on CI, and you run them there yourself:
+
+1. Run what Linux can locally first: `scripts/tests/run` for the script tests that need no Xcode or SwiftLint, ShellCheck as CI's `lint` job runs it, and `scripts/fitness/run`.
+2. Commit and push the branch, then dispatch `ci.yml` on it (`workflow_dispatch`, ref = the branch; no PR needed). That run does `lint`, then `test`: `scripts/tests/run` and `CI=true scripts/quality --full`.
+3. Find the run with a `list_workflow_runs` filtered on `event: workflow_dispatch`, and wait for it with a scheduled check-in or Monitor (~25 min).
+4. Read each job's result; on red, read the failing step's log, fix, push, and dispatch again.
+
+The `Quality gate` step's log ends with the gate table: paste it with the run link as this session's table. Ask the user to run a command on their Mac only for what CI cannot do: a device, the Simulator UI, an Xcode MCP tool such as `RenderPreview`.
+
 **Done when:** `scripts/quality --full` exits 0; for a change touching only docs or agent config (the paths under `paths-ignore` in `.github/workflows/ci.yml`), when `scripts/quality --fast` exits 0. Paste the table it prints into the final report and PR. Before marking any other PR ready, run it as `CI=true scripts/quality --full`: only `CI=true` turns compiler warnings into errors, as CI does, so a warning that passes locally fails the PR's CI run. It also makes `scripts/doctor` exit 1 before any gate on a missing or mismatched pinned tool or Xcode: run `scripts/bootstrap` first and fix what its `doctor` reports.
 
 ## 2. Read the result
