@@ -9,6 +9,14 @@ Adapts persistence and platform services to the domain: raw I/O, orchestration, 
 - `NSFileCoordinator` guards concurrent file access.
 - Decode failures degrade to empty arrays rather than crashing.
 
+## Data Migrations
+
+Existing users' JSON files, on disk and in iCloud, must keep loading after every release, with no data lost and no crash on launch.
+
+- A change to the persisted JSON shape (renaming, removing or retyping a field, changing an encoding format, restructuring `DayData`/`Meal`/`Workout`/`Mood` or `DayDataContainer`) needs a decision: a migration in `Migration/DataMigration.swift`, decode-time healing at the entity (`Domain/AGENTS.md` rule_2), or a stated reason why old files still load.
+- A migration follows the existing pattern: a private function guarded by its own `UserDefaults` completion flag, called from `migrateIfNeeded()`, with the tests rule_4 lists.
+- `scripts/fitness/persisted-shape-guard.sh` warns in pre-push and on PRs when a persisted type's shape changes without `Data/Migration/` or `DataMigrationTests` changing. Answer it with a migration, or say in the PR why none is needed.
+
 ## Rules
 
 Type-Driven Design — encode business rules and guarantees in the type system.

@@ -55,16 +55,7 @@ Group keys by feature area with snake_case prefixes:
 
 ## App Intents
 
-`Intents/` holds the Siri/Shortcuts/Spotlight entry points (`LogWaterIntent`, `LogMoodIntent`, `AddMealIntent`, `AddWorkoutIntent`, `GetDayStatusIntent`) and `HealthTrackerShortcuts`. Like views, they reach the domain only through use cases.
-
-- **Isolation.** Don't mark intent or `AppEnum` types `nonisolated`. They already infer nonisolated because the protocols refine `Sendable`, and an explicit `nonisolated struct` breaks the build on its `@Parameter` vars. Mark `perform()`, `run(with:on:)`, and `registerUndo(on:…)` `@MainActor`. That's where the use cases and `undoManager` live.
-- **Testable core.** `perform()` stays thin: it builds live use cases from `IntentUseCaseFactory`, then calls `run(with:on:)`, `registerUndo(on:useCase:change:)`, and `cancelTodaysNotifications()`. Tests drive `run`/`registerUndo` with `MockHealthDataRepository` and a real `UndoManager` (`UndoManager.registerAndUndo`). `perform()` itself is covered end to end by `HealthTrackerIntentsUITests`, which `scripts/quality --full` runs on iOS 27 and counts toward the per-file floor. There's no `@Dependency`, because an unregistered one is a `fatalError` on a cold Siri launch.
-- **One write, last.** Resolve every parameter, including any `needsValueError` re-ask, before the single save. `perform()` can restart from the top, so nothing may be saved before it.
-- **Every write posts `healthDataDidChange`.** Writes and undos go through `UpdateDayDataUseCase.executeAndNotify`. `MainView` reloads on that notification and on scene activation, so its in-memory days can't overwrite an intent's write.
-- **Frozen contract.** Intent type names, `AppEnum` raw values (explicit strings in `IntentEnums.swift`, guarded by tests), and App Shortcut phrases are persisted by Shortcuts and Siri. You may add to them, but never rename or remove. `AppEnum`s mirror domain enums so Domain stays framework-free.
-- **Strings.** Titles, parameters, and dialogs use literal `intent_*` keys in `Localizable.strings`. Summaries are keyed with `${param}` (`"intent_log_water_summary ${amount}"`), and interpolated dialogs with `%@`. Phrases are keyed by their English source in `AppShortcuts.strings` (en and pt-BR), and every phrase needs `\(.applicationName)`.
-- **Run-time text is resolved in the app.** Siri and Shortcuts look a key up in their own process and language, which can differ from the app's (on the iOS 27 simulator the Shortcuts runner reads no preferences and shows English). So every dialog, prompt (`requestValueDialog`, `requestDisambiguationDialog`, `needsValueError`), and error message goes through `LocalizedStringResource.resolvedInApp`, built by a static on the intent (`LogMoodIntent.dialog(for:)`, `AddMealIntent.itemsPrompt`) and tested with `readByForeignHost`. Static metadata (titles, parameter names, summaries) can't be: the system reads it from the build.
-- **Spotlight.** A search of the app's name shows about three shortcuts, starting from `HealthTrackerShortcuts`' order, so the most common logs go first. No phrase interpolates an `AppEnum`: each case becomes its own result and crowds the others out.
+`Intents/` holds the Siri/Shortcuts/Spotlight entry points and `HealthTrackerShortcuts`. Before changing a file there, or an `intent_*` string or `AppShortcuts.strings` phrase, read `Intents/AGENTS.md`: intent names, `AppEnum` raw values and phrases are a frozen contract.
 
 ## Rules
 

@@ -15,7 +15,7 @@ xcrun simctl list devices
 ```
 Substitute its UDID for `<simulator-id>` below.
 
-**When other agents may be testing in parallel** ([`AGENTS.md` → Parallel agents](../../../AGENTS.md#parallel-agents)), run on a simulator of your own:
+**When other agents may be testing in parallel** (`parallel-agents` skill), run on a simulator of your own:
 
 ```bash
 xcrun simctl clone <shut-down-simulator-id> "HT-<branch-name>"   # prints the new UDID: your <simulator-id>

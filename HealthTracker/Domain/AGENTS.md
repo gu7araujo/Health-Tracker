@@ -28,7 +28,7 @@ Type-Driven Design — encode invariants in types so they hold by construction (
 </rule_1>
 
 <rule_2>
-**TOLERANT DECODE AT THE ENTITY** — `Meal` and `Workout` carry custom `Codable` inits that upgrade legacy shapes in place: `Meal` reads a legacy single `description` when `items` is absent; `Workout.Intensity` defaults to `.medium` when missing; `Workout.Duration` maps the old enum raw values (0–6) to real minutes. This is per-field, decode-time healing — distinct from the one-time file migration in `Data/Migration/`. Any change to a persisted entity's shape lands here first; see the root **Data Migrations** policy before touching it.
+**TOLERANT DECODE AT THE ENTITY** — `Meal` and `Workout` carry custom `Codable` inits that upgrade legacy shapes in place: `Meal` reads a legacy single `description` when `items` is absent; `Workout.Intensity` defaults to `.medium` when missing; `Workout.Duration` maps the old enum raw values (0–6) to real minutes. This is per-field, decode-time healing — distinct from the one-time file migration in `Data/Migration/`. Any change to a persisted entity's shape lands here first; read the **Data Migrations** policy in `Data/AGENTS.md` before touching it.
 </rule_2>
 
 <rule_3>

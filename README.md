@@ -246,7 +246,7 @@ Some rules span several files, which SwiftLint can't see. Small bash scripts in 
 | `localization-parity.sh` | A `.strings` file, or a key in one, exists in `en.lproj` but not `pt-BR.lproj`, or the reverse | `Presentation/AGENTS.md` localization |
 | `test-mirror.sh` | A Domain/Data `.swift` file has no `HealthTrackerTests/**/<Name>Tests.swift`. Protocol-only files don't count. A name shared with another app file needs its test at the mirrored path, `HealthTrackerTests/<dirs>/<Name>Tests.swift` | `HealthTrackerTests/AGENTS.md` (mirrors the production tree) |
 | `accessibility-ids.sh` | An ID in `HealthTrackerUITests/Support/AccessibilityID.swift` isn't declared in `HealthTracker/Presentation/AccessibilityID.swift` | `HealthTrackerUITests/AGENTS.md` rule_2 |
-| `persisted-shape-guard.sh` (warns only) | A `Codable` member of `DayData`, `RecordedDayData`, `Meal`, `Workout`, `Mood` or `DayDataContainer` changed, but neither `HealthTracker/Data/Migration/` nor `DataMigrationTests` did | `AGENTS.md` Data Migrations |
+| `persisted-shape-guard.sh` (warns only) | A `Codable` member of `DayData`, `RecordedDayData`, `Meal`, `Workout`, `Mood` or `DayDataContainer` changed, but neither `HealthTracker/Data/Migration/` nor `DataMigrationTests` did | `Data/AGENTS.md` Data Migrations |
 
 `scripts/fitness/run` runs the first three, prints one `<check>: <file>[:<line>]: <message>` line per violation and then `N violation(s)`, and exits 1 if N > 0.
 
