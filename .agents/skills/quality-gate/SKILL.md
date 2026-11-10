@@ -9,7 +9,7 @@ description: Run HealthTracker's quality gate (scripts/quality), act on its resu
 
 ## 1. Run it
 
-`scripts/bootstrap` (once per clone and per new worktree) installs the git hooks and the pinned SwiftLint, SwiftFormat, Periphery and xcode-build-server into `build/tools/bin`, writes `buildServer.json` for swift-lsp, and checks tool versions; the gate looks for its tools there first.
+`scripts/bootstrap` (once per clone and per new worktree) installs the git hooks and the pinned SwiftLint, SwiftFormat and Periphery into `build/tools/bin`, and checks tool versions; the gate looks for its tools there first.
 
 ```bash
 scripts/quality --fast --json   # iterate: format, lint, fitness, unit tests, unused code, Domain/Data unit line + region coverage (~2 min)

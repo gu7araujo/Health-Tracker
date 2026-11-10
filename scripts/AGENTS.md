@@ -5,7 +5,7 @@ The bash tooling behind the quality gate, the git hooks and CI. Each script's he
 ## Map
 
 - `quality` — the one gate: runs every check and prints the pass/fail table (`--help` lists the modes).
-- `bootstrap` — setup per clone or new worktree: enables `.githooks`, installs the pinned tools into `build/tools/bin` (`ci/install-tools.sh`), writes the checkout's gitignored `buildServer.json` (`xcode-build-server config`, the build settings swift-lsp reads), then runs `doctor`.
+- `bootstrap` — setup per clone or new worktree: enables `.githooks`, installs the pinned tools into `build/tools/bin` (`ci/install-tools.sh`), writes the checkout's gitignored `buildServer.json` for swift-lsp, then runs `doctor`.
 - `doctor` — compares installed tools with `tool-versions.env`; warns locally, fails under `CI=true`. Locally it also warns when swift-lsp's setup is incomplete: no `xcode-build-server`, no `buildServer.json`, or no build behind it.
 - `lib/` — helpers behind `quality`; each file's header names its job. `tools-path.sh` (`prepend_tools_path <root>`, the one build/tools/bin PATH lookup) is also sourced by `doctor`, `tests/run`, `.githooks/pre-commit` and `.claude/hooks/format-swift.sh`.
 - `ci/` — GitHub Actions steps: pinned tool install, Xcode selection, the iOS simulator runtime `--full` needs (`install-simulator-runtime.sh`, the SDK's version for `HealthTrackerIntentsUITests`), the job summary, the docs-only test behind the `changes` job (`docs-only.sh`).

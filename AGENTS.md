@@ -52,7 +52,7 @@ On a task spanning several files, layers or PRs, the main session is the **orche
 - Build, test and preview through the Xcode MCP tools. When they are unavailable or failing, fall back to `xcodebuild`: `cli-build` skill to build, `cli-test` skill to run tests.
 - Apple API docs: use the Xcode MCP `DocumentationSearch` tool (a `query`, optionally `frameworks`) over training memory, especially for iOS 26 APIs like Liquid Glass.
 - After a UI change, render the view's `#Preview` with the Xcode MCP `RenderPreview` tool and review the snapshot in light, dark and a large Dynamic Type size. Add a `#Preview` first when the view has none.
-- After `scripts/bootstrap` and one Xcode build (the Xcode MCP `BuildProject`; `scripts/quality` builds into its own `build/DerivedData`, which the LSP doesn't read), use the `LSP` tool for go-to-definition and find-references. Its diagnostics are real; fix them rather than ignoring them.
+- Use the `LSP` tool for go-to-definition and find-references once the checkout has run `scripts/bootstrap` and has one Xcode build (the Xcode MCP `BuildProject`); `scripts/quality` builds into `build/DerivedData`, which swift-lsp does not read. From then on its diagnostics are the compiler's: fix them.
 - To see how code behaves without writing a test, run a `print`-based snippet with the Xcode MCP `RunCodeSnippet` tool (e.g. construct a `DayData` and print its `status`).
 - The project uses `PBXFileSystemSynchronizedRootGroup`: adding or deleting a source file needs no `project.pbxproj` edit. A file under `HealthTracker/` that must stay out of the app bundle (an `AGENTS.md`) needs a `membershipExceptions` entry there.
 
@@ -71,7 +71,7 @@ A change to the persisted JSON shape (`DayData`, `Meal`, `Workout`, `Mood`, `Day
 
 ## Committing
 
-- Run `scripts/bootstrap` once per clone and per new worktree: it installs the git hooks and the pinned tools, and writes the checkout's `buildServer.json` (swift-lsp's build settings).
+- Run `scripts/bootstrap` once per clone and per new worktree: it installs the git hooks and the pinned tools.
 - Branch first (`git switch -c <type>/<name>`): the git hooks refuse commits and pushes to `main`, and run `scripts/quality --fast` before every push. Let them run.
 - Use the `gh` CLI for GitHub work. Open PRs as **draft**; the user approves and merges every PR. Pushing, watching CI and marking a PR ready: `quality-gate` skill.
 - A task that outlives the session becomes a GitHub issue, closed by the PR that does it: `issue-tracking` skill.
