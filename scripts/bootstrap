@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # One-time setup per clone or worktree: enables the repo's git hooks, installs the pinned
-# SwiftLint, SwiftFormat and Periphery into build/tools/bin, and checks tool versions. Safe to re-run.
+# SwiftLint, SwiftFormat, Periphery and xcode-build-server into build/tools/bin, writes this
+# checkout's buildServer.json (swift-lsp's build settings), and checks tool versions. Safe to re-run.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
@@ -15,6 +16,14 @@ echo "Git hooks enabled (core.hooksPath=.githooks)."
 
 if [ -x scripts/ci/install-tools.sh ]; then
   scripts/ci/install-tools.sh build/tools/bin
+fi
+
+# buildServer.json binds sourcekit-lsp to this checkout's DerivedData. It records the path the
+# tool is called by as the command sourcekit-lsp launches, hence the absolute path.
+xbs="$PWD/build/tools/bin/xcode-build-server"
+if [ -x "$xbs" ] && [ -d HealthTracker.xcodeproj ]; then
+  "$xbs" config -project HealthTracker.xcodeproj -scheme HealthTracker >/dev/null ||
+    echo "warning: could not write buildServer.json; swift-lsp diagnostics will be unreliable." >&2
 fi
 
 if [ -x scripts/doctor ]; then

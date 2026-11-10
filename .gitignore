@@ -73,3 +73,5 @@ fastlane/test_output
 
 # Test Coverage report
 build/
+# swift-lsp build server config (scripts/bootstrap writes it; holds machine-specific paths)
+buildServer.json

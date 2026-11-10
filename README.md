@@ -39,9 +39,10 @@ The SwiftLint, SwiftFormat, Periphery and Xcode versions are pinned in `scripts/
 scripts/bootstrap
 ```
 
-This does three things:
+This does four things:
 - It points git at the repo's hooks (`git config core.hooksPath .githooks`). The path is relative, so every worktree uses its own `.githooks`. If a different hooks path was set before, it tells you it replaced it.
 - It runs `scripts/ci/install-tools.sh build/tools/bin`, which downloads the pinned Periphery, SwiftLint and SwiftFormat (each release zip sha256-checked) into `build/tools/bin`. The gate, `doctor`, the hooks and the script tests run tools from there before `PATH`. A fresh worktree has no `build/tools/bin`, so bootstrap it before its first push: without Periphery the pre-push gate fails.
+- On macOS it also installs the pinned [xcode-build-server](https://github.com/SolaWing/xcode-build-server) and writes a gitignored `buildServer.json`, so `sourcekit-lsp` (the swift-lsp plugin) resolves the app module. Diagnostics are accurate once the checkout has been built in Xcode (`scripts/quality` builds into `build/DerivedData`, which does not count).
 - It runs `scripts/doctor`, which compares your installed tools with the pins and prints a fix command for each mismatch.
 
 Running `scripts/bootstrap` again is safe.
@@ -339,7 +340,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | Path | Purpose |
 |---|---|
 | `scripts/quality` | The quality gate (see above) |
-| `scripts/bootstrap` | One-time setup per clone or worktree: enables `.githooks`, installs the pinned tools into `build/tools/bin`, runs `doctor` |
+| `scripts/bootstrap` | One-time setup per clone or worktree: enables `.githooks`, installs the pinned tools into `build/tools/bin`, writes `buildServer.json`, runs `doctor` |
 | `scripts/doctor` | Compares installed tools with the pins. Warns locally, fails when `CI=true` |
 | `scripts/tool-versions.env` | Pinned SwiftLint / SwiftFormat / Periphery / Xcode versions and test simulator model |
 | `scripts/quality-thresholds.env` | Coverage thresholds and ratchets |
