@@ -4,7 +4,7 @@ HealthTracker is an iOS 26.0 health tracking app built with SwiftUI and Swift 6:
 
 ## Repo Map
 
-Each area keeps its rules in its own `AGENTS.md`. Read it before changing files there: it doesn't load on its own.
+Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it when you first read a file in that directory; read it yourself when you plan a change there or review from a diff.
 
 | Working in | Read |
 |---|---|
