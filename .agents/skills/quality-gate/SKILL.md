@@ -115,7 +115,7 @@ The pre-push hook runs `scripts/quality --fast` (~2 min, past the Bash tool's 12
 Open every PR as **draft**, with the gate table in its body. Every push to a PR runs CI, drafts included.
 
 - **A docs-only PR** (only `paths-ignore` files) runs just `changes` and `ci-gate` (~30 s). Stop with the link once `--fast` is green.
-- **Any other PR** is marked ready only after a green local `CI=true scripts/quality --full` (section 1):
+- **Any other PR** is marked ready only after a green local `CI=true scripts/quality --full` (section 1; in a cloud session, `CLOUD.md`'s Done when):
   1. Push, then wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run; until then `gh pr checks` has nothing to watch.
   2. `gh pr checks <n> --watch`.
   3. Green: `gh pr ready <n>` (it starts no new run), and stop there with the link. The user approves and merges every PR.
