@@ -1,26 +1,31 @@
 ---
 name: device-interaction
-description: "Verify app or iPhone behavior on device or simulator via screenshots, UI hierarchy, and touch interactions."
+description: "Verify app or iPhone behavior on device or simulator via screenshots, UI hierarchy, and touch interactions. Use after a UI-affecting change that needs checking in the running app, when the user asks whether it works on device, or to debug a touch or layout problem. Skip for unit tests, build-only requests and changes with no UI effect."
 ---
 # Device Interaction
 
-TRIGGER when: user asks to verify/test/check if the app works on device, after implementing a UI-affecting feature that needs device verification, user says "does it work", "test this", "check on device", user reports UI doesn't work as expected, need to debug touch/interaction issues.
-DO NOT TRIGGER when: user asks about unit tests only, build-only requests without device testing, code review without device testing, simulator configuration questions, changes that don't affect UI (e.g. comments, refactors, non-UI logic).
-
----
-
 # For the Main Agent
 
-**This is a SUBAGENT skill.** Invoke it via the Agent tool when device verification is needed. If there is an open session for that work, provide that session identifier to a subagent for exclusive use by that subagent.
+**This is a SUBAGENT skill.** Invoke it via the Agent tool when device verification is needed. If there is an open session for that work, provide its session key to a subagent for exclusive use by that subagent.
 
 ```
 Agent tool:
 - subagent_type: "general-purpose"
-- description: "Verify login feature works"
-- prompt: "Using the device-interaction skill, verify that the login feature works correctly on session <session-identifier>. Launch the app, capture screenshot and UI hierarchy, check that the login button is visible and tappable, and report if the implementation is working correctly."
+- description: "Verify adding a meal"
+- prompt: "Using the device-interaction skill, verify on session <session-key> that adding a meal works. Launch the app, tap the add-record button, enter one meal item and save. Check that the meal card appears and that today's ring in the calendar strip changes, and report whether the implementation works."
 ```
 
-**After implementing a UI-affecting feature, invoke this skill to verify the implementation works on a device.**
+To start from a known state (several days of history, a full ring), seed the store with the `mock-sim-data` skill before launching.
+
+## Starting a Session
+
+1. **Get the workspace id.** Call `XcodeListWorkspaces` and take the `workspaceIdentifier` whose `workspacePath` is this checkout's `HealthTracker.xcodeproj`; a worktree's project has the same name, so match the full path. If it isn't listed, open it with `XcodeOpenWorkspace` (absolute path), which returns the identifier. **Done when:** you hold the identifier for this checkout. A project Xcode hasn't opened fails with `Unknown workspace identifier`, and leaving the parameter out fails with `workspaceIdentifier is required`.
+2. **Start the session:** call `DeviceInteractionStartWorkspaceSession` with that `workspaceIdentifier` and a fresh `sessionIdentifier`: `<What You Verify> <branch> <HHMMSS>`. A `sessionIdentifier` is spent once its session ends, so each start gets a new one (`This session identifier is currently in use or was recently used`). **Done when:** the call returns a session key, which `DeviceInteractionInstallAndRun`, `DeviceInteractionSynthesize` and `DeviceInteractionEndSession` all take.
+
+Recovering:
+
+- `The target device is already in use by a different session with key X`: call `DeviceInteractionEndSession` with `X`, then start once more.
+- `Session not found` from any later call: the session is gone; start a new one with a new `sessionIdentifier`.
 
 ## Session Lifecycle
 
@@ -68,8 +73,8 @@ The hierarchy files include calculated hitPoint positions for each element:
 
 ```
 UIView {{100, 200}, {60, 30}}, hitPoint: {130.0, 215.0}
-  UIButton "Login" {{110, 205}, {30, 20}}, hitPoint: {125.0, 215.0}
-  UIButton "Login2" {{140, 205}, {20, 20}}, hitPoint: {150.0, 215.0}, activationBundleId: com.your.app
+  UIButton "Save" {{110, 205}, {30, 20}}, hitPoint: {125.0, 215.0}
+  UIButton "Cancel" {{140, 205}, {20, 20}}, hitPoint: {150.0, 215.0}, activationBundleId: com.gustavoaraujo.health-tracker
 ```
 
 - `{100, 200}` - origin position

@@ -2,14 +2,19 @@
   "permissions": {
     "allow": [
       "mcp__xcode",
-      "mcp__xcode-tools",
       "Bash(swiftlint *)",
       "Bash(swiftformat *)",
-      "Bash(xcodebuild *)",
       "Bash(xcbeautify *)",
       "Bash(scripts/quality*)",
       "Bash(scripts/tests/run*)",
-      "Bash(scripts/doctor*)"
+      "Bash(scripts/doctor*)",
+      "Bash(scripts/bootstrap*)",
+      "Bash(scripts/fitness/*)",
+      "Bash(xcrun simctl *)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr checks*)",
+      "Bash(gh run view*)",
+      "Bash(gh run list*)"
     ],
     "deny": [
       "Bash(git commit --no-verify*)",
@@ -31,11 +36,11 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit",
+        "matcher": "Edit|Write|MultiEdit|mcp__xcode__XcodeWrite|mcp__xcode__XcodeUpdate",
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-swift.sh"
+            "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-swift.sh; [ ! -x \"$hook\" ] || \"$hook\""
           }
         ]
       }
