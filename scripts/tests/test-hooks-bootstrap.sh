@@ -49,6 +49,30 @@ test_bootstrap_installs_tools_into_build_tools_bin() {
   [ "$(cat "$WORK/install-tools-arg" 2>/dev/null)" = "build/tools/bin" ] || { echo "install-tools.sh not run with build/tools/bin"; return 1; }
 }
 
+test_bootstrap_writes_build_server_json() {
+  new_repo build-server
+  mkdir -p HealthTracker.xcodeproj build/tools/bin
+  # Stands in for the pinned xcode-build-server: logs its own path and arguments, writes the config.
+  printf '#!/bin/sh\necho "$0 $*" > "%s"\necho "{}" > buildServer.json\n' "$WORK/xbs-call" > build/tools/bin/xcode-build-server
+  chmod +x build/tools/bin/xcode-build-server
+  scripts/bootstrap > /dev/null || { echo "bootstrap failed"; return 1; }
+  [ -f buildServer.json ] || { echo "buildServer.json not written"; return 1; }
+  # An absolute path: xcode-build-server records how it was called as the command sourcekit-lsp launches.
+  local expected
+  expected="$(pwd -P)/build/tools/bin/xcode-build-server config -project HealthTracker.xcodeproj -scheme HealthTracker"
+  [ "$(cat "$WORK/xbs-call")" = "$expected" ] || { echo "called as '$(cat "$WORK/xbs-call")', expected '$expected'"; return 1; }
+}
+
+test_bootstrap_survives_a_failing_build_server_config() {
+  new_repo build-server-fails
+  mkdir -p HealthTracker.xcodeproj build/tools/bin
+  printf '#!/bin/sh\nexit 1\n' > build/tools/bin/xcode-build-server && chmod +x build/tools/bin/xcode-build-server
+  local out
+  out="$(scripts/bootstrap 2>&1)" || { echo "bootstrap failed: $out"; return 1; }
+  [[ "$out" == *"warning: could not write buildServer.json"* ]] || { echo "no warning: $out"; return 1; }
+  [[ "$out" == *"scripts/quality"* ]] || { echo "next steps not reached: $out"; return 1; }
+}
+
 test_bootstrap_prints_next_steps() {
   new_repo next-steps
   local out

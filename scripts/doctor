@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Compares installed tools with the pins in scripts/tool-versions.env.
+# Compares installed tools with the pins in scripts/tool-versions.env. Locally it also checks
+# swift-lsp's setup: xcode-build-server, buildServer.json and a build in the DerivedData it points at.
 # Warns locally (exit 0); fails (exit 1) when CI=true.
 set -uo pipefail
 
@@ -41,6 +42,24 @@ check Xcode xcodebuild "$XCODE_VERSION" "$(xcodebuild -version 2>/dev/null | awk
 for tool in xcbeautify jq; do
   command -v "$tool" >/dev/null || report "$tool not installed" "brew install $tool"
 done
+
+# swift-lsp reads its build settings through xcode-build-server; CI runs no LSP.
+if [ "$level" = "warning" ]; then
+  build_server="$(dirname "$0")/../buildServer.json"
+  command -v xcode-build-server >/dev/null || report "xcode-build-server not installed" "scripts/bootstrap"
+  if [ ! -f "$build_server" ]; then
+    report "buildServer.json missing (swift-lsp diagnostics are unreliable without it)" "scripts/bootstrap"
+  else
+    build_root="$(sed -n 's/.*"build_root": "\(.*\)".*/\1/p' "$build_server")"
+    build_fix="build the app once (Xcode or the Xcode MCP BuildProject); swift-lsp reads that build's settings and index"
+    if [ ! -d "$build_root" ]; then
+      report "buildServer.json points at $build_root, which does not exist" "scripts/bootstrap, then $build_fix"
+    # `xcode-build-server config` creates the dir; only a build leaves a log in it.
+    elif ! compgen -G "$build_root/Logs/Build/*.xcactivitylog" >/dev/null; then
+      report "buildServer.json points at $build_root, which holds no build yet" "$build_fix"
+    fi
+  fi
+fi
 
 if [ "$problems" -gt 0 ] && [ "$level" = "error" ]; then
   exit 1
