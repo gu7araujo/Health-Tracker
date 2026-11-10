@@ -9,6 +9,11 @@ Adapts persistence and platform services to the domain: raw I/O, orchestration, 
 - `NSFileCoordinator` guards concurrent file access.
 - Decode failures degrade to empty arrays rather than crashing.
 
+## Notifications
+
+- `UNUserNotificationCenter` is reached only from `Services/NotificationService.swift` and its seam, `Services/UserNotificationCentering.swift`.
+- Every type and extension in a file that calls the center is declared `nonisolated`: the app defaults to MainActor isolation, and the center's synchronous calls (`removeAllPendingNotificationRequests()` and its siblings) stall the UI from the main actor. `scripts/fitness/notification-center-isolation.sh` enforces it.
+
 ## Data Migrations
 
 Existing users' JSON files, on disk and in iCloud, must keep loading after every release, with no data lost and no crash on launch.

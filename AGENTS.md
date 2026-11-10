@@ -45,7 +45,7 @@ On a task spanning several files, layers or PRs, the main session is the **orche
 
 - Run independent slices, or a staged pipeline (implement → review → verify), as a Workflow.
 - Brief each subagent as a cold start: the goal, the files, the constraints, its done-criterion, and the shape of the report to return.
-- Agents working at the same time each take their own worktree in `.claude/worktrees/<branch-name>`: `parallel-agents` skill. Create a worktree only when the task requires it or the user asks.
+- Agents working at the same time each take their own worktree in `.claude/worktrees/<branch-name>`, and at most two of them build or test at once: `parallel-agents` skill. Create a worktree only when the task requires it or the user asks.
 
 ## Building and Validating
 

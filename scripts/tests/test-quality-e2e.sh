@@ -54,11 +54,12 @@ case "\$1 \$2" in
   *) exit 0 ;;
 esac
 EOF
-# xcodebuild: the unit run writes the profile and the app binary ($APP_BINARY, unless $NO_PROFILE);
+# xcodebuild: blocks while $TMP/hold exists (a run caught mid-build); the unit run writes the profile and the app binary ($APP_BINARY, unless $NO_PROFILE);
 # the UI run replaces the profile, so the region rows must read it in between.
 cat >"$TMP/bin/xcodebuild" <<EOF
 #!/bin/sh
 echo "\$*" >>"$TMP/xcodebuild.calls"
+while [ -e "$TMP/hold" ]; do sleep 0.1; done
 app=build/DerivedData/Build/Products/Debug-iphonesimulator/HealthTracker.app
 case "\$*" in
   *-only-testing:HealthTrackerTests*)
@@ -92,6 +93,23 @@ periphery_stub() {
 }
 periphery_stub 0
 
+# gate <repo> [args...]: runs <repo>'s scripts/quality on the stubs, with the machine-wide --full lock
+# in $TMP so a real gate running on this Mac never holds the test up.
+gate() {
+  (cd "$1" && PATH="$TMP/bin:$PATH" SIMULATOR_ID=SHARED-UDID CI="${CI_ENV:-}" GITHUB_ACTIONS="${GHA:-}" \
+    QUALITY_LOCK="$TMP/quality.lock" QUALITY_LOCK_POLL=0.1 "$1/scripts/quality" "${@:2}")
+}
+
+# wait_until <command...>: polls for up to 10 s; fails if the command never succeeds.
+wait_until() {
+  local tries=0
+  until "$@" 2>/dev/null; do
+    tries=$((tries + 1))
+    [ "$tries" -lt 100 ] || return 1
+    sleep 0.1
+  done
+}
+
 # run_quality <lint json> [args...] -> sets out, code. CI comes from $CI_ENV (cleared by default: the
 # stubs are not the pinned versions, so doctor would fail) and GITHUB_ACTIONS from $GHA, so the test
 # behaves the same inside a GitHub Actions job.
@@ -99,8 +117,7 @@ run_quality() {
   printf '#!/bin/sh\necho %s\n' "'$1'" >"$TMP/bin/swiftlint"
   chmod +x "$TMP/bin/swiftlint"
   shift
-  out="$(cd "$REPO" && PATH="$TMP/bin:$PATH" SIMULATOR_ID=SHARED-UDID CI="${CI_ENV:-}" GITHUB_ACTIONS="${GHA:-}" \
-    "$REPO/scripts/quality" "$@" 2>&1)"
+  out="$(gate "$REPO" "$@" 2>&1)"
   code=$?
 }
 
@@ -451,5 +468,76 @@ NO_PROFILE=1 run_quality '[]' --fast
 grep -qE '^Domain unit region coverage +n/a  >= 90.0% +✗$' <<<"$out" &&
   grep -qE '^Data unit region coverage +n/a  >= 60.0% +✗$' <<<"$out" ||
   fail "a run without a profile should report n/a region rows, got: $out"
+
+# Lock: --full runs on one Mac take turns (two at once exhaust its processes), whatever worktree
+# they run in. A second one says whose run it waits for, and starts its tests when that one ends.
+REPO2="$TMP/repo2"
+cp -R "$REPO" "$REPO2"
+git -C "$REPO2" checkout -q -b feat/y
+touch "$TMP/hold"
+: >"$TMP/xcodebuild.calls"
+gate "$REPO" --full >"$TMP/first.out" 2>&1 &
+first=$!
+wait_until grep -q . "$TMP/xcodebuild.calls" || fail "the first --full should reach its tests: $(cat "$TMP/first.out")"
+gate "$REPO2" --full >"$TMP/second.out" 2>&1 &
+second=$!
+wait_until grep -q 'waiting for feat/x' "$TMP/second.out" ||
+  fail "a second --full should say it is waiting for feat/x, got: $(cat "$TMP/second.out")"
+# --fast is not held: the pre-push hook must not queue behind an 8-minute --full.
+gate "$REPO2" --fast --simulator FAST-UDID >/dev/null 2>&1 &
+fast=$!
+wait_until grep -q 'id=FAST-UDID' "$TMP/xcodebuild.calls" || fail "--fast should not wait for the --full lock"
+grep -q 'id=CLONED-UDID' "$TMP/xcodebuild.calls" &&
+  fail "the second --full should not start its tests while the first runs, got: $(cat "$TMP/xcodebuild.calls")"
+rm "$TMP/hold"
+# (The fixture's app coverage is below its threshold, so a finished --full reports 11/13.)
+wait "$first" "$second" "$fast"
+grep -q 'gates passed' "$TMP/first.out" || fail "the first --full should finish: $(cat "$TMP/first.out")"
+grep -q 'id=CLONED-UDID' "$TMP/xcodebuild.calls" && grep -q 'gates passed' "$TMP/second.out" ||
+  fail "the second --full should run once the first ends: $(cat "$TMP/second.out")"
+[ ! -e "$TMP/quality.lock" ] || fail "the lock should be released when the last --full exits"
+
+# A lock whose holder died without releasing it (kill -9, a crash) is taken over.
+mkdir "$TMP/quality.lock"
+(exit 0) &
+wait $!
+echo $! >"$TMP/quality.lock/pid"
+echo feat/dead >"$TMP/quality.lock/branch"
+run_quality '[]' --full
+[[ "$out" == *"gates passed"* ]] || fail "--full should take over a dead run's lock: $out"
+[ ! -e "$TMP/quality.lock" ] || fail "a taken-over lock should be released on exit"
+
+# --stop ends the gate running in this worktree, however stuck: its simulators are shut down, its
+# lock released, and nothing of it is left running.
+touch "$TMP/hold"
+: >"$TMP/xcodebuild.calls"
+: >"$TMP/simctl.calls"
+gate "$REPO" --full >"$TMP/first.out" 2>&1 &
+first=$!
+wait_until grep -q . "$TMP/xcodebuild.calls" || fail "the gate to stop should reach its tests"
+out="$(gate "$REPO" --stop 2>&1)"
+[ $? -eq 0 ] || fail "--stop should exit 0, got: $out"
+[[ "$out" == *"Stopped scripts/quality (pid "* ]] || fail "--stop should say what it stopped, got: $out"
+wait "$first"
+[ $? -eq 143 ] || fail "a stopped gate should exit 143 (terminated)"
+grep -q 'simctl shutdown WORKTREE-UDID' "$TMP/simctl.calls" ||
+  fail "a stopped gate should shut down the simulator it booted, got: $(cat "$TMP/simctl.calls")"
+[ ! -e "$TMP/quality.lock" ] || fail "a stopped --full should release the lock"
+[ -z "$(ls "$REPO/build/quality.pids" 2>/dev/null)" ] || fail "a stopped gate should leave no pid file"
+! pgrep -f "$TMP/bin/xcodebuild" >/dev/null || fail "--stop should end the gate's xcodebuild too"
+rm "$TMP/hold"
+# It stops only this worktree's gate, and with none running says so.
+out="$(gate "$REPO2" --stop 2>&1)"
+[ $? -eq 0 ] && [[ "$out" == *"No scripts/quality run to stop"* ]] ||
+  fail "--stop with nothing running should say so and exit 0, got: $out"
+# A stale pid file whose pid now belongs to another process is cleared, never killed.
+sleep 30 &
+bystander=$!
+mkdir -p "$REPO/build/quality.pids"
+touch "$REPO/build/quality.pids/$bystander"
+out="$(gate "$REPO" --stop 2>&1)"
+kill -0 "$bystander" 2>/dev/null || fail "--stop must not kill a process that is not scripts/quality"
+[ ! -e "$REPO/build/quality.pids/$bystander" ] || fail "--stop should clear a stale pid file"
+kill "$bystander"
 
 [ "$failures" -eq 0 ]

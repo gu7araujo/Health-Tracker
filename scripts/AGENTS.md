@@ -4,7 +4,7 @@ The bash tooling behind the quality gate, the git hooks and CI. Each script's he
 
 ## Map
 
-- `quality` — the one gate: runs every check and prints the pass/fail table (`--help` lists the modes).
+- `quality` — the one gate: runs every check and prints the pass/fail table (`--help` lists the modes). `--full` runs take turns behind a machine-wide `mkdir` lock; `--stop` ends the run recorded in `build/quality.pids/`.
 - `bootstrap` — setup per clone or new worktree: enables `.githooks`, installs the pinned tools into `build/tools/bin` (`ci/install-tools.sh`), then runs `doctor`.
 - `doctor` — compares installed tools with `tool-versions.env`; warns locally, fails under `CI=true`.
 - `lib/` — helpers behind `quality`; each file's header names its job. `tools-path.sh` (`prepend_tools_path <root>`, the one build/tools/bin PATH lookup) is also sourced by `doctor`, `tests/run`, `.githooks/pre-commit` and `.claude/hooks/format-swift.sh`.

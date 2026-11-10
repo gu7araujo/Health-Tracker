@@ -5,6 +5,7 @@ set -uo pipefail
 usage() {
   cat <<'EOF'
 Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-baseline]
+       scripts/quality --stop
 
   --fast             Format, lint, fitness checks, unit tests, unused code (Periphery), Domain/Data
                      unit line and region coverage ratchets (default).
@@ -16,6 +17,12 @@ Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-b
   --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
                      (an exported SIMULATOR_ID is ignored so worktrees never share a device).
   --update-baseline  With --fast: raise the *_UNIT_MIN ratchets to the measured coverage.
+  --stop             Stop the gate running in this worktree (each records its PID in
+                     build/quality.pids/) with its xcodebuild, and exit 0.
+
+--full runs on one Mac take turns, whatever worktree they are in: a second one prints
+"Lock: waiting for <branch>" until the first exits. The lock is a directory,
+~/Library/Caches/HealthTracker/quality.lock (or $QUALITY_LOCK); a dead run's lock is taken over.
 
 Tools in build/tools/bin (scripts/ci/install-tools.sh build/tools/bin) run before those on PATH.
 Thresholds: scripts/quality-thresholds.env. Per-file floor exceptions: scripts/coverage-exceptions.txt.
@@ -33,6 +40,7 @@ while [ $# -gt 0 ]; do
     --fast | --full) MODE="${1#--}" ;;
     --json) JSON="build/quality.json" ;;
     --update-baseline) UPDATE_BASELINE=1 ;;
+    --stop) MODE="stop" ;;
     --simulator)
       [ $# -ge 2 ] || { usage >&2 && exit 2; }
       SIMULATOR="$2"
@@ -59,8 +67,84 @@ prepend_tools_path "$ROOT"
 # shellcheck source=quality-thresholds.env
 source scripts/quality-thresholds.env
 
+PIDS="build/quality.pids"
+LOCK="${QUALITY_LOCK:-$HOME/Library/Caches/HealthTracker/quality.lock}"
+
+# kill_tree <signal> <pid>: signals the process and every descendant. The children are listed
+# before the parent is signalled, since a dead parent's children can no longer be found through it.
+kill_tree() {
+  local child children
+  children="$(pgrep -P "$2")"
+  kill "-$1" "$2" 2>/dev/null
+  for child in $children; do
+    kill_tree "$1" "$child"
+  done
+}
+
+if [ "$MODE" = "stop" ]; then
+  stopped=""
+  for file in "$PIDS"/*; do
+    [ -e "$file" ] || continue
+    pid="${file##*/}"
+    # A run killed with -9 leaves its file behind, and its pid may since belong to another process.
+    if [[ "$(ps -o command= -p "$pid" 2>/dev/null)" == *quality* ]]; then
+      kill_tree TERM "$pid"
+      # TERM lets the run shut its simulators down and release the lock; KILL is for one that hangs.
+      for _ in $(seq 50); do
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.2
+      done
+      kill -0 "$pid" 2>/dev/null && kill_tree KILL "$pid"
+      echo "Stopped scripts/quality (pid $pid)"
+      stopped=1
+    fi
+    rm -f "$file"
+  done
+  [ -n "$stopped" ] || echo "No scripts/quality run to stop in $ROOT"
+  exit 0
+fi
+
 "$ROOT/scripts/doctor" || exit 1
-mkdir -p build
+mkdir -p "$PIDS"
+: >"$PIDS/$$"
+
+# Clones this run boots (kept for reuse) are shut down on exit, so booted clones never pile up;
+# one already booted is someone's session and stays up.
+shutdown_on_exit=""
+held_lock=""
+cleanup() {
+  local udid
+  rm -f "$PIDS/$$"
+  [ -z "$held_lock" ] || rm -rf "$LOCK"
+  for udid in $shutdown_on_exit; do
+    xcrun simctl shutdown "$udid" >/dev/null 2>&1
+  done
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# Two --full runs at once exhaust the Mac's processes (fork failed, 2026-10-28), so they take turns.
+if [ "$MODE" = "full" ]; then
+  mkdir -p "$(dirname "$LOCK")"
+  waiting_for=""
+  until mkdir "$LOCK" 2>/dev/null; do
+    holder="$(cat "$LOCK/pid" 2>/dev/null)"
+    if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+      rm -rf "$LOCK"
+      continue
+    fi
+    holder_branch="$(cat "$LOCK/branch" 2>/dev/null)"
+    if [ -n "$holder_branch" ] && [ "$holder_branch" != "$waiting_for" ]; then
+      echo "Lock: waiting for $holder_branch (scripts/quality --full, pid $holder; stop it with scripts/quality --stop in its worktree)"
+      waiting_for="$holder_branch"
+    fi
+    sleep "${QUALITY_LOCK_POLL:-5}"
+  done
+  held_lock=1
+  echo $$ >"$LOCK/pid"
+  git rev-parse --abbrev-ref HEAD >"$LOCK/branch"
+fi
 rows=""
 
 # row <name> <value> <comparator> <threshold> <passed>
@@ -120,9 +204,6 @@ version_ge() {
 
 branch="$(git rev-parse --abbrev-ref HEAD)"
 branch="${branch//\//-}"
-# Clones this run boots (kept for reuse) are shut down on exit, so booted clones never pile up;
-# one already booted is someone's session and stays up.
-shutdown_on_exit=""
 own_simulator=""
 if [ -z "$SIMULATOR" ]; then
   SIMULATOR="$("$LIB/simulator.sh" "HT-$branch")" || exit 1
@@ -155,18 +236,6 @@ if [ "$MODE" = "full" ]; then
   fi
   [ -n "$INTENTS_SIMULATOR" ] ||
     echo "error: HealthTrackerIntentsUITests needs an iPhone simulator on iOS $intents_min or later (the iphonesimulator SDK's version); install that runtime with: xcodebuild -downloadPlatform iOS" >&2
-fi
-
-shutdown_clones() {
-  local udid
-  for udid in $shutdown_on_exit; do
-    xcrun simctl shutdown "$udid" >/dev/null 2>&1
-  done
-}
-if [ -n "$shutdown_on_exit" ]; then
-  trap shutdown_clones EXIT
-  trap 'exit 130' INT
-  trap 'exit 143' TERM
 fi
 
 # Each bundle runs on its own so the Domain/Data ratchets can measure unit-only coverage

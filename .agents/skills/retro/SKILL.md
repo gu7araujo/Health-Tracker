@@ -45,11 +45,17 @@ Check each catch against the current tree first (`grep -rln '<keyword>' scripts/
 | 4. Threshold or exception | A threshold CI measured differently, a ratchet that blocked a good change, a stale or new exception, baseline or disable | The change and the numbers behind it. It is the user's call |
 | 5. Process or tooling | CI cost, a flaky test, a hook gap, a tool that misreports, a reviewer that finds nothing | The smallest change to the workflow, script or doc |
 
-A catch can take two classes (a regression test exists, but the rule behind it is unwritten: 1 + 2). Prefer the class-3 enforcer when the pattern can recur; prefer a shorter doc over a sync test when the doc only copies what a command prints. Propose an action only for a catch that has recurred or cost more than about an hour; record the rest as "leave it".
+A catch can take two classes (a regression test exists, but the rule behind it is unwritten: 1 + 2). Prefer the class-3 enforcer when the pattern can recur; prefer a shorter doc over a sync test when the doc only copies what a command prints.
+
+**Exit rule.** A retro that only feeds the next retro is a loop, so cap what it proposes:
+
+- Propose an action only for a catch backed by one of: the same catch seen at least twice, a red CI run, or a user correction. Record every other catch as "leave it".
+- Propose at most 3 actions per retro, the most valuable first; the rest wait for a later retro to see them again.
+- "No action" is a valid result: when no catch clears the bar, report the table with every row "leave it" and stop.
 
 ## 3. Report
 
-Report the table to the user, most valuable proposal first, then stop:
+Report the table to the user, the proposals (at most 3) first, then stop:
 
 | # | Catch (PR, evidence) | Class | Proposed action | Effort (S < 1 h, M < half a day, L) |
 |---|---|---|---|---|
@@ -64,4 +70,4 @@ No retro log file: the issues are the log, so `gh issue list --label retro --sta
 
 ## 4. Implement the approved rows
 
-Each approved row's issue is its own branch and draft PR whose body starts with `Closes #<issue>`, through the root `AGENTS.md` Workflow: the failing test first, `scripts/quality --full` green, then ready. Thresholds, exception lists, the lint baseline, `swiftlint:disable` and `periphery:ignore` change only in a row the user approved by number, called out under "Threshold or rule changes". The user merges.
+Batch a retro's approved rows into one branch and one draft PR whose body starts with a `Closes #<issue>` line per row, through the root `AGENTS.md` Workflow: each row's failing test first, `scripts/quality --full` green, then ready. Merging that PR ends the retro: its own PR is not a batch to run the next retro on. Thresholds, exception lists, the lint baseline, `swiftlint:disable` and `periphery:ignore` change only in a row the user approved by number, called out under "Threshold or rule changes". The user merges.
