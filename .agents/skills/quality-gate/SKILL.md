@@ -18,16 +18,9 @@ scripts/quality --full --json   # done: everything in --fast, plus UI and intent
 
 It tests on `--simulator <udid>` when given; otherwise it reuses or clones a simulator named `HT-<branch>`, so parallel worktrees stay isolated, and shuts that clone down when it exits unless it was already booted. `--full` also runs `HealthTrackerIntentsUITests`, which needs a runtime at least the iPhone simulator SDK's version (iOS 27.2 with Xcode 27.2; its `AppIntentsTesting` fails to load on 27.0): on an older simulator it uses a second clone, `HT-<branch>-ios27` (re-cloned when its runtime falls below that), shut down the same way; with no iPhone on such a runtime the `Intents UI tests` row is `n/a` and the gate prints the fix, `xcodebuild -downloadPlatform iOS`. An exported `SIMULATOR_ID` is ignored on purpose. Delete both clones when the branch is done: `xcrun simctl delete "HT-<branch with / replaced by ->"` and `xcrun simctl delete "HT-<branch with / replaced by ->-ios27"`.
 
-`--full` runs on one Mac take turns, whatever worktree they run in: a second one prints `Lock: waiting for <branch>` and starts when the first exits (the lock is `~/Library/Caches/HealthTracker/quality.lock`; a dead run's lock is taken over). Stop a stuck or unwanted gate with `scripts/quality --stop` in its worktree, never `kill`: it ends the run and its `xcodebuild`, shuts down the simulators the run booted and releases the lock.
+`--full` runs on one Mac take turns, whatever worktree they run in: a second one prints `Lock: waiting for <branch>` and starts when the first exits, so a waiting run is working (`scripts/quality --help` describes the lock). Stop a stuck or unwanted gate with `scripts/quality --stop` in its worktree, never `kill`: it ends the run and its `xcodebuild`, shuts down the simulators the run booted and releases the lock.
 
-**In a cloud session** (a Linux container: no `xcrun`, Xcode MCP disconnected), the Mac-only gates run on CI, and you run them there yourself:
-
-1. Run what Linux can locally first: `scripts/tests/run` for the script tests that need no Xcode or SwiftLint, ShellCheck as CI's `lint` job runs it, and `scripts/fitness/run`.
-2. Commit and push the branch, then dispatch `ci.yml` on it (`workflow_dispatch`, ref = the branch; no PR needed). That run does `lint`, then `test`: `scripts/tests/run` and `CI=true scripts/quality --full`.
-3. Find the run with a `list_workflow_runs` filtered on `event: workflow_dispatch`, and wait for it with a scheduled check-in or Monitor (~25 min).
-4. Read each job's result; on red, read the failing step's log, fix, push, and dispatch again.
-
-The `Quality gate` step's log ends with the gate table: paste it with the run link as this session's table. Ask the user to run a command on their Mac only for what CI cannot do: a device, the Simulator UI, an Xcode MCP tool such as `RenderPreview`.
+**In a cloud session** (a Linux container: no `xcrun`, Xcode MCP disconnected), run the gate on CI instead: [`CLOUD.md`](CLOUD.md), whose **Done when** replaces the one below.
 
 **Done when:** `scripts/quality --full` exits 0; for a change touching only docs or agent config (the paths under `paths-ignore` in `.github/workflows/ci.yml`), when `scripts/quality --fast` exits 0. Paste the table it prints into the final report and PR. Before marking any other PR ready, run it as `CI=true scripts/quality --full`: only `CI=true` turns compiler warnings into errors, as CI does, so a warning that passes locally fails the PR's CI run. It also makes `scripts/doctor` exit 1 before any gate on a missing or mismatched pinned tool or Xcode: run `scripts/bootstrap` first and fix what its `doctor` reports.
 

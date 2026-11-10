@@ -14,8 +14,8 @@ One agent per worktree (`.claude/worktrees/<branch-name>`), **at most two buildi
 5. **Build and run unit tests freely** (`BuildProject`, `RunSomeTests` on `HealthTrackerTests`): each worktree builds into its own DerivedData.
 6. **Run UI tests through the MCP from one agent at a time**: `HealthTrackerUITests`, and `RunAllTests`, which includes them. Concurrent runs share the clone pool: when one run finishes, the other's clones are torn down and rebuilt, stretching a ~4 min suite past 15 min or stalling it outright, even with each worktree on its own run destination. Iterate on unit tests; run the full suite once at the end.
 7. **Read results from the tool response** (pass/fail counts, errors) or `GetBuildLog` with your `workspaceIdentifier`. The artifact files it points to (`fullLogPath`, test console logs, `.xcresult`) are named by timestamp and overwritten when two runs finish in the same second.
-8. **Stop what you abandon.** A run keeps going inside Xcode after its caller gives up, and blocks the next one ("There is already a test running"). `StopProject` with your `workspaceIdentifier` clears it; do the same for a test run with no result after ~15 min. A stuck gate: `scripts/quality --stop` in its worktree, never `kill` or `pkill`.
-9. **Wait on events.** Wait for a background run with Monitor, and for CI with `gh pr checks <n> --watch` or a scheduled check-in: each wakes you when the run ends.
+8. **Stop what you abandon.** A run keeps going inside Xcode after its caller gives up, and blocks the next one ("There is already a test running"). `StopProject` with your `workspaceIdentifier` clears it; do the same for a test run with no result after ~15 min. A stuck gate: `scripts/quality --stop` in its worktree (`quality-gate` skill, section 1).
+9. **Wait for a background run with Monitor**: it wakes you when the run ends.
 10. **Keep the user able to see progress.** A workflow script calls `log()` with one line per phase, and the orchestrator posts a one-line status once a background workflow passes 20 min.
 
 ## On the `xcodebuild` fallback

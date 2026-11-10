@@ -5,7 +5,7 @@ description: Run a retro on merged HealthTracker PRs (what reviewers and CI caug
 
 # Retro
 
-Sharpen the saw: every **catch** (anything a reviewer, a verifier, CI or the gate found after the code was first written) ends up with an enforcer, a doc line, or a deliberate "leave it". A retro is read-only until the user approves its proposals.
+Sharpen the saw: every **catch** (anything a reviewer, a verifier, CI or the gate found after the code was first written) ends up with an enforcer, a doc line, or a deliberate "leave it". A retro is read-only until the user approves its proposals. A retro's own PR (section 4) ends that retro: its merge is not a batch to run the next one on.
 
 Keep the raw data in `build/retro/` (gitignored; `mkdir -p build/retro`). Save each `gh` call's JSON to a file, then run `jq` on the file: a `gh … --jq` inside a loop can be refused by the worktree sandbox.
 
@@ -55,7 +55,7 @@ A catch can take two classes (a regression test exists, but the rule behind it i
 
 ## 3. Report
 
-Report the table to the user, the proposals (at most 3) first, then stop:
+Report the table to the user, the proposals first, then stop:
 
 | # | Catch (PR, evidence) | Class | Proposed action | Effort (S < 1 h, M < half a day, L) |
 |---|---|---|---|---|
@@ -70,4 +70,4 @@ No retro log file: the issues are the log, so `gh issue list --label retro --sta
 
 ## 4. Implement the approved rows
 
-Batch a retro's approved rows into one branch and one draft PR whose body starts with a `Closes #<issue>` line per row, through the root `AGENTS.md` Workflow: each row's failing test first, `scripts/quality --full` green, then ready. Merging that PR ends the retro: its own PR is not a batch to run the next retro on. Thresholds, exception lists, the lint baseline, `swiftlint:disable` and `periphery:ignore` change only in a row the user approved by number, called out under "Threshold or rule changes". The user merges.
+Batch a retro's approved rows into one branch and one draft PR whose body starts with a `Closes #<issue>` line per row, through the root `AGENTS.md` Workflow: each row's failing test first, `scripts/quality --full` green, then ready. Thresholds, exception lists, the lint baseline, `swiftlint:disable` and `periphery:ignore` change only in a row the user approved by number, called out under "Threshold or rule changes". The user merges.
