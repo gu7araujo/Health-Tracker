@@ -45,6 +45,7 @@
 				Domain/AGENTS.md,
 				Info.plist,
 				Presentation/AGENTS.md,
+				Presentation/Intents/AGENTS.md,
 			);
 			target = B756C6112EA3F8900057DE0C /* HealthTracker */;
 		};

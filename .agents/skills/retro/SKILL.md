@@ -35,7 +35,7 @@ Then sweep the standing lists once per retro: `scripts/quality --full` reports s
 
 ## 2. Classify each catch
 
-Check each catch against the current tree first (`grep -rln '<keyword>' scripts/tests scripts/fitness .swiftlint.yml AGENTS.md HealthTracker*/AGENTS.md HealthTracker/*/AGENTS.md .agents/skills README.md`): a follow-up named in a PR may still be open.
+Check each catch against the current tree first (`grep -rln '<keyword>' scripts/tests scripts/fitness .swiftlint.yml AGENTS.md HealthTracker*/AGENTS.md HealthTracker/*/AGENTS.md HealthTracker/Presentation/Intents/AGENTS.md scripts/AGENTS.md .agents/skills README.md`): a follow-up named in a PR may still be open.
 
 | Class | Test | Proposed action |
 |---|---|---|
