@@ -53,6 +53,7 @@ On a task spanning several files, layers or PRs, the main session is the **orche
 - In a cloud session (Linux, no Xcode), CI is your Mac: push the branch, dispatch CI on it and read the result yourself (`quality-gate` skill, section 1). Hand the user a command only for what CI cannot run.
 - Apple API docs: use the Xcode MCP `DocumentationSearch` tool (a `query`, optionally `frameworks`) over training memory, especially for iOS 26 APIs like Liquid Glass.
 - After a UI change, render the view's `#Preview` with the Xcode MCP `RenderPreview` tool and review the snapshot in light, dark and a large Dynamic Type size. Add a `#Preview` first when the view has none.
+- Use the `LSP` tool for go-to-definition and find-references once the checkout has run `scripts/bootstrap` and has one Xcode build (the Xcode MCP `BuildProject`); `scripts/quality` builds into `build/DerivedData`, which swift-lsp does not read. From then on its diagnostics are the compiler's: fix them.
 - To see how code behaves without writing a test, run a `print`-based snippet with the Xcode MCP `RunCodeSnippet` tool (e.g. construct a `DayData` and print its `status`).
 - The project uses `PBXFileSystemSynchronizedRootGroup`: adding or deleting a source file needs no `project.pbxproj` edit. A file under `HealthTracker/` that must stay out of the app bundle (an `AGENTS.md`) needs a `membershipExceptions` entry there.
 

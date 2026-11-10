@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Installs the SwiftLint and SwiftFormat release binaries pinned in scripts/tool-versions.env, and
-# on macOS the Periphery release. Every zip's sha256 is verified against its pin before unpacking.
+# Installs the SwiftLint and SwiftFormat release binaries pinned in scripts/tool-versions.env, on
+# macOS the Periphery release, and on macOS outside CI xcode-build-server (swift-lsp's build server).
+# Every archive's sha256 is verified against its pin before unpacking.
 #
 # Usage: scripts/ci/install-tools.sh [<bin-dir>]
 #   <bin-dir> defaults to ${RUNNER_TEMP:-$TMPDIR}/ci-tools/bin. When GITHUB_PATH is set, <bin-dir>
 #   is appended to it so later steps find the tools. Supports macOS and Linux x86_64.
 #   Locally, `scripts/ci/install-tools.sh build/tools/bin` installs them where scripts/quality
 #   looks first, so a fresh clone needs no Homebrew for them.
+#   xcode-build-server's sources go beside <bin-dir>, into <bin-dir>/../libexec/xcode-build-server.
 set -euo pipefail
 
 # shellcheck source=../tool-versions.env
@@ -75,6 +77,24 @@ if [ -n "$periphery" ]; then
   chmod +x "$BIN/periphery"
 fi
 
+# xcode-build-server (macOS, local only): Python sources with no release binary. They unpack into
+# libexec beside <bin-dir>; its launcher, linked into <bin-dir>, imports the modules next to its real path.
+xbs=""
+if [ -n "$periphery" ] && [ "${CI:-}" != "true" ]; then
+  # The physical parent of <bin-dir>: where the relative link below resolves, even through a symlink.
+  xbs="$(CDPATH='' cd -P -- "$BIN" && cd .. && pwd -P)/libexec/xcode-build-server"
+  archive="v$XCODE_BUILD_SERVER_VERSION.tar.gz"
+  curl -fsSL --retry 3 -o "$work/$archive" \
+    "https://github.com/SolaWing/xcode-build-server/archive/refs/tags/$archive"
+  verify "$work/$archive" "$archive" "$XCODE_BUILD_SERVER_SHA256"
+  mkdir -p "$work/xcode-build-server"
+  tar -xzf "$work/$archive" --strip-components 1 -C "$work/xcode-build-server"
+  rm -rf "${xbs:?}"
+  mkdir -p "$(dirname "$xbs")"
+  mv "$work/xcode-build-server" "$xbs"
+  ln -sf "../libexec/xcode-build-server/xcode-build-server" "$BIN/xcode-build-server"
+fi
+
 # check <label> <installed> <pinned>
 check() {
   echo "$1 $2"
@@ -86,6 +106,8 @@ check() {
 check SwiftLint "$("$BIN/swiftlint" version)" "$SWIFTLINT_VERSION"
 check SwiftFormat "$("$BIN/swiftformat" --version)" "$SWIFTFORMAT_VERSION"
 [ -z "$periphery" ] || check Periphery "$("$BIN/periphery" version)" "$PERIPHERY_VERSION"
+# It has no version command; misc.py holds the constant.
+[ -z "$xbs" ] || check xcode-build-server "$(awk -F'"' '/^VERSION = / { print $2 }' "$xbs/misc.py")" "$XCODE_BUILD_SERVER_VERSION"
 
 if [ -n "${GITHUB_PATH:-}" ]; then
   echo "$BIN" >>"$GITHUB_PATH"
