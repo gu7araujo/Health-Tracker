@@ -1,0 +1,3 @@
+interface:
+  display_name: "Agent Docs Placement"
+  short_description: "Pick the right home for an agent instruction"
