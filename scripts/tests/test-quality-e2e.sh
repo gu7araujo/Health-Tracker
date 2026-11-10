@@ -97,7 +97,7 @@ periphery_stub 0
 # in $TMP so a real gate running on this Mac never holds the test up.
 gate() {
   (cd "$1" && PATH="$TMP/bin:$PATH" SIMULATOR_ID=SHARED-UDID CI="${CI_ENV:-}" GITHUB_ACTIONS="${GHA:-}" \
-    QUALITY_LOCK="$TMP/quality.lock" QUALITY_LOCK_POLL=0.1 "$1/scripts/quality" "${@:2}")
+    QUALITY_LOCK="${LOCK_PATH:-$TMP/quality.lock}" QUALITY_LOCK_POLL=0.1 "$1/scripts/quality" "${@:2}")
 }
 
 # wait_until <command...>: polls for up to 10 s; fails if the command never succeeds.
@@ -506,6 +506,27 @@ echo feat/dead >"$TMP/quality.lock/branch"
 run_quality '[]' --full
 [[ "$out" == *"gates passed"* ]] || fail "--full should take over a dead run's lock: $out"
 [ ! -e "$TMP/quality.lock" ] || fail "a taken-over lock should be released on exit"
+
+# So is one whose pid was reused by another process (the lock outlives a reboot), and one left
+# without a pid (its run died between creating and signing it).
+sleep 30 &
+bystander=$!
+mkdir "$TMP/quality.lock"
+echo "$bystander" >"$TMP/quality.lock/pid"
+echo feat/rebooted >"$TMP/quality.lock/branch"
+run_quality '[]' --full
+[[ "$out" == *"gates passed"* ]] || fail "--full should take over a lock whose pid is not a gate: $out"
+kill "$bystander"
+mkdir "$TMP/quality.lock"
+run_quality '[]' --full
+[[ "$out" == *"gates passed"* ]] || fail "--full should take over a lock left without a pid: $out"
+# A lock that cannot be created fails the run with the reason, rather than waiting forever.
+: >"$TMP/not-a-directory"
+: >"$TMP/xcodebuild.calls"
+LOCK_PATH="$TMP/not-a-directory/quality.lock" run_quality '[]' --full
+[ "$code" -eq 1 ] && [[ "$out" == *"error: cannot create the --full lock $TMP/not-a-directory/quality.lock"* ]] ||
+  fail "an uncreatable lock should fail with the reason (got $code): $out"
+[ ! -s "$TMP/xcodebuild.calls" ] || fail "a run without the lock should not start its tests"
 
 # --stop ends the gate running in this worktree, however stuck: its simulators are shut down, its
 # lock released, and nothing of it is left running.

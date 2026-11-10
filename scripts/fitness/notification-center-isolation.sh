@@ -26,7 +26,7 @@ find HealthTracker -name '*.swift' -exec awk '
     sub(/\/\/.*/, "")
     if ($0 ~ /UNUserNotificationCenter|\.(removeAllPendingNotificationRequests|removePendingNotificationRequests|removeAllDeliveredNotifications|removeDeliveredNotifications|setNotificationCategories)\(/)
       calls = 1
-    if ($0 !~ /nonisolated/ && match($0, /^([A-Za-z@]+ +)*(class|struct|enum|extension|protocol) +[A-Za-z_]+/))
+    if ($0 !~ /nonisolated|^import / && match($0, /^([A-Za-z@]+(\([^)]*\))? +)*(class|struct|enum|extension|protocol) +[A-Za-z_]+/))
       found[++count] = sprintf("notification-center-isolation: %s:%d: \"%s\" is not nonisolated in a file that calls UNUserNotificationCenter", \
         FILENAME, FNR, substr($0, RSTART, RLENGTH))
   }

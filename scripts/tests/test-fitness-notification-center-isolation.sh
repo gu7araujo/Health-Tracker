@@ -47,8 +47,16 @@ out="$("$SCRIPT" "$TMP/many")"
 [[ "$out" == *'Center.swift:1: "extension UNUserNotificationCenter"'*'Center.swift:2: "@MainActor struct Canceller"'* ]] ||
   fail "should name the extension and the struct, got: $out"
 
+# An attribute with arguments does not hide the declaration behind it.
+put "$TMP/attribute" HealthTracker/Data/Services/Center.swift \
+  '@available(iOS 26, *) final class Canceller { let center = UNUserNotificationCenter.current() }'
+out="$("$SCRIPT" "$TMP/attribute")"
+[[ "$out" == *'Center.swift:1: "@available(iOS 26, *) final class Canceller"'* ]] ||
+  fail "should see a declaration behind an attribute with arguments, got: $out"
+
 # Must pass: nonisolated types and actors; mentions in comments; files that never touch the center.
 put "$TMP/pass" HealthTracker/Data/Services/NotificationService.swift \
+  'import struct UserNotifications.UNNotificationRequest' \
   '/// Wraps UNUserNotificationCenter.' \
   'final nonisolated class NotificationService: NotificationServiceProtocol {' \
   '    struct Nested {}' \

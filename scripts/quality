@@ -81,16 +81,22 @@ kill_tree() {
   done
 }
 
+# is_gate <pid>: whether the pid is a running scripts/quality. A pid file or lock can outlive its
+# run (kill -9, a reboot), and the pid may since belong to another process.
+is_gate() {
+  [[ "$(ps -o command= -p "$1" 2>/dev/null)" == *scripts/quality* ]]
+}
+
 if [ "$MODE" = "stop" ]; then
   stopped=""
   for file in "$PIDS"/*; do
     [ -e "$file" ] || continue
     pid="${file##*/}"
-    # A run killed with -9 leaves its file behind, and its pid may since belong to another process.
-    if [[ "$(ps -o command= -p "$pid" 2>/dev/null)" == *quality* ]]; then
+    if is_gate "$pid"; then
       kill_tree TERM "$pid"
-      # TERM lets the run shut its simulators down and release the lock; KILL is for one that hangs.
-      for _ in $(seq 50); do
+      # TERM lets the run shut its simulators down and release the lock (give it 30 s); KILL is
+      # for one that hangs.
+      for _ in $(seq 150); do
         kill -0 "$pid" 2>/dev/null || break
         sleep 0.2
       done
@@ -126,11 +132,19 @@ trap 'exit 143' TERM
 
 # Two --full runs at once exhaust the Mac's processes (fork failed, 2026-10-28), so they take turns.
 if [ "$MODE" = "full" ]; then
-  mkdir -p "$(dirname "$LOCK")"
+  mkdir -p "$(dirname "$LOCK")" 2>/dev/null
   waiting_for=""
+  unsigned=0
   until mkdir "$LOCK" 2>/dev/null; do
+    if [ ! -d "$LOCK" ]; then
+      echo "error: cannot create the --full lock $LOCK (set QUALITY_LOCK to a writable path)" >&2
+      exit 1
+    fi
+    # Take over a lock whose holder is gone, or that stays unsigned (no pid) past a poll: its run
+    # died between creating and signing it.
     holder="$(cat "$LOCK/pid" 2>/dev/null)"
-    if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+    [ -n "$holder" ] && unsigned=0 || unsigned=$((unsigned + 1))
+    if { [ -n "$holder" ] && ! is_gate "$holder"; } || [ "$unsigned" -gt 1 ]; then
       rm -rf "$LOCK"
       continue
     fi
