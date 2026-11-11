@@ -21,15 +21,16 @@ first_time() {
 }
 
 # simple_commands: the Bash call's command as one simple command per line, each starting at its
-# command word. Continued lines are joined; quoted strings, heredoc bodies, VAR=value prefixes and
-# wrappers (env, time, xcrun, exec, nohup, if/then/else, do/while/until, !) are dropped. A
-# heuristic for choosing a reminder, not a shell parser.
+# command word. Continued lines are joined; heredoc bodies, VAR=value prefixes and wrappers (env,
+# time, xcrun, exec, nohup, if/then/else, do/while/until, !) are dropped, and so are quoted strings,
+# except that one naming a .swift file becomes the word Q.swift. A heuristic for the routing hooks,
+# not a shell parser.
 simple_commands() {
   local command
   command="$(field .tool_input.command)"
   command="${command//\\$'\n'/ }"
   awk '{ print } /<</ { exit }' <<<"$command" |
-    sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g" |
+    sed -E "s/'[^']*\.swift'/Q.swift/g; s/\"[^\"]*\.swift\"/Q.swift/g; s/'[^']*'//g; s/\"[^\"]*\"//g" |
     tr ';&|(){}`' '\n' |
     awk '{
       sub(/^[ \t]+/, "")

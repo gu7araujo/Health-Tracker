@@ -64,7 +64,7 @@
           },
           {
             "type": "command",
-            "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-changed-swift.sh; [ ! -x \"$hook\" ] || \"$hook\""
+            "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/swift-bash-edits.sh; [ ! -x \"$hook\" ] || \"$hook\""
           }
         ]
       }
@@ -80,15 +80,6 @@
         ]
       },
       {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-changed-swift.sh; [ ! -x \"$hook\" ] || \"$hook\""
-          }
-        ]
-      },
-      {
         "matcher": "Bash|mcp__xcode__BuildProject|mcp__xcode__RunSomeTests|mcp__xcode__RunAllTests|mcp__xcode__GetBuildLog|mcp__xcode__XcodeRefreshCodeIssuesInFile",
         "hooks": [
           {
@@ -99,15 +90,6 @@
       }
     ],
     "PostToolUseFailure": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-changed-swift.sh; [ ! -x \"$hook\" ] || \"$hook\""
-          }
-        ]
-      },
       {
         "matcher": "Bash|mcp__xcode__BuildProject|mcp__xcode__RunSomeTests|mcp__xcode__RunAllTests|mcp__xcode__GetBuildLog|mcp__xcode__XcodeRefreshCodeIssuesInFile",
         "hooks": [

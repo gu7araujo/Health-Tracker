@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests the Claude Code hooks in .claude/hooks (format-swift.sh, then the routing hooks:
 # layer-docs.sh, concurrency-skill.sh, xcodebuild-runner.sh, bootstrap-check.sh,
-# format-changed-swift.sh) and their wiring in .claude/settings.json, by feeding each hook JSON
+# swift-bash-edits.sh) and their wiring in .claude/settings.json, by feeding each hook JSON
 # for files in a temp dir. Set TEST_TMPDIR to choose where.
 set -uo pipefail
 
@@ -348,59 +348,31 @@ context bootstrap-check.sh "$(jq -n --arg cwd "$WORK/ready" '{hook_event_name: "
 [ -z "$out" ] || fail "a bootstrapped checkout should be silent: $out"
 hook_wired SessionStart bootstrap-check.sh startup
 
-# format-changed-swift.sh: before a Bash call it snapshots the checkout's changed Swift files; after
-# it, the files the call changed are formatted and linted, so a sed or heredoc edit still goes
-# through format-swift.sh. Files changed before the call (the user's work, an Edit already checked)
-# are left alone.
-bash_event() {
-  jq -n --arg event "$1" --arg cwd "$2" --arg id "$3" '{hook_event_name: $event, tool_name: "Bash", session_id: "f1",
-    tool_use_id: $id, cwd: $cwd, tool_input: {command: "sed -i"}, tool_response: {stdout: ""}}'
-}
-# run_format <event> <cwd> <tool_use_id> -> sets out, code
-run_format() {
-  out="$(GIT_CEILING_DIRECTORIES="$WORK" "$HOOKS/format-changed-swift.sh" <<<"$(bash_event "$@")" 2>&1)"
+# swift-bash-edits.sh: a Bash command that writes a .swift file is refused, so every Swift edit goes
+# through Edit/Write and the format hook.
+# decision <command> -> sets out (the permission decision and reason), code
+decision() {
+  local raw
+  raw="$("$HOOKS/swift-bash-edits.sh" <<<"$(jq -n --arg command "$1" '{hook_event_name: "PreToolUse", tool_name: "Bash",
+    session_id: "w1", tool_input: {command: $command}}')" 2>&1)"
   code=$?
+  out="$(jq -r '.hookSpecificOutput | "\(.permissionDecision) \(.permissionDecisionReason)"' <<<"$raw" 2>/dev/null || printf '%s' "$raw")"
 }
-repo="$WORK/bash-edits"
-mkdir -p "$repo/Sources"
-git -C "$repo" init -q
-cp "$FIXTURES/Formatted.swift.fixture" "$repo/Sources/Committed.swift"
-git -C "$repo" add . && git -C "$repo" -c user.name=t -c user.email=t@t commit -qm init
-cp "$FIXTURES/Unformatted.swift.fixture" "$repo/Sources/UserWork.swift"
-run_format PreToolUse "$repo" t1
-[ "$code" -eq 0 ] && [ -z "$out" ] || fail "the snapshot should be silent (got $code): $out"
-cp "$FIXTURES/Unformatted.swift.fixture" "$repo/Sources/Committed.swift"
-cp "$FIXTURES/Unformatted.swift.fixture" "$repo/Sources/New.swift"
-cp "$FIXTURES/Unformatted.swift.fixture" "$repo/notes.txt"
-run_format PostToolUse "$repo" t1
-[ "$code" -eq 0 ] || fail "formatting the call's files should exit 0 (got $code): $out"
-for file in Committed New; do
-  diff -q "$repo/Sources/$file.swift" "$FIXTURES/Formatted.swift.fixture" >/dev/null || fail "$file.swift was not formatted"
+for command in "sed -i '' 's/a/b/' HealthTracker/Domain/Entities/Meal.swift" \
+  "sed -Ei 's/a/b/' \"HealthTracker/My File.swift\"" "sed --in-place 's/a/b/' x.swift" \
+  "perl -pi -e 's/a/b/' x.swift" "echo 'let a = 1' > HealthTracker/New.swift" "printf x >>x.swift" \
+  "git show main:x.swift | tee x.swift" $'cat <<\'EOF\' > HealthTracker/New.swift\nstruct New {}\nEOF' \
+  "cd HealthTracker && sed -i '' 's/a/b/' x.swift"; do
+  decision "$command"
+  [ "$code" -eq 0 ] || fail "swift-bash-edits should exit 0 (got $code): $out"
+  [[ "$out" == deny* && "$out" == *Edit* ]] || fail "a Bash write to .swift should be denied, naming Edit: $command ($out)"
 done
-diff -q "$repo/Sources/UserWork.swift" "$FIXTURES/Unformatted.swift.fixture" >/dev/null ||
-  fail "a file changed before the call was formatted"
-diff -q "$repo/notes.txt" "$FIXTURES/Unformatted.swift.fixture" >/dev/null || fail "a non-Swift file was modified"
-# A failing command (PostToolUseFailure) can still have edited files; a violation is reported with exit 2.
-run_format PreToolUse "$repo" t2
-cp "$FIXTURES/LintViolation.swift.fixture" "$repo/Sources/Caster.swift"
-run_format PostToolUseFailure "$repo" t2
-[ "$code" -eq 2 ] || fail "a lint violation in a Bash-edited file should exit 2 (got $code): $out"
-[[ "$out" == *force_cast* ]] || fail "the violation should be reported: $out"
-# A call that changes nothing checks nothing, so the violation is not reported again.
-run_format PreToolUse "$repo" t3
-run_format PostToolUse "$repo" t3
-[ "$code" -eq 0 ] || fail "a call that changed no file should exit 0 (got $code): $out"
-# Without its snapshot (the PreToolUse hook missed), the call is skipped rather than guessed at.
-cp "$FIXTURES/Unformatted.swift.fixture" "$repo/Sources/Unseen.swift"
-run_format PostToolUse "$repo" t4
-[ "$code" -eq 0 ] || fail "a call without a snapshot should exit 0 (got $code): $out"
-diff -q "$repo/Sources/Unseen.swift" "$FIXTURES/Unformatted.swift.fixture" >/dev/null ||
-  fail "a call without a snapshot should format nothing"
-run_format PreToolUse "$WORK/no-repo" t5
-run_format PostToolUse "$WORK/no-repo" t5
-[ "$code" -eq 0 ] || fail "a cwd outside a checkout should exit 0 (got $code): $out"
-for event in PreToolUse PostToolUse PostToolUseFailure; do
-  hook_wired "$event" format-changed-swift.sh Bash
+for command in "sed -n 1,20p x.swift" "sed 's/a/b/' x.swift > /dev/null" "cat x.swift" "grep -rn 'x > y.swift' ." \
+  "swiftformat x.swift" "git mv a.swift b.swift" "sed -i '' 's/a/b/' notes.md" "xcodebuild build 2>&1 | tee build.log" \
+  "echo 'write > a.swift later'"; do
+  decision "$command"
+  [ -z "$out" ] || fail "a command that writes no .swift file should pass: $command ($out)"
 done
+hook_wired PreToolUse swift-bash-edits.sh Bash
 
 [ "$failures" -eq 0 ]
