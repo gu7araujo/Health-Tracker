@@ -80,6 +80,25 @@
                   "name": "testMood()",
                   "nodeType": "Test Case",
                   "result": "Passed"
+                },
+                {
+                  "name": "testParameterized(_:)",
+                  "nodeType": "Test Case",
+                  "result": "Failed",
+                  "children": [
+                    {
+                      "name": "\"water\"",
+                      "nodeType": "Arguments",
+                      "result": "Failed",
+                      "children": [
+                        {
+                          "name": "MainViewUITests.swift:70: nested failure",
+                          "nodeType": "Failure Message",
+                          "result": "Failed"
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }

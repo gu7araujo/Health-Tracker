@@ -382,14 +382,16 @@ for command in "sed -n 1,20p x.swift" "sed 's/a/b/' x.swift > /dev/null" "cat x.
 done
 hook_wired PreToolUse swift-bash-edits.sh Bash
 
-# gate-reminder.sh: a session stopping with Swift changed on the branch since the last gate run
-# (build/quality.json) is sent back once to run the gate: a block whose reason Claude reads, skipped
-# when the stop already follows a Stop hook's block (stop_hook_active), so it can never loop.
-# stop_message <repo> [PATH] [stop_hook_active] -> sets out (the block's reason, or the raw output), code
+# gate-reminder.sh: a session stopping with Swift changed on the branch since the last green gate run
+# (build/quality.json) is sent back to run the gate: a block whose reason Claude reads, once per
+# session and gate run, and skipped when the stop already follows a Stop hook's block
+# (stop_hook_active), so it can never loop.
+# stop_message <repo> [PATH] [stop_hook_active] [session] -> sets out (the block's reason, or the raw
+# output), code. Each call is a new session unless <session> is given.
 stop_message() {
   local raw
-  raw="$(jq -n --arg cwd "$1" --argjson active "${3:-false}" '{hook_event_name: "Stop", session_id: "g1", cwd: $cwd,
-    stop_hook_active: $active}' | PATH="${2:-$PATH}" "$HOOKS/gate-reminder.sh" 2>&1)"
+  raw="$(jq -n --arg cwd "$1" --argjson active "${3:-false}" --arg session "${4:-g-$RANDOM$RANDOM}" '{hook_event_name: "Stop",
+    session_id: $session, cwd: $cwd, stop_hook_active: $active}' | PATH="${2:-$PATH}" "$HOOKS/gate-reminder.sh" 2>&1)"
   code=$?
   out="$(jq -r 'select(.decision == "block") | .reason' <<<"$raw" 2>/dev/null || printf '%s' "$raw")"
   [ -z "$raw" ] || [ -n "$out" ] || fail "gate-reminder output should be a block with a reason: $raw"
@@ -410,15 +412,22 @@ printf 'struct B {}\n' >"$GATE/HealthTracker/B.swift"
 stop_message "$GATE"
 [ "$code" -eq 0 ] || fail "gate-reminder should exit 0 (got $code): $out"
 [[ "$out" == *scripts/quality* && "$out" == *table* ]] || fail "an untracked Swift file without a gate run should be reminded: $out"
+stop_message "$GATE" "$PATH" false same
+stop_message "$GATE" "$PATH" false same
+[ -z "$out" ] || fail "a session already sent back for this gate run should be let through: $out"
 touch -t 202601010000 "$GATE/HealthTracker/B.swift"
 printf '{"passed": true}\n' >"$GATE/build/quality.json"
 stop_message "$GATE"
 [ -z "$out" ] || fail "a gate run newer than every Swift change should be silent: $out"
+printf '{"passed": false}\n' >"$GATE/build/quality.json"
+stop_message "$GATE"
+[[ "$out" == *scripts/quality* ]] || fail "a red gate run should not count as the last gate run: $out"
+printf '{"passed": true}\n' >"$GATE/build/quality.json"
 gitc add -A && gitc commit -q -m b
 printf 'struct A { let a = 1 }\n' >"$GATE/HealthTracker/A.swift"
 touch -t 202601010000 "$GATE/build/quality.json"
-stop_message "$GATE"
-[[ "$out" == *scripts/quality* ]] || fail "a Swift edit newer than the gate run should be reminded: $out"
+stop_message "$GATE" "$PATH" false same
+[[ "$out" == *scripts/quality* ]] || fail "after a new gate run, a Swift edit newer than it should be reminded again: $out"
 gitc add -A && gitc commit -q -m a
 touch -t 202601010000 "$GATE/HealthTracker/A.swift" "$GATE/HealthTracker/B.swift"
 stop_message "$GATE"
@@ -441,10 +450,24 @@ gitc checkout -q -- HealthTracker/B.swift
 touch "$GATE/HealthTracker/B.swift"
 stop_message "$GATE" "$PATH" true
 [ "$code" -eq 0 ] && [ -z "$out" ] || fail "a stop after a Stop hook's block should be let through (got $code): $out"
+# A gate still running in the checkout (a live pid in build/quality.pids) will write its own table.
+mkdir -p "$GATE/scripts" "$GATE/build/quality.pids"
+printf '#!/bin/sh\nsleep 30\n' >"$GATE/scripts/quality"
+chmod +x "$GATE/scripts/quality"
+"$GATE/scripts/quality" &
+gate_pid=$!
+touch "$GATE/build/quality.pids/$gate_pid"
+stop_message "$GATE"
+[ -z "$out" ] || fail "a stop while a gate runs should be silent: $out"
+kill "$gate_pid"
+wait "$gate_pid" 2>/dev/null
+stop_message "$GATE"
+[[ "$out" == *scripts/quality* ]] || fail "a stale pid file should not silence the reminder: $out"
+rm -rf "$GATE/scripts" "$GATE/build/quality.pids"
 # A cloud session (no xcrun) runs the gate on CI instead, so it is never reminded.
 mkdir -p "$WORK/no-xcrun-bin"
 ln -sf "$(command -v jq)" "$WORK/no-xcrun-bin/jq"
-for tool in git dirname; do
+for tool in git dirname find; do
   ln -sf "$(command -v "$tool")" "$WORK/no-xcrun-bin/$tool"
 done
 stop_message "$GATE" "$WORK/no-xcrun-bin:/bin"
@@ -452,5 +475,6 @@ stop_message "$GATE" "$WORK/no-xcrun-bin:/bin"
 stop_message "$WORK/no-repo"
 [ "$code" -eq 0 ] && [ -z "$out" ] || fail "a cwd outside a checkout should be silent (got $code): $out"
 hook_wired Stop gate-reminder.sh Stop
+hook_wired SubagentStop gate-reminder.sh SubagentStop
 
 [ "$failures" -eq 0 ]

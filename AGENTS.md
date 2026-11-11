@@ -34,10 +34,10 @@ The core loop is **red → green**: write a failing test, then make it pass. Fol
 **Definition of done**, in every session, interactive or workflow: the final report and PR carry the evidence, each item that applies.
 
 1. **Red**: the failing test's name and its failing assertion line, quoted.
-2. **Gate**: the table from the last `scripts/quality` run, after the last edit. A project Stop hook sends the session back once when Swift changed since the last run's `build/quality.json`.
+2. **Gate**: the table from the last `scripts/quality` run, after the last edit. A Stop hook sends a session or subagent back, once per gate run, when Swift changed since the last green run's `build/quality.json`.
 3. **Scenario**: for user-facing behaviour, the scenario checked in `en` and `pt-BR` (an AppIntentsTesting or UI test, or `device-interaction`).
 4. **Previews**: for an edited View, the `RenderPreview` snapshots `HealthTracker/Presentation/AGENTS.md` asks for.
-5. **Review**: each pass the `reviewing` skill's tier calls for, Codex included, with its findings and what became of each.
+5. **Review**: each pass the `reviewing` skill's tier calls for (or why one was unavailable), with its findings and what became of each.
 
 Aim for near-total coverage: every public function, file and edge case earns a test. Follow the plan when we have one.
 
@@ -53,7 +53,7 @@ On a task spanning several files, layers or PRs, the main session is the **orche
 
 - Run independent slices, or a staged pipeline (implement → review → verify), as a Workflow.
 - Brief each subagent as a cold start: the goal, the files, the constraints, its done-criterion, and the shape of the report to return. Write each skill it needs as a call in its first step (`Skill("tdd")` for an implementer).
-- An implementer's report schema requires the definition of done as fields: `red_evidence` (test name plus failing assertion line), `green_evidence` (the gate table), `previews` (snapshots, when Views changed) and `skills_loaded`. The verify stage fails an implementer whose field is empty where it applies, and the PR body's "How verified" lists the skills that ran.
+- An implementer's report schema requires the definition of done as fields: `red_evidence` (test name plus failing assertion line), `green_evidence` (the gate table), `scenario` (the en and pt-BR check, for user-facing behaviour), `previews` (snapshots, when Views changed) and `skills_loaded`. The verify stage fails an implementer whose field is empty where it applies, and the PR body's "How verified" lists the skills that ran.
 - Agents working at the same time each take their own worktree in `.claude/worktrees/<branch-name>`, and at most two of them build or test at once: `parallel-agents` skill. Create a worktree only when the task requires it or the user asks.
 
 ## Building and Validating

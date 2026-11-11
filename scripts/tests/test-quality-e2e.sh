@@ -565,6 +565,7 @@ kill "$bystander"
 
 # Under the table, each failed test is named with its first failure message, and each n/a test
 # row gets the last error: line its run logged, so nobody greps the log to learn either.
+cp "$TMP/tests.json" "$TMP/tests.passing.json"
 cp "$FIX/test-results.json" "$TMP/tests.json"
 sed -i.bak 's/"HealthTrackerTests"/"NotRunTests"/' "$TMP/tests.json"
 out="$(XCODEBUILD_ERROR="error: Unable to boot the Simulator." gate "$REPO" --full 2>&1)"
@@ -578,7 +579,7 @@ below="$(tail -n +"${table_end:-1}" <<<"$out")"
 out="$(gate "$REPO" --full 2>&1)"
 [[ "$out" == *"Unit tests n/a: no error: line in build/xcodebuild.log"* ]] ||
   fail "an n/a test row with no logged error should say so, got: $out"
-printf '{"testNodes":[]}\n' >"$TMP/tests.json"
+mv "$TMP/tests.passing.json" "$TMP/tests.json"
 
 
 # Every run writes build/quality.json, --json or not: the Stop hook's gate-reminder.sh reads it.

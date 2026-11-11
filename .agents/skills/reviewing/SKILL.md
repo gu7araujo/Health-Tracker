@@ -14,7 +14,7 @@ The tier is set by the riskiest path the diff touches. A diff of only files matc
 | Tier | Diff touches | Passes |
 |---|---|---|
 | Docs | only docs or agent config (CI's `paths-ignore`) | `code-review` at `low` |
-| Standard | app or test code | `code-review` at `high`, then Codex |
+| Standard | app or test code | Specialist, `code-review` at `high`, then Codex |
 | High | persisted types (`Domain/Entities/`, `Data/`), the frozen intent contract (`Presentation/Intents/`), `HealthTracker.entitlements`, `Info.plist`, and the guardrails (`.github/`, `.githooks/`, `scripts/`, `.claude/settings.json`, `.claude/hooks/`, `.swiftlint.yml`, `.periphery.yml`) | Standard with `code-review` at `xhigh`, plus `security-review` |
 
 **Done when:** every path in `git diff --name-only main...` (plus uncommitted files) is placed in a tier, and the highest one is named.

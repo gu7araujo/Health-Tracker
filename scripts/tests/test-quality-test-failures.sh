@@ -20,15 +20,16 @@ expect() {
 }
 
 expect HealthTrackerTests 0
-expect HealthTrackerUITests 2
+expect HealthTrackerUITests 3
 expect MissingTests ""     # bundle never ran: unmeasured
 expect CrashedTests ""     # bundle failed without a failing case (crash): unmeasured
 
-# --list names each failed case (its nodeIdentifier, or suite/name) with its first failure message,
-# kept on one line.
+# --list names each failed case (its nodeIdentifier, or suite/name) with its first failure message
+# at any depth (a parameterized case nests it under Arguments), kept on one line.
 out="$("$FAILURES" "$FIX" HealthTrackerUITests --list 2>&1)"
 expected="MainViewUITests/testAddMeal(): MainViewUITests.swift:42: XCTAssertTrue failed
-MainViewUITests/testAddWater(): MainViewUITests.swift:60: first line second line"
+MainViewUITests/testAddWater(): MainViewUITests.swift:60: first line second line
+MainViewUITests/testParameterized(_:): MainViewUITests.swift:70: nested failure"
 [ "$out" = "$expected" ] || fail "--list: expected [$expected], got [$out]"
 out="$("$FAILURES" "$FIX" HealthTrackerTests --list 2>&1)"
 [ -z "$out" ] || fail "--list of a passing bundle should print nothing, got [$out]"
