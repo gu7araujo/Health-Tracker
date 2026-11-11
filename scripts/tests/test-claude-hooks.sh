@@ -250,6 +250,10 @@ context layer-docs.sh "$(edit_input "$ROOT/README.md" s1)"
 mkdir -p "$WORK/outside/scripts"
 context layer-docs.sh "$(edit_input "$WORK/outside/scripts/x.sh" s4)"
 [ -z "$out" ] || fail "an edit outside the checkout should be silent: $out"
+mkdir -p "$WORK/other-repo/scripts"
+git -C "$WORK/other-repo" init -q
+context layer-docs.sh "$(edit_input "$WORK/other-repo/scripts/build.sh" s4)"
+[ -z "$out" ] || fail "an edit in another repository should be silent: $out"
 context layer-docs.sh "$(edit_input "$ROOT/scripts/quality" s4)"
 [[ "$out" == *scripts/AGENTS.md* ]] || fail "an outside edit should not use up the scripts reminder: $out"
 context layer-docs.sh "$(jq -n '{hook_event_name: "PreToolUse", tool_name: "mcp__xcode__XcodeUpdate", session_id: "s3",
@@ -283,6 +287,14 @@ context concurrency-skill.sh "$(build_output "** BUILD SUCCEEDED ** (Sendable.sw
 # Reading code or a diff that mentions a diagnostic is not a build: silent, and the reminder stays available.
 context concurrency-skill.sh "$(build_output "+  \"error: main actor-isolated property\"" c5 "git diff main")"
 [ -z "$out" ] || fail "a non-build command's output should be silent: $out"
+for command in "git log --grep xcodebuild" "sed -n 1,80p scripts/quality" "git diff main -- scripts/quality"; do
+  context concurrency-skill.sh "$(build_output "error: main actor-isolated property" c5 "$command")"
+  [ -z "$out" ] || fail "a command that only names a build tool should be silent: $command ($out)"
+done
+for command in "git push -u origin feat/x" "gh run view 123 --log-failed" "swift build"; do
+  context concurrency-skill.sh "$(build_output "error: main actor-isolated property" "c-$RANDOM$RANDOM" "$command")"
+  [[ "$out" == *swift-concurrency* ]] || fail "a command that builds or prints a build log should count: $command ($out)"
+done
 context concurrency-skill.sh "$(build_output "error: main actor-isolated property" c5 "scripts/quality --fast")"
 [[ "$out" == *swift-concurrency* ]] || fail "a gate run's diagnostic should still be reminded after a non-build match: $out"
 # A failing build fires PostToolUseFailure, with its output in .error.
@@ -309,14 +321,16 @@ bash_input() {
 for command in "xcodebuild -scheme HealthTracker build" "set -o pipefail && xcodebuild test | xcbeautify" \
   "cd /tmp; NSUnbufferedIO=YES xcodebuild build" "xcrun xcodebuild -scheme HealthTracker test" \
   "env NSUnbufferedIO=YES xcodebuild build" "time xcodebuild build-for-testing" "/usr/bin/xcodebuild build" \
-  "if xcodebuild test; then :; fi" "{ xcodebuild build; }"; do
+  "if xcodebuild test; then :; fi" "{ xcodebuild build; }" "echo \`xcodebuild build\`" \
+  $'xcodebuild -scheme HealthTracker \\\ntest'; do
   context xcodebuild-runner.sh "$(bash_input "$command")"
   [[ "$out" == *mcp__xcode__BuildProject* ]] || fail "a main-session xcodebuild should get the reminder: $command ($out)"
 done
 context xcodebuild-runner.sh "$(bash_input "xcodebuild test" agent-b)"
 [ -z "$out" ] || fail "a subagent's xcodebuild should be silent: $out"
 for command in "grep -rn xcodebuild scripts" "scripts/quality --fast" "git log --grep xcodebuild" \
-  "xcodebuild -version" "xcodebuild -list -project HealthTracker.xcodeproj"; do
+  "xcodebuild -version" "xcodebuild -list -project HealthTracker.xcodeproj" 'echo "run xcodebuild build next"' \
+  "xcodebuild -showBuildSettings -derivedDataPath build" $'gh pr create --body-file - <<EOF\nxcodebuild\n test\nEOF'; do
   context xcodebuild-runner.sh "$(bash_input "$command")"
   [ -z "$out" ] || fail "a command that neither builds nor tests should be silent: $command ($out)"
 done

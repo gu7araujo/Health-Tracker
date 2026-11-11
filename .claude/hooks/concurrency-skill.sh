@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # Claude Code PostToolUse and PostToolUseFailure hook on Bash and the Xcode MCP build tools: when a
 # build's output (or a failed build's error) holds a Swift concurrency diagnostic, tells the agent
-# to call the swift-concurrency skill before fixing it. Bash counts only when it builds or tests
-# (xcodebuild, swift build/test, scripts/quality), so reading code or a diff that quotes a
-# diagnostic stays silent. Once per session and agent.
+# to call the swift-concurrency skill before fixing it. Bash counts only when a simple command in
+# it builds or prints a build log (xcodebuild, swift build/test, scripts/quality, git push and its
+# pre-push gate, gh run view/watch), so reading code or a diff that quotes a diagnostic stays
+# silent. Once per session and agent.
 set -uo pipefail
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 
 if [ "$(field .tool_name)" = Bash ]; then
-  grep -qE '(^|[^[:alnum:]_-])(xcodebuild|swift[[:space:]]+(build|test)|scripts/quality)([^[:alnum:]_-]|$)' \
-    <<<"$(field .tool_input.command)" || exit 0
+  awk '/^([^ \t]*\/)?(xcodebuild|quality)([ \t]|$)/ || /^swift[ \t]+(build|test)/ ||
+    /^git[ \t]+push([ \t]|$)/ || /^gh[ \t]+run[ \t]+(view|watch)/ { found = 1 }
+    END { exit !found }' <<<"$(simple_commands)" || exit 0
 fi
 output="$(jq -r '[.tool_response, .error] | map(select(. != null) | if type == "string" then . else tojson end) | join("\n")' <<<"$input")"
 # Swift 6 wording: "<x> actor-isolated", "global actor 'X'-isolated", "non-Sendable", "'Sendable'

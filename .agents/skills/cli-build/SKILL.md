@@ -1,6 +1,6 @@
 ---
 name: cli-build
-description: Build the HealthTracker app or compile the test target with xcodebuild, the fallback once an Xcode MCP build call has returned an error you can quote. Use before any xcodebuild build in a main session; workflow subagents and gates build through scripts/quality.
+description: Build the HealthTracker app or compile the test target with xcodebuild, the fallback once an Xcode MCP build call has returned an error you can quote. Use before any xcodebuild build in a main session; workflow subagents and gates use scripts/quality or the Xcode MCP (parallel-agents skill).
 ---
 
 # Build HealthTracker from the CLI

@@ -17,7 +17,7 @@ Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it when Read
 | `HealthTrackerIntentsUITests/` (intents end to end, iOS 27) | also `HealthTrackerIntentsUITests/AGENTS.md` |
 | `scripts/`, `.githooks/`, `.github/` | `scripts/AGENTS.md` |
 
-- `HealthTracker/UITestingSupport.swift` — the `-uiTesting` launch-argument hook: temp-dir repository, skips migration and permission prompts. It also detects the unit-test host (`XCTestConfigurationFilePath`), which skips that startup and renders no `MainView`.
+- `HealthTracker/UITestingSupport.swift` — the `-uiTesting` and unit-test-host startup switches; what each skips: the two test targets' `AGENTS.md`.
 - `HealthTracker/Resources/` — localizable strings for `en` and `pt-BR`, plus `AppShortcuts.strings` (Siri phrases).
 
 ## Workflow

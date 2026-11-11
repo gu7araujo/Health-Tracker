@@ -1,6 +1,6 @@
 ---
 name: cli-test
-description: Run HealthTracker's unit and/or UI tests with xcodebuild, the fallback once an Xcode MCP test call has returned an error you can quote. Use before any xcodebuild test run in a main session; workflow subagents and gates test through scripts/quality.
+description: Run HealthTracker's unit and/or UI tests with xcodebuild, the fallback once an Xcode MCP test call has returned an error you can quote. Use before any xcodebuild test run in a main session; workflow subagents and gates use scripts/quality or the Xcode MCP (parallel-agents skill).
 ---
 
 # Run HealthTracker tests from the CLI
