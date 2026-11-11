@@ -14,7 +14,7 @@ if [ "$(field .tool_name)" = Bash ]; then
     /^git[ \t]+push([ \t]|$)/ || /^gh[ \t]+run[ \t]+(view|watch)/ { found = 1 }
     END { exit !found }' <<<"$(simple_commands)" || exit 0
 fi
-output="$(jq -r '[.tool_response, .error] | map(select(. != null) | if type == "string" then . else tojson end) | join("\n")' <<<"$input")"
+output="$(field '([.tool_response, .error] | map(select(. != null) | if type == "string" then . else tojson end) | join("\n"))')"
 # Swift 6 wording: "<x> actor-isolated", "global actor 'X'-isolated", "non-Sendable", "'Sendable'
 # protocol", "not concurrency-safe", "concurrently-executing code", "risks causing data races".
 grep -qiE "actor-isolated|'-isolated|non-sendable|'sendable'|concurrency-safe|concurrently-executing|data race" <<<"$output" || exit 0
