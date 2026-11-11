@@ -1,6 +1,6 @@
 # Test Suite
 
-The unit-test target. Built on **Swift Testing** (not XCTest), it mirrors the production tree one-to-one (`scripts/fitness/test-mirror.sh` requires a `<Name>Tests.swift` per Domain/Data file, at the mirrored path when the name isn't unique, minus `scripts/fitness/test-mirror-exceptions.txt`): one test struct per type, grouped under `Domain/`, `Data/`, and `Presentation/`. Every test runs against protocol fakes and deterministic fixtures — no real services, files, or wall clock. UI flows live in the separate `HealthTrackerUITests` target. In the unit-test host (`XCTestConfigurationFilePath`), `HealthTracker/UITestingSupport.swift` skips the app's startup and renders no `MainView`.
+The unit-test target. Built on **Swift Testing** (not XCTest), it mirrors the production tree one-to-one (`scripts/fitness/test-mirror.sh` requires a `<Name>Tests.swift` per Domain/Data file, at the mirrored path when the name isn't unique, minus `scripts/fitness/test-mirror-exceptions.txt`): one test struct per type, grouped under `Domain/`, `Data/`, and `Presentation/`. Every test runs against protocol fakes and deterministic fixtures — no real services, files, or wall clock. UI flows live in the separate `HealthTrackerUITests` target. In the unit-test host (`XCTestConfigurationFilePath`), `UITestingSupport.isHostingUnitTests` skips the app's startup and `HealthTrackerApp` renders no `MainView`.
 
 Writing a test: call `Skill("swift-testing-expert:swift-testing-expert")` for traits, parameterized tests and `#expect`/`#require`.
 

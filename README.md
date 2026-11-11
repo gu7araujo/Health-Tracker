@@ -336,7 +336,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
   - pushes to `main` and force-pushes;
   - `git reset --hard`;
   - `gh pr merge`.
-- A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately. If SwiftFormat or SwiftLint can't run, the hook reports that as an error instead of passing.
+- A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately. If SwiftFormat or SwiftLint can't run, the hook reports that as an error instead of passing. Another (`swift-bash-edits.sh`) refuses a Bash command that writes a `.swift` file in the checkout, so agents' Swift edits go through the first.
 - Agents open PRs as **draft**; every push runs CI, drafts included. They run `CI=true scripts/quality --full` locally, push, wait for the checks, and mark the PR ready once they are green. If `test` goes red, the agent reproduces it locally, fixes it and pushes again; a failure it can't reproduce locally, or a red run after a fix that was green locally, comes to you as a report instead. You review and merge.
 
 ## Script reference
@@ -356,6 +356,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `.github/workflows/` | `ci.yml` (PRs, pushes to `main`), `weekly.yml` (schedule) and `claude-code-review.yml` (AI review of non-draft PRs, on Linux) |
 | `.githooks/` | pre-commit and pre-push hooks |
 | `.claude/hooks/format-swift.sh` | Claude Code hook that formats and lints each edited Swift file |
+| `.claude/hooks/` (others) | Claude Code hooks that route agents: `layer-docs.sh`, `concurrency-skill.sh`, `xcodebuild-runner.sh`, `bootstrap-check.sh`, `swift-bash-edits.sh` (each header is its spec; tests in `scripts/tests/test-claude-hooks.sh`) |
 
 If you change a script, run its tests:
 

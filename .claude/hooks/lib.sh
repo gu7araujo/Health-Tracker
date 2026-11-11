@@ -21,16 +21,26 @@ first_time() {
 }
 
 # simple_commands: the Bash call's command as one simple command per line, each starting at its
-# command word. Continued lines are joined; heredoc bodies, VAR=value prefixes and wrappers (env,
-# time, xcrun, exec, nohup, if/then/else, do/while/until, !) are dropped, and so are quoted strings,
-# except that one naming a .swift file becomes the word Q.swift. A heuristic for the routing hooks,
-# not a shell parser.
+# command word. Continued lines are joined; heredoc bodies (up to their terminator), VAR=value
+# prefixes and wrappers (env, time, xcrun, exec, nohup, if/then/else, do/while/until, !) are
+# dropped, and so are quoted strings, even across lines, except that one naming a .swift file
+# becomes that path with its blanks and shell operators turned to _. A heuristic for the routing hooks, not a shell
+# parser.
 simple_commands() {
   local command
   command="$(field .tool_input.command)"
   command="${command//\\$'\n'/ }"
-  awk '{ print } /<</ { exit }' <<<"$command" |
-    sed -E "s/'[^']*\.swift'/Q.swift/g; s/\"[^\"]*\.swift\"/Q.swift/g; s/'[^']*'//g; s/\"[^\"]*\"//g" |
+  awk -v q="'" '
+    skip { line = $0; if (tabs) sub(/^\t+/, "", line); if (line == delim) skip = 0; next }
+    { print; line = $0; gsub(/<<</, "", line) }
+    match(line, "<<-?[ \t]*[\"" q "]?[A-Za-z_][A-Za-z0-9_]*") {
+      delim = substr(line, RSTART, RLENGTH)
+      tabs = delim ~ /^<<-/
+      sub("^<<-?[ \t]*[\"" q "]?", "", delim)
+      skip = 1
+    }' <<<"$command" |
+    perl -0777 -pe 's{(\x27[^\x27]*\x27|"(?:[^"\\]|\\.)*")}{
+      my $m = $1; $m =~ /\.swift["\x27]\z/ ? do { (my $w = substr($m, 1, -1)) =~ s/[\s<>|;&()`{}]/_/g; $w } : "" }gse' |
     tr ';&|(){}`' '\n' |
     awk '{
       sub(/^[ \t]+/, "")

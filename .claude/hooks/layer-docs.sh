@@ -18,8 +18,8 @@ if [ -n "$path" ]; then
   while [ ! -d "$dir" ]; do dir="$(dirname "$dir")"; done
   checkout="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)" || exit 0
   # Only this project's checkouts (the main one or a worktree) share the hook's git directory.
-  [ "$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir)" = \
-    "$(git -C "$(dirname "$0")" rev-parse --path-format=absolute --git-common-dir)" ] || exit 0
+  [ "$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = \
+    "$(git -C "$(dirname "$0")" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ] || exit 0
   full="$(cd "$dir" && pwd -P)${path#"$dir"}"
   rel="${full#"$checkout"/}"
   [ "$rel" != "$full" ] || exit 0

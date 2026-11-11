@@ -17,7 +17,7 @@ Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it when Read
 | `HealthTrackerIntentsUITests/` (intents end to end, iOS 27) | also `HealthTrackerIntentsUITests/AGENTS.md` |
 | `scripts/`, `.githooks/`, `.github/` | `scripts/AGENTS.md` |
 
-- `HealthTracker/UITestingSupport.swift` — the `-uiTesting` and unit-test-host startup switches; what each skips: the two test targets' `AGENTS.md`.
+- `HealthTracker/UITestingSupport.swift` — the `-uiTesting` and unit-test-host startup switches; what each skips: the test targets' `AGENTS.md`.
 - `HealthTracker/Resources/` — localizable strings for `en` and `pt-BR`, plus `AppShortcuts.strings` (Siri phrases).
 
 ## Workflow
@@ -79,7 +79,7 @@ A skill loads only when called: make each call below. Each layer's `AGENTS.md` n
 - **Iterate** with `scripts/quality --fast` (format, lint, fitness, unit tests, unused code, Domain/Data coverage).
 - **Done** is `scripts/quality --full` exiting 0. A change touching only docs or agent config (the `paths-ignore` paths in `.github/workflows/ci.yml`) is done when `--fast` exits 0. Paste that run's gate table in your final report and PR.
 - **Fix a red gate in code or tests.** Lowering a threshold, editing `scripts/coverage-exceptions.txt` or `scripts/fitness/test-mirror-exceptions.txt`, adding a `swiftlint:disable` or `// periphery:ignore`, or regenerating `.swiftlint-baseline.json` to absorb a new violation is the user's call: propose it, and call each one out in the report and PR.
-- Hooks in `.claude/hooks/` format and lint changed `.swift` files and name the doc, skill or runner a step needs; act on what they report.
+- Hooks in `.claude/hooks/` format and lint each `.swift` file you Edit or Write, refuse Bash writes to one, and name the doc, skill or runner a step needs; act on what they report.
 
 ## Data Migrations
 

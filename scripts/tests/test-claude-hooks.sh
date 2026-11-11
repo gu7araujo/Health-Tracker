@@ -295,6 +295,8 @@ for command in "git push -u origin feat/x" "gh run view 123 --log-failed" "swift
   context concurrency-skill.sh "$(build_output "error: main actor-isolated property" "c-$RANDOM$RANDOM" "$command")"
   [[ "$out" == *swift-concurrency* ]] || fail "a command that builds or prints a build log should count: $command ($out)"
 done
+context concurrency-skill.sh "$(build_output "error: main actor-isolated property" c8 $'git commit -m "$(cat <<\'EOF\'\nfix: x\nEOF\n)" && git push')"
+[[ "$out" == *swift-concurrency* ]] || fail "a git push after a heredoc commit message should count: $out"
 context concurrency-skill.sh "$(build_output "error: main actor-isolated property" c5 "scripts/quality --fast")"
 [[ "$out" == *swift-concurrency* ]] || fail "a gate run's diagnostic should still be reminded after a non-build match: $out"
 # A failing build fires PostToolUseFailure, with its output in .error.
@@ -321,7 +323,7 @@ bash_input() {
 for command in "xcodebuild -scheme HealthTracker build" "set -o pipefail && xcodebuild test | xcbeautify" \
   "cd /tmp; NSUnbufferedIO=YES xcodebuild build" "xcrun xcodebuild -scheme HealthTracker test" \
   "env NSUnbufferedIO=YES xcodebuild build" "time xcodebuild build-for-testing" "/usr/bin/xcodebuild build" \
-  "if xcodebuild test; then :; fi" "{ xcodebuild build; }" "echo \`xcodebuild build\`" \
+  "if xcodebuild test; then :; fi" "{ xcodebuild build; }" $'grep -q x <<<"$y"\nxcodebuild build' "echo \`xcodebuild build\`" \
   $'xcodebuild -scheme HealthTracker \\\ntest'; do
   context xcodebuild-runner.sh "$(bash_input "$command")"
   [[ "$out" == *mcp__xcode__BuildProject* ]] || fail "a main-session xcodebuild should get the reminder: $command ($out)"
@@ -353,8 +355,8 @@ hook_wired SessionStart bootstrap-check.sh startup
 # decision <command> -> sets out (the permission decision and reason), code
 decision() {
   local raw
-  raw="$("$HOOKS/swift-bash-edits.sh" <<<"$(jq -n --arg command "$1" '{hook_event_name: "PreToolUse", tool_name: "Bash",
-    session_id: "w1", tool_input: {command: $command}}')" 2>&1)"
+  raw="$("$HOOKS/swift-bash-edits.sh" <<<"$(jq -n --arg command "$1" --arg cwd "${2:-$ROOT}" '{hook_event_name: "PreToolUse",
+    tool_name: "Bash", session_id: "w1", cwd: $cwd, tool_input: {command: $command}}')" 2>&1)"
   code=$?
   out="$(jq -r '.hookSpecificOutput | "\(.permissionDecision) \(.permissionDecisionReason)"' <<<"$raw" 2>/dev/null || printf '%s' "$raw")"
 }
@@ -362,14 +364,19 @@ for command in "sed -i '' 's/a/b/' HealthTracker/Domain/Entities/Meal.swift" \
   "sed -Ei 's/a/b/' \"HealthTracker/My File.swift\"" "sed --in-place 's/a/b/' x.swift" \
   "perl -pi -e 's/a/b/' x.swift" "echo 'let a = 1' > HealthTracker/New.swift" "printf x >>x.swift" \
   "git show main:x.swift | tee x.swift" $'cat <<\'EOF\' > HealthTracker/New.swift\nstruct New {}\nEOF' \
-  "cd HealthTracker && sed -i '' 's/a/b/' x.swift"; do
+  "cd HealthTracker && sed -i '' 's/a/b/' x.swift" "sed -i '' 's/a/b/' $ROOT/HealthTracker/Domain/Entities/Meal.swift" \
+  $'gh pr create --body "notes" && git show HEAD:x.swift > HealthTracker/x.swift'; do
   decision "$command"
   [ "$code" -eq 0 ] || fail "swift-bash-edits should exit 0 (got $code): $out"
   [[ "$out" == deny* && "$out" == *Edit* ]] || fail "a Bash write to .swift should be denied, naming Edit: $command ($out)"
 done
 for command in "sed -n 1,20p x.swift" "sed 's/a/b/' x.swift > /dev/null" "cat x.swift" "grep -rn 'x > y.swift' ." \
   "swiftformat x.swift" "git mv a.swift b.swift" "sed -i '' 's/a/b/' notes.md" "xcodebuild build 2>&1 | tee build.log" \
-  "echo 'write > a.swift later'"; do
+  "echo 'write > a.swift later'" \
+  $'gh pr create --title T --body "Summary\n\n- Move Old.swift -> New.swift and update callers"' \
+  $'git commit -m "refactor\n\n- MealsView.swift -> MealsSectionView.swift (rename)"' \
+  $'cat > /tmp/snippet.swift <<\'EOF\'\nlet x = 1\nEOF' "git show HEAD:X.swift > /tmp/old.swift" \
+  'git show HEAD:X.swift > "$TMPDIR/old file.swift"'; do
   decision "$command"
   [ -z "$out" ] || fail "a command that writes no .swift file should pass: $command ($out)"
 done
