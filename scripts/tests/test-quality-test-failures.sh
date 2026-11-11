@@ -24,10 +24,11 @@ expect HealthTrackerUITests 2
 expect MissingTests ""     # bundle never ran: unmeasured
 expect CrashedTests ""     # bundle failed without a failing case (crash): unmeasured
 
-# --list names each failed case (its nodeIdentifier, or suite/name) with its first failure message.
+# --list names each failed case (its nodeIdentifier, or suite/name) with its first failure message,
+# kept on one line.
 out="$("$FAILURES" "$FIX" HealthTrackerUITests --list 2>&1)"
 expected="MainViewUITests/testAddMeal(): MainViewUITests.swift:42: XCTAssertTrue failed
-MainViewUITests/testAddWater()"
+MainViewUITests/testAddWater(): MainViewUITests.swift:60: first line second line"
 [ "$out" = "$expected" ] || fail "--list: expected [$expected], got [$out]"
 out="$("$FAILURES" "$FIX" HealthTrackerTests --list 2>&1)"
 [ -z "$out" ] || fail "--list of a passing bundle should print nothing, got [$out]"

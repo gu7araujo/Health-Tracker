@@ -12,8 +12,8 @@ description: Run HealthTracker's quality gate (scripts/quality), act on its resu
 `scripts/bootstrap` (once per clone and per new worktree) installs the git hooks and the pinned SwiftLint, SwiftFormat and Periphery into `build/tools/bin`, and checks tool versions; the gate looks for its tools there first.
 
 ```bash
-scripts/quality --fast --json   # iterate: format, lint, fitness, unit tests, unused code, Domain/Data unit line + region coverage (~2 min)
-scripts/quality --full --json   # done: everything in --fast, plus UI and intents UI tests, app coverage, per-file floor (~8 min)
+scripts/quality --fast   # iterate: format, lint, fitness, unit tests, unused code, Domain/Data unit line + region coverage (~2 min)
+scripts/quality --full   # done: everything in --fast, plus UI and intents UI tests, app coverage, per-file floor (~8 min)
 ```
 
 It tests on `--simulator <udid>` when given; otherwise it reuses or clones a simulator named `HT-<branch>`, so parallel worktrees stay isolated, and shuts that clone down when it exits unless it was already booted. `--full` also runs `HealthTrackerIntentsUITests`, which needs a runtime at least the iPhone simulator SDK's version (iOS 27.2 with Xcode 27.2; its `AppIntentsTesting` fails to load on 27.0): on an older simulator it uses a second clone, `HT-<branch>-ios27` (re-cloned when its runtime falls below that), shut down the same way; with no iPhone on such a runtime the `Intents UI tests` row is `n/a` and the gate prints the fix, `xcodebuild -downloadPlatform iOS`. An exported `SIMULATOR_ID` is ignored on purpose. Delete both clones when the branch is done: `xcrun simctl delete "HT-<branch with / replaced by ->"` and `xcrun simctl delete "HT-<branch with / replaced by ->-ios27"`.

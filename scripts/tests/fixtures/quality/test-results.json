@@ -67,7 +67,14 @@
                 {
                   "name": "testAddWater()",
                   "nodeType": "Test Case",
-                  "result": "Failed"
+                  "result": "Failed",
+                  "children": [
+                    {
+                      "name": "MainViewUITests.swift:60: first line\nsecond line",
+                      "nodeType": "Failure Message",
+                      "result": "Failed"
+                    }
+                  ]
                 },
                 {
                   "name": "testMood()",

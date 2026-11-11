@@ -383,15 +383,16 @@ done
 hook_wired PreToolUse swift-bash-edits.sh Bash
 
 # gate-reminder.sh: a session stopping with Swift changed on the branch since the last gate run
-# (build/quality.json) is reminded to run the gate. Non-blocking: a systemMessage, never a block.
-# stop_message <repo> [PATH] -> sets out (the systemMessage, or the raw output), code
+# (build/quality.json) is sent back once to run the gate: a block whose reason Claude reads, skipped
+# when the stop already follows a Stop hook's block (stop_hook_active), so it can never loop.
+# stop_message <repo> [PATH] [stop_hook_active] -> sets out (the block's reason, or the raw output), code
 stop_message() {
   local raw
-  raw="$(jq -n --arg cwd "$1" '{hook_event_name: "Stop", session_id: "g1", cwd: $cwd, stop_hook_active: false}' |
-    PATH="${2:-$PATH}" "$HOOKS/gate-reminder.sh" 2>&1)"
+  raw="$(jq -n --arg cwd "$1" --argjson active "${3:-false}" '{hook_event_name: "Stop", session_id: "g1", cwd: $cwd,
+    stop_hook_active: $active}' | PATH="${2:-$PATH}" "$HOOKS/gate-reminder.sh" 2>&1)"
   code=$?
-  out="$(jq -r '.systemMessage // empty' <<<"$raw" 2>/dev/null || printf '%s' "$raw")"
-  [ -z "$raw" ] || jq -e 'has("decision") | not' <<<"$raw" >/dev/null 2>&1 || fail "gate-reminder should never block: $raw"
+  out="$(jq -r 'select(.decision == "block") | .reason' <<<"$raw" 2>/dev/null || printf '%s' "$raw")"
+  [ -z "$raw" ] || [ -n "$out" ] || fail "gate-reminder output should be a block with a reason: $raw"
 }
 GATE="$WORK/gate-repo"
 git init -q -b main "$GATE"
@@ -429,8 +430,17 @@ rm "$GATE/HealthTracker/B.swift"
 touch -t 202601010000 "$GATE/HealthTracker/A.swift"
 stop_message "$GATE"
 [ -z "$out" ] || fail "a deleted Swift file has no mtime to compare and should be silent: $out"
+# A name find could read as an option, or that git would quote, is still compared.
+for name in "-x.swift" "Ação.swift"; do
+  printf 'struct C {}\n' >"$GATE/$name"
+  stop_message "$GATE"
+  [[ "$out" == *scripts/quality* ]] || fail "a new $name should be reminded: $out"
+  rm -- "$GATE/$name"
+done
 gitc checkout -q -- HealthTracker/B.swift
 touch "$GATE/HealthTracker/B.swift"
+stop_message "$GATE" "$PATH" true
+[ "$code" -eq 0 ] && [ -z "$out" ] || fail "a stop after a Stop hook's block should be let through (got $code): $out"
 # A cloud session (no xcrun) runs the gate on CI instead, so it is never reminded.
 mkdir -p "$WORK/no-xcrun-bin"
 ln -sf "$(command -v jq)" "$WORK/no-xcrun-bin/jq"

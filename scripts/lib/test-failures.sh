@@ -13,7 +13,7 @@ if [ "${3:-}" = "--list" ]; then
     | .. | objects | select(.nodeType? == "Test Suite") | .name as $suite
     | .children[]? | select(.nodeType? == "Test Case" and .result == "Failed")
     | (.nodeIdentifier // "\($suite)/\(.name)")
-      + ([.children[]? | select(.nodeType? == "Failure Message") | ": \(.name)"][0] // "")' "$1" 2>/dev/null
+      + ([.children[]? | select(.nodeType? == "Failure Message") | ": \(.name | gsub("\n"; " "))"][0] // "")' "$1" 2>/dev/null
   exit 0
 fi
 

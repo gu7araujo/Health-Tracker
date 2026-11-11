@@ -580,4 +580,11 @@ out="$(gate "$REPO" --full 2>&1)"
   fail "an n/a test row with no logged error should say so, got: $out"
 printf '{"testNodes":[]}\n' >"$TMP/tests.json"
 
+
+# Every run writes build/quality.json, --json or not: the Stop hook's gate-reminder.sh reads it.
+rm -f "$REPO/build/quality.json"
+run_quality '[]' --fast
+jq -e '.mode == "fast" and (.gates | length > 0)' "$REPO/build/quality.json" >/dev/null 2>&1 ||
+  fail "a run without --json should still write build/quality.json"
+
 [ "$failures" -eq 0 ]
