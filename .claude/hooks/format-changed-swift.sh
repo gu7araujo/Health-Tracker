@@ -1,39 +1,44 @@
 #!/usr/bin/env bash
-# Claude Code PostToolUse hook on Bash: runs format-swift.sh on each Swift file that git reports
-# changed (against HEAD, or untracked) and whose content differs from the last call's. A file
-# edited by sed, a heredoc or a script so still gets formatted and linted. The content hashes
-# seen last are kept per session, agent and checkout under $TMPDIR/claude-hooks. Violations go to
+# Claude Code hook on Bash, wired to PreToolUse, PostToolUse and PostToolUseFailure. Before the
+# call it snapshots the content hash of each Swift file git reports changed (against HEAD, or
+# untracked) in the session's checkout; after it, format-swift.sh runs on each such file whose hash
+# is new. A file edited by sed, a heredoc or a script so still gets formatted and linted, while
+# files changed before the call (the user's own work, an Edit the Edit hook already checked) are
+# left alone. The snapshot is keyed by tool_use_id; a call without one is skipped. Violations go to
 # stderr with exit 2, as format-swift.sh reports them.
 set -uo pipefail
-
 hooks="$(cd "$(dirname "$0")" && pwd)"
-input="$(cat)"
-field() { jq -r "$1 // empty" <<<"$input"; }
+# shellcheck source=lib.sh
+source "$hooks/lib.sh"
 
 checkout="$(git -C "$(field .cwd)" rev-parse --show-toplevel 2>/dev/null)" || exit 0
 cd "$checkout" || exit 0
+snapshot="$(state_path "bash-$(field .tool_use_id)")"
 
-files=()
-while IFS= read -r -d '' file; do
-  [ -f "$file" ] && files+=("$file")
-done < <(
-  git diff -z --name-only --diff-filter=ACMR HEAD -- '*.swift' 2>/dev/null
-  git ls-files -z --others --exclude-standard -- '*.swift'
-)
-[ "${#files[@]}" -gt 0 ] || exit 0
+# "<hash> <path>" per changed Swift file.
+changed_swift() {
+  local files=() file
+  while IFS= read -r -d '' file; do
+    [ -f "$file" ] && files+=("$file")
+  done < <(
+    git diff -z --name-only --diff-filter=ACMR HEAD -- '*.swift' 2>/dev/null
+    git ls-files -z --others --exclude-standard -- '*.swift'
+  )
+  [ "${#files[@]}" -gt 0 ] || return 0
+  paste -d ' ' <(git hash-object -- "${files[@]}") <(printf '%s\n' "${files[@]}")
+}
 
-agent="$(field .agent_id)"
-state="${TMPDIR:-/tmp}/claude-hooks/$(field .session_id)-${agent:-main}-formatted-$(git hash-object --stdin <<<"$checkout")"
-mkdir -p "$(dirname "$state")"
-touch "$state"
+if [ "$(field .hook_event_name)" = PreToolUse ]; then
+  mkdir -p "$(dirname "$snapshot")"
+  changed_swift >"$snapshot"
+  exit 0
+fi
 
+[ -f "$snapshot" ] || exit 0
 status=0
-for file in "${files[@]}"; do
-  grep -qxF "$(git hash-object -- "$file") $file" "$state" && continue
+while read -r hash file; do
+  grep -qxF "$hash $file" "$snapshot" && continue
   jq -n --arg path "$checkout/$file" '{tool_input: {file_path: $path}}' | "$hooks/format-swift.sh" || status=2
-done
-
-for file in "${files[@]}"; do
-  printf '%s %s\n' "$(git hash-object -- "$file")" "$file"
-done >"$state"
+done < <(changed_swift)
+rm -f "$snapshot"
 exit "$status"

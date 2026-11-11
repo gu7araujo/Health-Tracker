@@ -17,6 +17,7 @@ Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it when Read
 | `HealthTrackerIntentsUITests/` (intents end to end, iOS 27) | also `HealthTrackerIntentsUITests/AGENTS.md` |
 | `scripts/`, `.githooks/`, `.github/` | `scripts/AGENTS.md` |
 
+- `HealthTracker/UITestingSupport.swift` — the `-uiTesting` launch-argument hook: temp-dir repository, skips migration and permission prompts. It also detects the unit-test host (`XCTestConfigurationFilePath`), which skips that startup and renders no `MainView`.
 - `HealthTracker/Resources/` — localizable strings for `en` and `pt-BR`, plus `AppShortcuts.strings` (Siri phrases).
 
 ## Workflow
@@ -30,7 +31,7 @@ The core loop is **red → green**: write a failing test, then make it pass. Fol
 5. Review the diff in a fresh-context subagent, never in the session that wrote it: `reviewing` skill (passes by risk tier, rounds that converge).
 6. Run `scripts/quality --full` (`--fast` for a change touching only docs or agent config) and iterate until it exits 0: the bar for **done** ([Quality Gates](#quality-gates)).
 
-Aim for near-total coverage: every public function, file and edge case earns a test.
+Aim for near-total coverage: every public function, file and edge case earns a test. Follow the plan when we have one.
 
 Keep every change **tight**:
 
@@ -51,15 +52,16 @@ On a task spanning several files, layers or PRs, the main session is the **orche
 | Where | Build and test with |
 |---|---|
 | Main session, inner loop | Xcode MCP `BuildProject`, `RunSomeTests` |
-| Workflow subagent, any gate | `scripts/quality` only |
-| `xcodebuild` (`cli-build`, `cli-test` skills) | Only after an MCP build or test call errored: quote the error. A device or preview tool's error doesn't count; a disconnected MCP means asking the user to run `/mcp` |
+| Workflow subagent, any gate | `scripts/quality`, or the MCP per the `parallel-agents` skill |
+| `xcodebuild` (`cli-build`, `cli-test` skills) | Only after an MCP build or test call errors, quoting that error (a device or preview tool's doesn't count). MCP disconnected: ask the user to run `/mcp` |
 | Cloud session (Linux, no Xcode) | CI: push, dispatch and read it yourself (`quality-gate` skill, `CLOUD.md`); hand the user only what CI can't run |
 
 - The project uses `PBXFileSystemSynchronizedRootGroup`: adding or deleting a source file needs no `project.pbxproj` edit. A file under `HealthTracker/` that must stay out of the app bundle (an `AGENTS.md`) needs a `membershipExceptions` entry there.
+- Edit files with Edit or Write: the layer-doc and format hooks run on those.
 
 ### Skill and tool routing
 
-A skill loads only when called: make each call below. Layer-specific skills (SwiftUI, App Intents, Swift Testing) are named in that layer's `AGENTS.md`.
+A skill loads only when called: make each call below. Each layer's `AGENTS.md` names its own skills.
 
 | When | Call |
 |---|---|
@@ -67,8 +69,8 @@ A skill loads only when called: make each call below. Layer-specific skills (Swi
 | Checking behaviour on a device | `device-interaction`; seed data with `mock-sim-data` |
 | An Apple API question | `DocumentationSearch` before training memory |
 | Compile-checking one file | `XcodeRefreshCodeIssuesInFile` |
-| Go-to-definition, references | `LSP`, after `scripts/bootstrap` and one MCP `BuildProject`; its diagnostics are the compiler's |
-| Seeing how code behaves without a test | `RunCodeSnippet` |
+| Definitions, references | `LSP` (after `scripts/bootstrap` and one MCP `BuildProject`); its diagnostics are real |
+| Trying code without a test | `RunCodeSnippet` |
 
 ## Quality Gates
 
@@ -77,7 +79,7 @@ A skill loads only when called: make each call below. Layer-specific skills (Swi
 - **Iterate** with `scripts/quality --fast` (format, lint, fitness, unit tests, unused code, Domain/Data coverage).
 - **Done** is `scripts/quality --full` exiting 0. A change touching only docs or agent config (the `paths-ignore` paths in `.github/workflows/ci.yml`) is done when `--fast` exits 0. Paste that run's gate table in your final report and PR.
 - **Fix a red gate in code or tests.** Lowering a threshold, editing `scripts/coverage-exceptions.txt` or `scripts/fitness/test-mirror-exceptions.txt`, adding a `swiftlint:disable` or `// periphery:ignore`, or regenerating `.swiftlint-baseline.json` to absorb a new violation is the user's call: propose it, and call each one out in the report and PR.
-- Claude Code hooks (`.claude/hooks/`) format and lint the `.swift` files you change and point to the right doc, skill or runner; act on what they report.
+- Hooks in `.claude/hooks/` format and lint changed `.swift` files and name the doc, skill or runner a step needs; act on what they report.
 
 ## Data Migrations
 

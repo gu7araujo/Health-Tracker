@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Tests .claude/hooks/format-swift.sh (the Claude Code PostToolUse hook) by
-# feeding it hook JSON for files in a temp dir. Set TEST_TMPDIR to choose where.
+# Tests the Claude Code hooks in .claude/hooks (format-swift.sh, then the routing hooks:
+# layer-docs.sh, concurrency-skill.sh, xcodebuild-runner.sh, bootstrap-check.sh,
+# format-changed-swift.sh) and their wiring in .claude/settings.json, by feeding each hook JSON
+# for files in a temp dir. Set TEST_TMPDIR to choose where.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -233,15 +235,23 @@ context layer-docs.sh "$(edit_input "$ROOT/HealthTracker/Presentation/MainView.s
 context layer-docs.sh "$(edit_input "$ROOT/HealthTracker/Presentation/Intents/LogWaterIntent.swift" s1)"
 [[ "$out" == *"Presentation/Intents/AGENTS.md"* && "$out" == *app-intents-specialist* ]] ||
   fail "an Intents edit should name its AGENTS.md and app-intents-specialist: $out"
+[[ "$out" == *"iOS 26/27"* ]] || fail "the Intents reminder should scope app-intents-whats-new-27 to iOS 26/27: $out"
 context layer-docs.sh "$(edit_input "$ROOT/HealthTrackerTests/Domain/DayDataTests.swift" s1)"
 [[ "$out" == *"HealthTrackerTests/AGENTS.md"* && "$out" == *swift-testing-expert* ]] ||
   fail "a unit-test edit should name its AGENTS.md and swift-testing-expert: $out"
 for layer in HealthTracker/Domain HealthTracker/Data HealthTrackerUITests HealthTrackerIntentsUITests scripts; do
-  context layer-docs.sh "$(edit_input "$ROOT/$layer/Some.swift" s1)"
+  context layer-docs.sh "$(edit_input "$ROOT/$layer/New/Some.swift" s1)"
   [[ "$out" == *"$layer/AGENTS.md"* ]] || fail "an edit in $layer should name $layer/AGENTS.md: $out"
 done
 context layer-docs.sh "$(edit_input "$ROOT/README.md" s1)"
 [ -z "$out" ] || fail "an edit outside the layers should be silent: $out"
+# A path outside any checkout that merely contains a layer's name is not that layer, and leaves its
+# marker unset.
+mkdir -p "$WORK/outside/scripts"
+context layer-docs.sh "$(edit_input "$WORK/outside/scripts/x.sh" s4)"
+[ -z "$out" ] || fail "an edit outside the checkout should be silent: $out"
+context layer-docs.sh "$(edit_input "$ROOT/scripts/quality" s4)"
+[[ "$out" == *scripts/AGENTS.md* ]] || fail "an outside edit should not use up the scripts reminder: $out"
 context layer-docs.sh "$(jq -n '{hook_event_name: "PreToolUse", tool_name: "mcp__xcode__XcodeUpdate", session_id: "s3",
   tool_input: {filePath: "HealthTracker/HealthTracker/Domain/Entities/DayData.swift"}}')"
 [[ "$out" == *"HealthTracker/Domain/AGENTS.md"* ]] || fail "an Xcode MCP write should be mapped to its layer: $out"
@@ -249,16 +259,19 @@ for tool in Edit Write MultiEdit mcp__xcode__XcodeWrite mcp__xcode__XcodeUpdate;
   hook_wired PreToolUse layer-docs.sh "$tool"
 done
 
-# concurrency-skill.sh: an actor-isolation or Sendable diagnostic in a build's output names the skill, once.
+# concurrency-skill.sh: a concurrency diagnostic in a build's output, or its failure, names the skill once.
 build_output() {
-  jq -n --arg stdout "$1" --arg session "$2" '{hook_event_name: "PostToolUse", tool_name: "Bash", session_id: $session,
-    tool_input: {command: "xcodebuild build"}, tool_response: {stdout: $stdout, stderr: ""}}'
+  jq -n --arg stdout "$1" --arg session "$2" --arg command "${3:-xcodebuild build}" '{hook_event_name: "PostToolUse",
+    tool_name: "Bash", session_id: $session, tool_input: {command: $command}, tool_response: {stdout: $stdout, stderr: ""}}'
 }
 for diagnostic in \
   "MainView.swift:12:5: error: main actor-isolated property 'days' can not be referenced from a nonisolated context" \
   "error: type 'Meal' does not conform to the 'Sendable' protocol" \
   "error: capture of 'self' with non-Sendable type 'Store' in a '@Sendable' closure" \
-  "error: sending 'value' risks causing data races"; do
+  "error: sending 'value' risks causing data races" \
+  "error: static property 'shared' is not concurrency-safe because it is nonisolated global shared mutable state" \
+  "error: mutation of captured var 'count' in concurrently-executing code" \
+  "error: call to global actor 'MainActor'-isolated instance method 'load()' in a synchronous nonisolated context"; do
   context concurrency-skill.sh "$(build_output "$diagnostic" "c-$RANDOM$RANDOM")"
   [[ "$out" == *"swift-concurrency:swift-concurrency"* ]] || fail "should name swift-concurrency for: $diagnostic ($out)"
 done
@@ -267,28 +280,45 @@ context concurrency-skill.sh "$(build_output "error: actor-isolated call" c1)"
 [ -z "$out" ] || fail "a repeated concurrency diagnostic in a session should be silent: $out"
 context concurrency-skill.sh "$(build_output "** BUILD SUCCEEDED ** (Sendable.swift compiled)" c2)"
 [ -z "$out" ] || fail "output without a concurrency diagnostic should be silent: $out"
+# Reading code or a diff that mentions a diagnostic is not a build: silent, and the reminder stays available.
+context concurrency-skill.sh "$(build_output "+  \"error: main actor-isolated property\"" c5 "git diff main")"
+[ -z "$out" ] || fail "a non-build command's output should be silent: $out"
+context concurrency-skill.sh "$(build_output "error: main actor-isolated property" c5 "scripts/quality --fast")"
+[[ "$out" == *swift-concurrency* ]] || fail "a gate run's diagnostic should still be reminded after a non-build match: $out"
+# A failing build fires PostToolUseFailure, with its output in .error.
+context concurrency-skill.sh "$(jq -n '{hook_event_name: "PostToolUseFailure", tool_name: "Bash", session_id: "c6",
+  tool_input: {command: "xcodebuild build"}, error: "Exit code 65\nerror: non-Sendable type Store"}')"
+[[ "$out" == *swift-concurrency* ]] || fail "a failed build's diagnostic should name swift-concurrency: $out"
+[ "$(jq -r '.hookSpecificOutput.hookEventName' <<<"$("$HOOKS/concurrency-skill.sh" <<<"$(jq -n '{hook_event_name: "PostToolUseFailure",
+  tool_name: "Bash", session_id: "c7", tool_input: {command: "xcodebuild build"}, error: "error: non-Sendable type"}')")")" = PostToolUseFailure ] ||
+  fail "the reminder should be tagged with the event that fired it"
 context concurrency-skill.sh "$(jq -n '{hook_event_name: "PostToolUse", tool_name: "mcp__xcode__BuildProject", session_id: "c3",
   tool_response: [{type: "text", text: "{\"errors\":[{\"message\":\"Main actor-isolated property cannot be referenced\"}]}"}]}')"
 [[ "$out" == *swift-concurrency* ]] || fail "an Xcode MCP build's diagnostic should name swift-concurrency: $out"
-for tool in Bash mcp__xcode__BuildProject mcp__xcode__RunSomeTests mcp__xcode__GetBuildLog mcp__xcode__XcodeRefreshCodeIssuesInFile; do
-  hook_wired PostToolUse concurrency-skill.sh "$tool"
+for event in PostToolUse PostToolUseFailure; do
+  for tool in Bash mcp__xcode__BuildProject mcp__xcode__RunSomeTests mcp__xcode__GetBuildLog mcp__xcode__XcodeRefreshCodeIssuesInFile; do
+    hook_wired "$event" concurrency-skill.sh "$tool"
+  done
 done
 
-# xcodebuild-runner.sh: a main session's raw xcodebuild gets the MCP reminder; a subagent's does not.
+# xcodebuild-runner.sh: a main session's xcodebuild build or test gets the MCP reminder; a subagent's does not.
 bash_input() {
   jq -n --arg command "$1" --arg agent "${2:-}" '{hook_event_name: "PreToolUse", tool_name: "Bash", session_id: "x1",
     tool_input: {command: $command}} + (if $agent == "" then {} else {agent_id: $agent} end)'
 }
 for command in "xcodebuild -scheme HealthTracker build" "set -o pipefail && xcodebuild test | xcbeautify" \
-  "cd /tmp; NSUnbufferedIO=YES xcodebuild build"; do
+  "cd /tmp; NSUnbufferedIO=YES xcodebuild build" "xcrun xcodebuild -scheme HealthTracker test" \
+  "env NSUnbufferedIO=YES xcodebuild build" "time xcodebuild build-for-testing" "/usr/bin/xcodebuild build" \
+  "if xcodebuild test; then :; fi" "{ xcodebuild build; }"; do
   context xcodebuild-runner.sh "$(bash_input "$command")"
   [[ "$out" == *mcp__xcode__BuildProject* ]] || fail "a main-session xcodebuild should get the reminder: $command ($out)"
 done
 context xcodebuild-runner.sh "$(bash_input "xcodebuild test" agent-b)"
 [ -z "$out" ] || fail "a subagent's xcodebuild should be silent: $out"
-for command in "grep -rn xcodebuild scripts" "scripts/quality --fast" "git log --grep xcodebuild"; do
+for command in "grep -rn xcodebuild scripts" "scripts/quality --fast" "git log --grep xcodebuild" \
+  "xcodebuild -version" "xcodebuild -list -project HealthTracker.xcodeproj"; do
   context xcodebuild-runner.sh "$(bash_input "$command")"
-  [ -z "$out" ] || fail "a command that does not run xcodebuild should be silent: $command ($out)"
+  [ -z "$out" ] || fail "a command that neither builds nor tests should be silent: $command ($out)"
 done
 hook_wired PreToolUse xcodebuild-runner.sh Bash
 
@@ -304,38 +334,59 @@ context bootstrap-check.sh "$(jq -n --arg cwd "$WORK/ready" '{hook_event_name: "
 [ -z "$out" ] || fail "a bootstrapped checkout should be silent: $out"
 hook_wired SessionStart bootstrap-check.sh startup
 
-# format-changed-swift.sh: after a Bash call, Swift files git reports changed since the last call are
-# formatted and linted, so a sed or heredoc edit still goes through format-swift.sh.
-bash_ran() {
-  jq -n --arg cwd "$1" --arg session "$2" '{hook_event_name: "PostToolUse", tool_name: "Bash", session_id: $session, cwd: $cwd,
-    tool_input: {command: "sed -i"}, tool_response: {stdout: ""}}'
+# format-changed-swift.sh: before a Bash call it snapshots the checkout's changed Swift files; after
+# it, the files the call changed are formatted and linted, so a sed or heredoc edit still goes
+# through format-swift.sh. Files changed before the call (the user's work, an Edit already checked)
+# are left alone.
+bash_event() {
+  jq -n --arg event "$1" --arg cwd "$2" --arg id "$3" '{hook_event_name: $event, tool_name: "Bash", session_id: "f1",
+    tool_use_id: $id, cwd: $cwd, tool_input: {command: "sed -i"}, tool_response: {stdout: ""}}'
+}
+# run_format <event> <cwd> <tool_use_id> -> sets out, code
+run_format() {
+  out="$(GIT_CEILING_DIRECTORIES="$WORK" "$HOOKS/format-changed-swift.sh" <<<"$(bash_event "$@")" 2>&1)"
+  code=$?
 }
 repo="$WORK/bash-edits"
 mkdir -p "$repo/Sources"
 git -C "$repo" init -q
 cp "$FIXTURES/Formatted.swift.fixture" "$repo/Sources/Committed.swift"
 git -C "$repo" add . && git -C "$repo" -c user.name=t -c user.email=t@t commit -qm init
+cp "$FIXTURES/Unformatted.swift.fixture" "$repo/Sources/UserWork.swift"
+run_format PreToolUse "$repo" t1
+[ "$code" -eq 0 ] && [ -z "$out" ] || fail "the snapshot should be silent (got $code): $out"
 cp "$FIXTURES/Unformatted.swift.fixture" "$repo/Sources/Committed.swift"
 cp "$FIXTURES/Unformatted.swift.fixture" "$repo/Sources/New.swift"
 cp "$FIXTURES/Unformatted.swift.fixture" "$repo/notes.txt"
-out="$("$HOOKS/format-changed-swift.sh" <<<"$(bash_ran "$repo" f1)" 2>&1)"
-code=$?
-[ "$code" -eq 0 ] || fail "formatting changed files should exit 0 (got $code): $out"
+run_format PostToolUse "$repo" t1
+[ "$code" -eq 0 ] || fail "formatting the call's files should exit 0 (got $code): $out"
 for file in Committed New; do
   diff -q "$repo/Sources/$file.swift" "$FIXTURES/Formatted.swift.fixture" >/dev/null || fail "$file.swift was not formatted"
 done
+diff -q "$repo/Sources/UserWork.swift" "$FIXTURES/Unformatted.swift.fixture" >/dev/null ||
+  fail "a file changed before the call was formatted"
 diff -q "$repo/notes.txt" "$FIXTURES/Unformatted.swift.fixture" >/dev/null || fail "a non-Swift file was modified"
+# A failing command (PostToolUseFailure) can still have edited files; a violation is reported with exit 2.
+run_format PreToolUse "$repo" t2
 cp "$FIXTURES/LintViolation.swift.fixture" "$repo/Sources/Caster.swift"
-out="$("$HOOKS/format-changed-swift.sh" <<<"$(bash_ran "$repo" f1)" 2>&1)"
-code=$?
+run_format PostToolUseFailure "$repo" t2
 [ "$code" -eq 2 ] || fail "a lint violation in a Bash-edited file should exit 2 (got $code): $out"
 [[ "$out" == *force_cast* ]] || fail "the violation should be reported: $out"
-out="$("$HOOKS/format-changed-swift.sh" <<<"$(bash_ran "$repo" f1)" 2>&1)"
-code=$?
-[ "$code" -eq 0 ] || fail "files unchanged since the last call should not be checked again (got $code): $out"
-out="$("$HOOKS/format-changed-swift.sh" <<<"$(bash_ran "$WORK/no-repo" f1)" 2>&1)"
-code=$?
+# A call that changes nothing checks nothing, so the violation is not reported again.
+run_format PreToolUse "$repo" t3
+run_format PostToolUse "$repo" t3
+[ "$code" -eq 0 ] || fail "a call that changed no file should exit 0 (got $code): $out"
+# Without its snapshot (the PreToolUse hook missed), the call is skipped rather than guessed at.
+cp "$FIXTURES/Unformatted.swift.fixture" "$repo/Sources/Unseen.swift"
+run_format PostToolUse "$repo" t4
+[ "$code" -eq 0 ] || fail "a call without a snapshot should exit 0 (got $code): $out"
+diff -q "$repo/Sources/Unseen.swift" "$FIXTURES/Unformatted.swift.fixture" >/dev/null ||
+  fail "a call without a snapshot should format nothing"
+run_format PreToolUse "$WORK/no-repo" t5
+run_format PostToolUse "$WORK/no-repo" t5
 [ "$code" -eq 0 ] || fail "a cwd outside a checkout should exit 0 (got $code): $out"
-hook_wired PostToolUse format-changed-swift.sh Bash
+for event in PreToolUse PostToolUse PostToolUseFailure; do
+  hook_wired "$event" format-changed-swift.sh Bash
+done
 
 [ "$failures" -eq 0 ]
