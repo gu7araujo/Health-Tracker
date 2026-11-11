@@ -35,3 +35,7 @@ Black-box and isolated — each test drives the shipping app through its accessi
 <rule_5>
 **COMPOSE FLOWS FROM HELPERS** — build a scenario from the base-class flow helpers rather than re-scripting the modal tap-by-tap; a new flow that repeats across suites earns a helper on `HealthTrackerUITestCase`. UI tests are slow — each launches the app — so cover whole user journeys here and leave branch-level logic to `HealthTrackerTests`. Adding a feature or fixing a bug ends green; see the root **Workflow** for the red → green loop and the UI-test commands.
 </rule_5>
+
+<rule_6>
+**EVERY UI FAILURE GETS AN OWNER** — a UI-test failure seen while verifying, locally or on CI, ends in one of two places: fixed in the PR, or recorded on a `flaky-test` issue (filed, or commented on) with the run id (`issue-tracking` skill). A single `Timed out while evaluating UI query` earns one rerun of that test alone before you diagnose it. A PR that changes a UI test pastes its pass count over 20 runs (`RunSomeTests` with that test, repeated; `-test-iterations 20` under the root runner rule's `xcodebuild` fallback); a `Support/` change does the same for one test per changed helper.
+</rule_6>

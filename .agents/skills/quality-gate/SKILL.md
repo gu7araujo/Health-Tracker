@@ -12,8 +12,8 @@ description: Run HealthTracker's quality gate (scripts/quality), act on its resu
 `scripts/bootstrap` (once per clone and per new worktree) installs the git hooks and the pinned SwiftLint, SwiftFormat and Periphery into `build/tools/bin`, and checks tool versions; the gate looks for its tools there first.
 
 ```bash
-scripts/quality --fast --json   # iterate: format, lint, fitness, unit tests, unused code, Domain/Data unit line + region coverage (~2 min)
-scripts/quality --full --json   # done: everything in --fast, plus UI and intents UI tests, app coverage, per-file floor (~8 min)
+scripts/quality --fast   # iterate: format, lint, fitness, unit tests, unused code, Domain/Data unit line + region coverage (~2 min)
+scripts/quality --full   # done: everything in --fast, plus UI and intents UI tests, app coverage, per-file floor (~8 min)
 ```
 
 It tests on `--simulator <udid>` when given; otherwise it reuses or clones a simulator named `HT-<branch>`, so parallel worktrees stay isolated, and shuts that clone down when it exits unless it was already booted. `--full` also runs `HealthTrackerIntentsUITests`, which needs a runtime at least the iPhone simulator SDK's version (iOS 27.2 with Xcode 27.2; its `AppIntentsTesting` fails to load on 27.0): on an older simulator it uses a second clone, `HT-<branch>-ios27` (re-cloned when its runtime falls below that), shut down the same way; with no iPhone on such a runtime the `Intents UI tests` row is `n/a` and the gate prints the fix, `xcodebuild -downloadPlatform iOS`. An exported `SIMULATOR_ID` is ignored on purpose. Delete both clones when the branch is done: `xcrun simctl delete "HT-<branch with / replaced by ->"` and `xcrun simctl delete "HT-<branch with / replaced by ->-ios27"`.
@@ -32,7 +32,9 @@ It tests on `--simulator <udid>` when given; otherwise it reuses or clones a sim
 jq -r '.gates[] | select(.passed | not) | "\(.name): \(.value) (needs \(.comparator) \(.threshold))"' build/quality.json
 ```
 
-A `null` value (`n/a` in the table) means the metric could not be measured: the build failed or a test bundle crashed. Read `build/xcodebuild.log`. A region row alone at `n/a` means the unit run left no `Coverage.profdata` or app binary at the section 4 paths, or `llvm-cov` failed.
+A `null` value (`n/a` in the table) means the metric could not be measured: the build failed or a test bundle crashed. Under the table, the gate prints each failed test as `<row>: <Suite>/<test>(): <first failure message>`, and for an `n/a` test row its run's last `error:` line; read `build/xcodebuild.log` for the rest. A region row alone at `n/a` means the unit run left no `Coverage.profdata` or app binary at the section 4 paths, or `llvm-cov` failed.
+
+A red `UI tests` or `Intents UI tests` row follows the flake policy in `HealthTrackerUITests/AGENTS.md` (rule 6).
 
 The gate also prints details on stderr: format and lint violations with file and line, and `below floor: <path> <pct>%` for each file under the per-file floor.
 
@@ -112,7 +114,7 @@ A **new** threshold (a new gate, or a value set by hand) waits for one CI run: s
 
 The pre-push hook runs `scripts/quality --fast` (~2 min, past the Bash tool's 120 s default): run `git push` with a 600000 ms timeout.
 
-Open every PR as **draft**, with the gate table in its body. Every push to a PR runs CI, drafts included.
+Open every PR as **draft**, with the gate table in its body and a "How verified" section carrying the root `AGENTS.md` **Definition of done** evidence and the skills that ran. Every push to a PR runs CI, drafts included.
 
 - **A docs-only PR** (only `paths-ignore` files) runs just `changes` and `ci-gate` (~30 s). Stop with the link once `--fast` is green.
 - **Any other PR** is marked ready only after a green local `CI=true scripts/quality --full` (section 1; in a cloud session, `CLOUD.md`'s Done when):

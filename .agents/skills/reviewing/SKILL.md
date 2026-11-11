@@ -14,7 +14,7 @@ The tier is set by the riskiest path the diff touches. A diff of only files matc
 | Tier | Diff touches | Passes |
 |---|---|---|
 | Docs | only docs or agent config (CI's `paths-ignore`) | `code-review` at `low` |
-| Standard | app or test code | `code-review` at `high`, then Codex |
+| Standard | app or test code | Specialist, `code-review` at `high`, then Codex |
 | High | persisted types (`Domain/Entities/`, `Data/`), the frozen intent contract (`Presentation/Intents/`), `HealthTracker.entitlements`, `Info.plist`, and the guardrails (`.github/`, `.githooks/`, `scripts/`, `.claude/settings.json`, `.claude/hooks/`, `.swiftlint.yml`, `.periphery.yml`) | Standard with `code-review` at `xhigh`, plus `security-review` |
 
 **Done when:** every path in `git diff --name-only main...` (plus uncommitted files) is placed in a tier, and the highest one is named.
@@ -24,6 +24,7 @@ The tier is set by the riskiest path the diff touches. A diff of only files matc
 Run every pass of the tier.
 
 - **Claude passes** (`code-review`, `security-review`): each in a subagent with fresh context (the Agent tool), briefed as a cold start with the diff's scope, the tier and the [pass contract](#the-pass-contract) below.
+- **Specialist pass** (Standard and High), before `code-review`: one fresh subagent per specialist skill the diff's paths call for, which loads that skill and reviews the diff against it, citing the skill reference behind each finding. Paths to skills: `Presentation/` Views → `swiftui-specialist` (+ `swiftui-whats-new-27` for iOS 27 APIs); `Presentation/Intents/` → `app-intents-specialist` (+ `app-intents-whats-new-27`); `HealthTrackerTests/` → `swift-testing-expert:swift-testing-expert`; actors, `Sendable` or `Task` code → `swift-concurrency:swift-concurrency`.
 - **Codex** runs when `codex` is on the `PATH` (cloud sessions lack it: say so in the report):
 
   ```bash

@@ -69,7 +69,6 @@ One command decides whether the code is good enough. It prints a pass/fail table
 scripts/quality            # same as --fast
 scripts/quality --fast     # format, lint, fitness checks, unit tests, unused code, Domain/Data unit line + region coverage
 scripts/quality --full     # everything in --fast, plus UI and intents UI tests (iOS 27.2+ with Xcode 27.2), app coverage, per-file floor
-scripts/quality --full --json            # also writes build/quality.json
 scripts/quality --simulator <udid>       # test on a specific simulator
 scripts/quality --fast --update-baseline # raise the coverage ratchets (see below)
 scripts/quality --stop     # stop the gate running in this worktree
@@ -109,7 +108,7 @@ All output is in `build/`, which git ignores:
 |---|---|
 | `build/xcodebuild.log` | Full xcodebuild output |
 | `build/Test.xcresult` | Result bundle: open it in Xcode to browse failures and coverage |
-| `build/quality.json` | With `--json`: one entry per gate (`name`, `value`, `threshold`, `passed`) |
+| `build/quality.json` | One entry per gate (`name`, `value`, `threshold`, `passed`) |
 
 Exit codes: `0` all gates passed, `1` a gate failed, `2` usage error.
 
@@ -356,7 +355,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `.github/workflows/` | `ci.yml` (PRs, pushes to `main`), `weekly.yml` (schedule) and `claude-code-review.yml` (AI review of non-draft PRs, on Linux) |
 | `.githooks/` | pre-commit and pre-push hooks |
 | `.claude/hooks/format-swift.sh` | Claude Code hook that formats and lints each edited Swift file |
-| `.claude/hooks/` (others) | Claude Code hooks that route agents: `layer-docs.sh`, `concurrency-skill.sh`, `xcodebuild-runner.sh`, `bootstrap-check.sh`, `swift-bash-edits.sh` (each header is its spec; tests in `scripts/tests/test-claude-hooks.sh`) |
+| `.claude/hooks/` (others) | Claude Code hooks that route agents: `layer-docs.sh`, `concurrency-skill.sh`, `xcodebuild-runner.sh`, `bootstrap-check.sh`, `swift-bash-edits.sh`, `gate-reminder.sh` (each header is its spec; tests in `scripts/tests/test-claude-hooks.sh`) |
 
 If you change a script, run its tests:
 

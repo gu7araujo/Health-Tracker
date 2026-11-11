@@ -8,9 +8,13 @@ Closes #
 
 ## How verified
 
-<!-- The red → green test you wrote first, and the commands you ran. -->
+<!-- The root AGENTS.md Definition of done evidence that applies, and the commands you ran. -->
 
-- Red → green test:
+- Red → green test (name and failing assertion line):
+- Scenario (en and pt-BR):
+- Previews:
+- Review passes and their findings:
+- Skills that ran:
 - Commands:
 
 ## Quality gate
