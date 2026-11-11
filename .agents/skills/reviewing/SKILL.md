@@ -36,7 +36,7 @@ Run every pass of the tier.
 
 ## 3. Verify, then fix
 
-Check each finding against the code before acting on it. A real one gets fixed (a bug fix starts with its regression test: `tdd` skill). A false positive is rejected with the reason, and stays rejected when a later pass reports it again. A pre-existing problem becomes a GitHub issue (`issue-tracking` skill), so the PR stays on its own change.
+Check each finding against the code before acting on it. A real one gets fixed (a bug fix starts with its regression test: call `Skill("tdd")`). A false positive is rejected with the reason, and stays rejected when a later pass reports it again. A pre-existing problem becomes a GitHub issue (`issue-tracking` skill), so the PR stays on its own change.
 
 **Done when:** every finding is fixed, rejected with a reason, or filed.
 

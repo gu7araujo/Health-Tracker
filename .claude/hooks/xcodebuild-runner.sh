@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Claude Code PreToolUse hook on Bash: when a main session (no agent_id) runs an xcodebuild build or
+# test, reminds it of the runner rule in AGENTS.md (Building and Validating). Non-blocking;
+# subagents are left alone, and so are xcodebuild queries such as -version or -list.
+set -uo pipefail
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
+
+[ -z "$(field .agent_id)" ] || exit 0
+# A simple command run by xcodebuild, with a build or test action and no query flag.
+awk '/^([^ \t]*\/)?xcodebuild([ \t]|$)/ &&
+  !/[ \t]-(showBuildSettings|list|version|showsdks|showdestinations|help)([ \t]|$)/ &&
+  /[ \t](build|test|build-for-testing|test-without-building|analyze|archive)([ \t]|$)/ { found = 1 }
+  END { exit !found }' <<<"$(simple_commands)" || exit 0
+
+context PreToolUse "Main session: build and test with mcp__xcode__BuildProject / RunSomeTests. Use xcodebuild only after an MCP build or test call returned an error, and quote that error to the user; if the Xcode MCP is disconnected, ask the user to run /mcp instead."

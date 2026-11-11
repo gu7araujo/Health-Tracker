@@ -6,7 +6,7 @@ The end-to-end target. Built on **XCUITest**, each suite launches the real app o
 
 The shared machinery every suite leans on, all on `HealthTrackerUITestCase`:
 
-- **Launch** — `setUp` relaunches the app with `-uiTesting` (temp-dir store, skipped migration + permission prompts) forced to English `en_GB`. The 24-hour `en_GB` clock exposes the workout duration wheel as hours 0-23, exactly as the duration model expects.
+- **Launch** — `setUp` relaunches the app with `-uiTesting` (`HealthTracker/UITestingSupport.swift`: temp-dir store, skipped migration + permission prompts) forced to English `en_GB`. The 24-hour `en_GB` clock exposes the workout duration wheel as hours 0-23, exactly as the duration model expects.
 - **Lookup + waits** — `element(_:)` resolves any element by identifier; `assertExists` / `assertNotExists` / `assertSelected` poll for a condition; `scrollTo` swipes an off-screen row into view. All time out rather than sleep.
 - **Flow helpers** — `openAddModal`, `addMeal`, `addWorkout`, `saveModal`, `cancelModal`, `selectMenuOption`, `setDurationWheels`, `tapSwipeAction`. Compose a flow from these rather than re-scripting taps.
 

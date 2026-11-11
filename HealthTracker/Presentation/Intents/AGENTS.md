@@ -2,6 +2,8 @@
 
 The Siri/Shortcuts/Spotlight entry points (`LogWaterIntent`, `LogMoodIntent`, `AddMealIntent`, `AddWorkoutIntent`, `GetDayStatusIntent`) and `HealthTrackerShortcuts`. Like views, they reach the domain only through use cases. `Presentation/AGENTS.md` applies here too; this file adds what only intents need.
 
+Before changing an intent, call `Skill("app-intents-specialist")` (+ `app-intents-whats-new-27` for iOS 26/27 APIs such as `supportedModes`).
+
 ## Rules
 
 <rule_1>

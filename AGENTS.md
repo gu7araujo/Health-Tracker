@@ -4,7 +4,7 @@ HealthTracker is an iOS 26.0 health tracking app built with SwiftUI and Swift 6:
 
 ## Repo Map
 
-Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it when you first read a file in that directory; read it yourself when you plan a change there or review from a diff.
+Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it when Read first opens a file there, never through Bash; read it yourself when you plan a change there or review from a diff.
 
 | Working in | Read |
 |---|---|
@@ -17,17 +17,17 @@ Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it when you 
 | `HealthTrackerIntentsUITests/` (intents end to end, iOS 27) | also `HealthTrackerIntentsUITests/AGENTS.md` |
 | `scripts/`, `.githooks/`, `.github/` | `scripts/AGENTS.md` |
 
-- `HealthTracker/UITestingSupport.swift` — the `-uiTesting` launch-argument hook: temp-dir repository, skips migration and permission prompts. It also detects the unit-test host (`XCTestConfigurationFilePath`), which skips that startup and renders no `MainView`.
+- `HealthTracker/UITestingSupport.swift` — the `-uiTesting` and unit-test-host startup switches; what each skips: the test targets' `AGENTS.md`.
 - `HealthTracker/Resources/` — localizable strings for `en` and `pt-BR`, plus `AppShortcuts.strings` (Siri phrases).
 
 ## Workflow
 
-The core loop is **red → green**: write a failing test, then make it pass. Follow it always: `tdd` skill.
+The core loop is **red → green**: write a failing test, then make it pass. Follow it always: call `Skill("tdd")` first.
 
 1. Before coding, state how you'll verify the change with something runnable: a unit or UI test, a bash command, a preview snapshot.
 2. Write that test first and watch it fail (**red**). Every bug fix starts with a regression test that reproduces the bug.
 3. Implement the minimum code to pass it (**green**). On app or test code, then run the `simplify` skill over the diff.
-4. Run `scripts/quality --fast` and iterate until it exits 0, so reviewers only see a diff that already passes the gates.
+4. Run `scripts/quality --fast` and iterate until it exits 0, so review sees a diff that passes the gates.
 5. Review the diff in a fresh-context subagent, never in the session that wrote it: `reviewing` skill (passes by risk tier, rounds that converge).
 6. Run `scripts/quality --full` (`--fast` for a change touching only docs or agent config) and iterate until it exits 0: the bar for **done** ([Quality Gates](#quality-gates)).
 
@@ -41,21 +41,36 @@ Keep every change **tight**:
 
 ### Delegating
 
-On a task spanning several files, layers or PRs, the main session is the **orchestrator**: it keeps the plan, the decisions and the thread with the user, and hands subagents any step whose output it needs back only as a conclusion (a broad search, a long build or test log, a review pass, an independent slice of the plan). Work that needs the user's judgement or the conversation's history stays in the main session.
+On a task spanning several files, layers or PRs, the main session is the **orchestrator**: it keeps the plan, the decisions and the thread with the user, and hands subagents any step it needs back only as a conclusion (a broad search, a long log, a review pass, an independent slice). Work needing the user's judgement or the conversation's history stays in the main session.
 
 - Run independent slices, or a staged pipeline (implement → review → verify), as a Workflow.
-- Brief each subagent as a cold start: the goal, the files, the constraints, its done-criterion, and the shape of the report to return.
+- Brief each subagent as a cold start: the goal, the files, the constraints, its done-criterion, and the shape of the report to return. Write each skill it needs as a call in its first step (`Skill("tdd")` for an implementer).
 - Agents working at the same time each take their own worktree in `.claude/worktrees/<branch-name>`, and at most two of them build or test at once: `parallel-agents` skill. Create a worktree only when the task requires it or the user asks.
 
 ## Building and Validating
 
-- Build, test and preview through the Xcode MCP tools. When they are unavailable or failing, fall back to `xcodebuild`: `cli-build` skill to build, `cli-test` skill to run tests.
-- In a cloud session (Linux, no Xcode), CI is your Mac: push the branch, dispatch CI on it and read the result yourself (`quality-gate` skill, `CLOUD.md`). Hand the user a command only for what CI cannot run.
-- Apple API docs: use the Xcode MCP `DocumentationSearch` tool (a `query`, optionally `frameworks`) over training memory, especially for iOS 26 APIs like Liquid Glass.
-- After a UI change, render the view's `#Preview` with the Xcode MCP `RenderPreview` tool and review the snapshot in light, dark and a large Dynamic Type size. Add a `#Preview` first when the view has none.
-- Use the `LSP` tool for go-to-definition and find-references once the checkout has run `scripts/bootstrap` and has one Xcode build (the Xcode MCP `BuildProject`); `scripts/quality` builds into `build/DerivedData`, which swift-lsp does not read. From then on its diagnostics are the compiler's: fix them.
-- To see how code behaves without writing a test, run a `print`-based snippet with the Xcode MCP `RunCodeSnippet` tool (e.g. construct a `DayData` and print its `status`).
+| Where | Build and test with |
+|---|---|
+| Main session, inner loop | Xcode MCP `BuildProject`, `RunSomeTests` |
+| Workflow subagent, any gate | `scripts/quality`, or the MCP per the `parallel-agents` skill |
+| `xcodebuild` (`cli-build`, `cli-test` skills) | Only after an MCP build or test call errors, quoting that error (a device or preview tool's doesn't count). MCP disconnected: ask the user to run `/mcp` |
+| Cloud session (Linux, no Xcode) | CI: push, dispatch and read it yourself (`quality-gate` skill, `CLOUD.md`); hand the user only what CI can't run |
+
 - The project uses `PBXFileSystemSynchronizedRootGroup`: adding or deleting a source file needs no `project.pbxproj` edit. A file under `HealthTracker/` that must stay out of the app bundle (an `AGENTS.md`) needs a `membershipExceptions` entry there.
+- Edit files with Edit or Write: the layer-doc and format hooks run on those.
+
+### Skill and tool routing
+
+A skill loads only when called: make each call below. Each layer's `AGENTS.md` names its own skills.
+
+| When | Call |
+|---|---|
+| An actor-isolation or `Sendable` diagnostic | `Skill("swift-concurrency:swift-concurrency")` before fixing, then fix every call site sharing the cause |
+| Checking behaviour on a device | `device-interaction`; seed data with `mock-sim-data` |
+| An Apple API question | `DocumentationSearch` before training memory |
+| Compile-checking one file | `XcodeRefreshCodeIssuesInFile` |
+| Definitions, references | `LSP` (after `scripts/bootstrap` and one MCP `BuildProject`); its diagnostics are real |
+| Trying code without a test | `RunCodeSnippet` |
 
 ## Quality Gates
 
@@ -64,7 +79,7 @@ On a task spanning several files, layers or PRs, the main session is the **orche
 - **Iterate** with `scripts/quality --fast` (format, lint, fitness, unit tests, unused code, Domain/Data coverage).
 - **Done** is `scripts/quality --full` exiting 0. A change touching only docs or agent config (the `paths-ignore` paths in `.github/workflows/ci.yml`) is done when `--fast` exits 0. Paste that run's gate table in your final report and PR.
 - **Fix a red gate in code or tests.** Lowering a threshold, editing `scripts/coverage-exceptions.txt` or `scripts/fitness/test-mirror-exceptions.txt`, adding a `swiftlint:disable` or `// periphery:ignore`, or regenerating `.swiftlint-baseline.json` to absorb a new violation is the user's call: propose it, and call each one out in the report and PR.
-- A Claude Code hook formats and lints each `.swift` file you edit; fix the violations it reports.
+- Hooks in `.claude/hooks/` format and lint each `.swift` file you Edit or Write, refuse Bash writes to one, and name the doc, skill or runner a step needs; act on what they report.
 
 ## Data Migrations
 
