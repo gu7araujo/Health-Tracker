@@ -54,11 +54,12 @@ case "\$1 \$2" in
   *) exit 0 ;;
 esac
 EOF
-# xcodebuild: blocks while $TMP/hold exists (a run caught mid-build); the unit run writes the profile and the app binary ($APP_BINARY, unless $NO_PROFILE);
+# xcodebuild: prints $XCODEBUILD_ERROR when set; blocks while $TMP/hold exists (a run caught mid-build); the unit run writes the profile and the app binary ($APP_BINARY, unless $NO_PROFILE);
 # the UI run replaces the profile, so the region rows must read it in between.
 cat >"$TMP/bin/xcodebuild" <<EOF
 #!/bin/sh
 echo "\$*" >>"$TMP/xcodebuild.calls"
+[ -z "\$XCODEBUILD_ERROR" ] || echo "\$XCODEBUILD_ERROR"
 while [ -e "$TMP/hold" ]; do sleep 0.1; done
 app=build/DerivedData/Build/Products/Debug-iphonesimulator/HealthTracker.app
 case "\$*" in
@@ -560,5 +561,23 @@ out="$(gate "$REPO" --stop 2>&1)"
 kill -0 "$bystander" 2>/dev/null || fail "--stop must not kill a process that is not scripts/quality"
 [ ! -e "$REPO/build/quality.pids/$bystander" ] || fail "--stop should clear a stale pid file"
 kill "$bystander"
+
+
+# Under the table, each failed test is named with its first failure message, and each n/a test
+# row gets the last error: line its run logged, so nobody greps the log to learn either.
+cp "$FIX/test-results.json" "$TMP/tests.json"
+sed -i.bak 's/"HealthTrackerTests"/"NotRunTests"/' "$TMP/tests.json"
+out="$(XCODEBUILD_ERROR="error: Unable to boot the Simulator." gate "$REPO" --full 2>&1)"
+table_end="$(grep -n 'gates passed\.' <<<"$out" | cut -d: -f1)"
+below="$(tail -n +"${table_end:-1}" <<<"$out")"
+[[ "$below" == *"UI tests: MainViewUITests/testAddMeal(): MainViewUITests.swift:42: XCTAssertTrue failed"* &&
+  "$below" == *"UI tests: MainViewUITests/testAddWater()"* ]] ||
+  fail "the failed test ids should be printed under the table, got: $out"
+[[ "$below" == *"Unit tests n/a: error: Unable to boot the Simulator."* ]] ||
+  fail "an n/a test row's reason should be printed under the table, got: $out"
+out="$(gate "$REPO" --full 2>&1)"
+[[ "$out" == *"Unit tests n/a: no error: line in build/xcodebuild.log"* ]] ||
+  fail "an n/a test row with no logged error should say so, got: $out"
+printf '{"testNodes":[]}\n' >"$TMP/tests.json"
 
 [ "$failures" -eq 0 ]

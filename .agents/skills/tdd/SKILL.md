@@ -10,6 +10,7 @@ TDD is the red → green loop from the root `AGENTS.md` **Workflow**. This skill
 ## Rules of the loop
 
 - **Red before green.** Write the test, run it, and watch it fail for the reason you expect. Then write only enough code to pass it. A bug fix starts red: a regression test that reproduces the bug.
+- **Quote the red.** Keep the failing test's name and assertion line for the final report: it is item 1 of the **Definition of done** in the root `AGENTS.md` Workflow, which lists everything the report carries.
 - **One slice at a time.** One behaviour, one test, one minimal implementation per cycle. Each test is a **tracer bullet** through the real path, so the next cycle responds to what this one taught you.
 - **Green ends the cycle.** Cleanup is a separate step after green (the `simplify` skill), with the tests already guarding it.
 

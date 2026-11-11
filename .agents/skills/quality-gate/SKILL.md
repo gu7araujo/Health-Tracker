@@ -32,7 +32,9 @@ It tests on `--simulator <udid>` when given; otherwise it reuses or clones a sim
 jq -r '.gates[] | select(.passed | not) | "\(.name): \(.value) (needs \(.comparator) \(.threshold))"' build/quality.json
 ```
 
-A `null` value (`n/a` in the table) means the metric could not be measured: the build failed or a test bundle crashed. Read `build/xcodebuild.log`. A region row alone at `n/a` means the unit run left no `Coverage.profdata` or app binary at the section 4 paths, or `llvm-cov` failed.
+A `null` value (`n/a` in the table) means the metric could not be measured: the build failed or a test bundle crashed. Under the table, the gate prints each failed test as `<row>: <Suite>/<test>(): <first failure message>`, and for an `n/a` test row its run's last `error:` line; read `build/xcodebuild.log` for the rest. A region row alone at `n/a` means the unit run left no `Coverage.profdata` or app binary at the section 4 paths, or `llvm-cov` failed.
+
+A red `UI tests` or `Intents UI tests` row follows the flake policy in `HealthTrackerUITests/AGENTS.md` (rule 6).
 
 The gate also prints details on stderr: format and lint violations with file and line, and `below floor: <path> <pct>%` for each file under the per-file floor.
 
@@ -112,7 +114,7 @@ A **new** threshold (a new gate, or a value set by hand) waits for one CI run: s
 
 The pre-push hook runs `scripts/quality --fast` (~2 min, past the Bash tool's 120 s default): run `git push` with a 600000 ms timeout.
 
-Open every PR as **draft**, with the gate table in its body. Every push to a PR runs CI, drafts included.
+Open every PR as **draft**, with the gate table in its body and a "How verified" section carrying the root `AGENTS.md` **Definition of done** evidence and the skills that ran. Every push to a PR runs CI, drafts included.
 
 - **A docs-only PR** (only `paths-ignore` files) runs just `changes` and `ci-gate` (~30 s). Stop with the link once `--fast` is green.
 - **Any other PR** is marked ready only after a green local `CI=true scripts/quality --full` (section 1; in a cloud session, `CLOUD.md`'s Done when):

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Tests the Claude Code hooks in .claude/hooks (format-swift.sh, then the routing hooks:
 # layer-docs.sh, concurrency-skill.sh, xcodebuild-runner.sh, bootstrap-check.sh,
-# swift-bash-edits.sh) and their wiring in .claude/settings.json, by feeding each hook JSON
-# for files in a temp dir. Set TEST_TMPDIR to choose where.
+# swift-bash-edits.sh, gate-reminder.sh) and their wiring in .claude/settings.json, by feeding each
+# hook JSON for files in a temp dir. Set TEST_TMPDIR to choose where.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -381,5 +381,66 @@ for command in "sed -n 1,20p x.swift" "sed 's/a/b/' x.swift > /dev/null" "cat x.
   [ -z "$out" ] || fail "a command that writes no .swift file should pass: $command ($out)"
 done
 hook_wired PreToolUse swift-bash-edits.sh Bash
+
+# gate-reminder.sh: a session stopping with Swift changed on the branch since the last gate run
+# (build/quality.json) is reminded to run the gate. Non-blocking: a systemMessage, never a block.
+# stop_message <repo> [PATH] -> sets out (the systemMessage, or the raw output), code
+stop_message() {
+  local raw
+  raw="$(jq -n --arg cwd "$1" '{hook_event_name: "Stop", session_id: "g1", cwd: $cwd, stop_hook_active: false}' |
+    PATH="${2:-$PATH}" "$HOOKS/gate-reminder.sh" 2>&1)"
+  code=$?
+  out="$(jq -r '.systemMessage // empty' <<<"$raw" 2>/dev/null || printf '%s' "$raw")"
+  [ -z "$raw" ] || jq -e 'has("decision") | not' <<<"$raw" >/dev/null 2>&1 || fail "gate-reminder should never block: $raw"
+}
+GATE="$WORK/gate-repo"
+git init -q -b main "$GATE"
+gitc() { git -C "$GATE" -c user.name=t -c user.email=t@example.com -c commit.gpgsign=false "$@"; }
+mkdir -p "$GATE/HealthTracker" "$GATE/build"
+printf 'struct A {}\n' >"$GATE/HealthTracker/A.swift"
+gitc add -A && gitc commit -q -m init
+gitc switch -q -c feat/x
+stop_message "$GATE"
+[ "$code" -eq 0 ] && [ -z "$out" ] || fail "a branch without Swift changes should be silent (got $code): $out"
+printf 'notes\n' >"$GATE/README.md"
+stop_message "$GATE"
+[ -z "$out" ] || fail "a non-Swift change should be silent: $out"
+printf 'struct B {}\n' >"$GATE/HealthTracker/B.swift"
+stop_message "$GATE"
+[ "$code" -eq 0 ] || fail "gate-reminder should exit 0 (got $code): $out"
+[[ "$out" == *scripts/quality* && "$out" == *table* ]] || fail "an untracked Swift file without a gate run should be reminded: $out"
+touch -t 202601010000 "$GATE/HealthTracker/B.swift"
+printf '{"passed": true}\n' >"$GATE/build/quality.json"
+stop_message "$GATE"
+[ -z "$out" ] || fail "a gate run newer than every Swift change should be silent: $out"
+gitc add -A && gitc commit -q -m b
+printf 'struct A { let a = 1 }\n' >"$GATE/HealthTracker/A.swift"
+touch -t 202601010000 "$GATE/build/quality.json"
+stop_message "$GATE"
+[[ "$out" == *scripts/quality* ]] || fail "a Swift edit newer than the gate run should be reminded: $out"
+gitc add -A && gitc commit -q -m a
+touch -t 202601010000 "$GATE/HealthTracker/A.swift" "$GATE/HealthTracker/B.swift"
+stop_message "$GATE"
+[ -z "$out" ] || fail "committed Swift older than the gate run should be silent: $out"
+touch "$GATE/HealthTracker/B.swift"
+stop_message "$GATE"
+[[ "$out" == *scripts/quality* ]] || fail "a committed Swift change newer than the gate run should be reminded: $out"
+rm "$GATE/HealthTracker/B.swift"
+touch -t 202601010000 "$GATE/HealthTracker/A.swift"
+stop_message "$GATE"
+[ -z "$out" ] || fail "a deleted Swift file has no mtime to compare and should be silent: $out"
+gitc checkout -q -- HealthTracker/B.swift
+touch "$GATE/HealthTracker/B.swift"
+# A cloud session (no xcrun) runs the gate on CI instead, so it is never reminded.
+mkdir -p "$WORK/no-xcrun-bin"
+ln -sf "$(command -v jq)" "$WORK/no-xcrun-bin/jq"
+for tool in git dirname; do
+  ln -sf "$(command -v "$tool")" "$WORK/no-xcrun-bin/$tool"
+done
+stop_message "$GATE" "$WORK/no-xcrun-bin:/bin"
+[ -z "$out" ] || fail "a session without xcrun should be silent: $out"
+stop_message "$WORK/no-repo"
+[ "$code" -eq 0 ] && [ -z "$out" ] || fail "a cwd outside a checkout should be silent (got $code): $out"
+hook_wired Stop gate-reminder.sh Stop
 
 [ "$failures" -eq 0 ]

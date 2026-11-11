@@ -160,6 +160,8 @@ if [ "$MODE" = "full" ]; then
   git rev-parse --abbrev-ref HEAD >"$LOCK/branch"
 fi
 rows=""
+# Lines printed under the table: each failed test, and why an n/a test row could not be measured.
+details=""
 
 # row <name> <value> <comparator> <threshold> <passed>
 row() {
@@ -295,12 +297,14 @@ for bundle in "${bundles[@]}"; do
   # No simulator on the SDK's iOS for the intents run: unmeasured, so the gate fails rather than skips it.
   if [ -z "$destination" ]; then
     count_row "$name" ""
+    details+="$name n/a: no iPhone simulator on iOS $intents_min or later (xcodebuild -downloadPlatform iOS)"$'\n'
     continue
   fi
   if [ "$destination" != "$SIMULATOR" ]; then
     echo "Tests: $bundle on simulator $destination${intents_about:+ $intents_about}"
     xcrun simctl bootstatus "$destination" -b >/dev/null
   fi
+  log_start=$(($(wc -l <build/xcodebuild.log) + 1))
   xcodebuild test \
     -scheme HealthTracker \
     -destination "platform=iOS Simulator,id=$destination" \
@@ -310,7 +314,14 @@ for bundle in "${bundles[@]}"; do
     "${build_settings[@]}" \
     -resultBundlePath "$bundle_result" 2>&1 | tee -a build/xcodebuild.log | "${beautify[@]}"
   xcrun xcresulttool get test-results tests --path "$bundle_result" >build/test-results.json 2>/dev/null
-  count_row "$name" "$("$LIB/test-failures.sh" build/test-results.json "$bundle")"
+  failed="$("$LIB/test-failures.sh" build/test-results.json "$bundle")"
+  count_row "$name" "$failed"
+  if [ -z "$failed" ]; then
+    reason="$(tail -n +"$log_start" build/xcodebuild.log | grep 'error:' | tail -n 1)"
+    details+="$name n/a: ${reason:-no error: line in build/xcodebuild.log}"$'\n'
+  elif [ "$failed" -gt 0 ]; then
+    details+="$("$LIB/test-failures.sh" build/test-results.json "$bundle" --list | sed "s/^/$name: /")"$'\n'
+  fi
   # Region coverage is unit-only like the line ratchets: read the profile before the UI run replaces it.
   if [ "$bundle" = "HealthTrackerTests" ]; then
     app="build/DerivedData/Build/Products/Debug-iphonesimulator/HealthTracker.app"
@@ -373,3 +384,6 @@ if [ -n "$UPDATE_BASELINE" ] && ! grep -q $'\tfalse$' <<<"$rows"; then
 fi
 
 "$LIB/report.sh" "$MODE" ${JSON:+"$JSON"} <<<"${rows%$'\n'}"
+status=$?
+[ -z "$details" ] || printf '\n%s' "$details"
+exit "$status"
