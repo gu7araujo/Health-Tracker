@@ -420,8 +420,8 @@ printf '{"passed": true}\n' >"$GATE/build/quality.json"
 stop_message "$GATE"
 [ -z "$out" ] || fail "a gate run newer than every Swift change should be silent: $out"
 printf '{"passed": false}\n' >"$GATE/build/quality.json"
-stop_message "$GATE"
-[[ "$out" == *scripts/quality* ]] || fail "a red gate run should not count as the last gate run: $out"
+stop_message "$GATE" "$PATH" false same
+[[ "$out" == *scripts/quality* ]] || fail "a red gate run should not count, and should re-arm the session's reminder: $out"
 printf '{"passed": true}\n' >"$GATE/build/quality.json"
 gitc add -A && gitc commit -q -m b
 printf 'struct A { let a = 1 }\n' >"$GATE/HealthTracker/A.swift"
@@ -475,6 +475,7 @@ stop_message "$GATE" "$WORK/no-xcrun-bin:/bin"
 stop_message "$WORK/no-repo"
 [ "$code" -eq 0 ] && [ -z "$out" ] || fail "a cwd outside a checkout should be silent (got $code): $out"
 hook_wired Stop gate-reminder.sh Stop
-hook_wired SubagentStop gate-reminder.sh SubagentStop
+# Subagents (Explore, review passes) are left alone: the orchestrator's own Stop covers the branch.
+jq -e '.hooks | has("SubagentStop")' "$SETTINGS" >/dev/null && fail "gate-reminder should not run on SubagentStop"
 
 [ "$failures" -eq 0 ]

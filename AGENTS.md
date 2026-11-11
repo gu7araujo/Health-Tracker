@@ -34,7 +34,7 @@ The core loop is **red → green**: write a failing test, then make it pass. Fol
 **Definition of done**, in every session, interactive or workflow: the final report and PR carry the evidence, each item that applies.
 
 1. **Red**: the failing test's name and its failing assertion line, quoted.
-2. **Gate**: the table from the last `scripts/quality` run, after the last edit. A Stop hook sends a session or subagent back, once per gate run, when Swift changed since the last green run's `build/quality.json`.
+2. **Gate**: the table from the last `scripts/quality` run, after the last edit. A Stop hook sends the main session back, once per gate run, when Swift changed since the last green run's `build/quality.json`.
 3. **Scenario**: for user-facing behaviour, the scenario checked in `en` and `pt-BR` (an AppIntentsTesting or UI test, or `device-interaction`).
 4. **Previews**: for an edited View, the `RenderPreview` snapshots `HealthTracker/Presentation/AGENTS.md` asks for.
 5. **Review**: each pass the `reviewing` skill's tier calls for (or why one was unavailable), with its findings and what became of each.

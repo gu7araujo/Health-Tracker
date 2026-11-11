@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Claude Code Stop and SubagentStop hook: when a .swift file changed on this branch (committed since
-# main, or not yet committed) is newer than the last green gate run's build/quality.json, or there is
-# none, sends the session back: the definition of done (AGENTS.md Workflow) needs a fresh gate table.
+# Claude Code Stop hook: when a .swift file changed on this branch (committed since main, or not
+# yet committed) is newer than the last green gate run's build/quality.json, or there is none,
+# sends the main session back: the definition of done (AGENTS.md Workflow) needs a fresh gate table.
 # It blocks the stop with a reason Claude reads, once per session and gate run, so Claude runs the
 # gate or says why not. Silent when the stop already follows a Stop hook's block (stop_hook_active),
 # while a gate runs in the checkout, and without xcrun (a cloud session runs the gate on CI).
@@ -29,9 +29,10 @@ done < <({
 } 2>/dev/null)
 [ "${#changed[@]}" -gt 0 ] || exit 0
 run="none"
-if jq -e '.passed == true' build/quality.json >/dev/null 2>&1; then
-  [ -n "$(find "${changed[@]}" -newer build/quality.json 2>/dev/null)" ] || exit 0
+if [ -f build/quality.json ]; then
   run="$(stat -f %m build/quality.json)"
+  ! jq -e '.passed == true' build/quality.json >/dev/null 2>&1 ||
+    [ -n "$(find "${changed[@]}" -newer build/quality.json 2>/dev/null)" ] || exit 0
 fi
 first_time "gate-reminder-$run" || exit 0
 

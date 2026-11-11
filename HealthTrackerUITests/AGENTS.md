@@ -37,5 +37,5 @@ Black-box and isolated — each test drives the shipping app through its accessi
 </rule_5>
 
 <rule_6>
-**EVERY UI FAILURE GETS AN OWNER** — a UI-test failure seen while verifying, locally or on CI, ends in one of two places: fixed in the PR, or recorded on a `flaky-test` issue (filed, or commented on) with the run id (`issue-tracking` skill). A single `Timed out while evaluating UI query` earns one rerun of that test alone before you diagnose it. A PR that changes a UI test pastes its pass count over 20 runs, `xcodebuild test -only-testing:<Target>/<Suite>/<test> -test-iterations 20` (the one `xcodebuild` run the root runner rule allows up front); a `Support/` change does the same for one test per changed helper.
+**EVERY UI FAILURE GETS AN OWNER** — a UI-test failure seen while verifying, locally or on CI, ends in one of two places: fixed in the PR, or recorded on a `flaky-test` issue (filed, or commented on) with the run id (`issue-tracking` skill). A single `Timed out while evaluating UI query` earns one rerun of that test alone before you diagnose it. A PR that changes a UI test pastes its pass count over 20 runs (`RunSomeTests` with that test, repeated; `-test-iterations 20` under the root runner rule's `xcodebuild` fallback); a `Support/` change does the same for one test per changed helper.
 </rule_6>

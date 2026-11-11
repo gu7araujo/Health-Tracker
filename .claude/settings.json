@@ -55,16 +55,6 @@
         ]
       }
     ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gate-reminder.sh; [ ! -x \"$hook\" ] || \"$hook\""
-          }
-        ]
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit|mcp__xcode__XcodeWrite|mcp__xcode__XcodeUpdate",
