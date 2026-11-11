@@ -34,6 +34,37 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/bootstrap-check.sh; [ ! -x \"$hook\" ] || \"$hook\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|mcp__xcode__XcodeWrite|mcp__xcode__XcodeUpdate",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/layer-docs.sh; [ ! -x \"$hook\" ] || \"$hook\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/xcodebuild-runner.sh; [ ! -x \"$hook\" ] || \"$hook\""
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit|mcp__xcode__XcodeWrite|mcp__xcode__XcodeUpdate",
@@ -41,6 +72,24 @@
           {
             "type": "command",
             "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-swift.sh; [ ! -x \"$hook\" ] || \"$hook\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-changed-swift.sh; [ ! -x \"$hook\" ] || \"$hook\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|mcp__xcode__BuildProject|mcp__xcode__RunSomeTests|mcp__xcode__RunAllTests|mcp__xcode__GetBuildLog|mcp__xcode__XcodeRefreshCodeIssuesInFile",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/concurrency-skill.sh; [ ! -x \"$hook\" ] || \"$hook\""
           }
         ]
       }

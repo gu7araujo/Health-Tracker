@@ -1,11 +1,11 @@
 ---
 name: cli-test
-description: Run HealthTracker's unit and/or UI tests from the command line with xcodebuild. Use when the Xcode MCP test tools are unavailable or failing and you need to validate changes or run a single test.
+description: Run HealthTracker's unit and/or UI tests from the command line with xcodebuild. Use only after an Xcode MCP test call returned an error you can quote, before the first xcodebuild test of a session. Not for workflow subagents or gates, which use scripts/quality.
 ---
 
 # Run HealthTracker tests from the CLI
 
-Fallback for when the Xcode MCP test tools don't work. Pipe every command through `xcbeautify`.
+The fallback for a main session whose Xcode MCP `RunSomeTests` or `RunAllTests` returned an error: quote that error to the user first (root `AGENTS.md`, Building and Validating). A device or preview tool's error is no reason to fall back, and a disconnected MCP means asking the user to run `/mcp`. Pipe every command through `xcbeautify`.
 
 ## 1. Resolve a simulator id
 

@@ -48,7 +48,8 @@
     "edited": {
       "tdd": "fitted to the iOS repo (#25)",
       "wait-what": "fitted to the iOS repo (#25)",
-      "device-interaction": "tool name fixed (#73); triggers in the description, start recipe and HealthTracker examples (#69)"
+      "device-interaction": "tool name fixed (#73); triggers in the description, start recipe and HealthTracker examples (#69)",
+      "swiftui-specialist": "description starts with \"Use whenever writing, editing or reviewing SwiftUI views.\" (#70)"
     }
   }
 }

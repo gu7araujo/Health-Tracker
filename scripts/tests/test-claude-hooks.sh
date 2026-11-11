@@ -195,4 +195,147 @@ code=$?
 [ "$code" -eq 2 ] || fail "a missing tools-path helper should exit 2 (got $code): $out"
 [[ "$out" == *tools-path.sh* ]] || fail "the missing helper should be reported: $out"
 
+# --- Routing hooks: they point the agent at the layer doc, skill or runner the task needs. ---
+HOOKS="$ROOT/.claude/hooks"
+export TMPDIR="$WORK/hook-tmp"
+mkdir -p "$TMPDIR"
+
+# context <hook> <input JSON> -> sets out (the additionalContext, or stdout when not JSON), code
+context() {
+  local raw
+  raw="$("$HOOKS/$1" <<<"$2" 2>&1)"
+  code=$?
+  out="$(jq -r '.hookSpecificOutput.additionalContext // empty' <<<"$raw" 2>/dev/null || printf '%s' "$raw")"
+}
+
+# hook_wired <event> <hook script> <tool name>: settings.json runs the script on that event for that tool.
+hook_wired() {
+  jq -e --arg event "$1" --arg script "$2" --arg tool "$3" \
+    '.hooks[$event] // [] | any((.matcher // ".*") as $m | (.hooks | any(.command | contains($script))) and ($tool | test("^(" + $m + ")$")))' \
+    "$SETTINGS" >/dev/null || fail "settings.json should run $2 on $1 for $3"
+}
+
+# layer-docs.sh: the first edit in a layer, per session and agent, names its AGENTS.md and skill.
+edit_input() {
+  jq -n --arg path "$1" --arg session "$2" --arg agent "${3:-}" \
+    '{hook_event_name: "PreToolUse", tool_name: "Edit", session_id: $session, tool_input: {file_path: $path}} + (if $agent == "" then {} else {agent_id: $agent} end)'
+}
+context layer-docs.sh "$(edit_input "$ROOT/HealthTracker/Presentation/Sections/MealsSectionView.swift" s1)"
+[ "$code" -eq 0 ] || fail "layer-docs should exit 0 (got $code): $out"
+[[ "$out" == *"HealthTracker/Presentation/AGENTS.md"* && "$out" == *swiftui-specialist* ]] ||
+  fail "a Presentation edit should name its AGENTS.md and swiftui-specialist: $out"
+context layer-docs.sh "$(edit_input "$ROOT/HealthTracker/Presentation/MainView.swift" s1)"
+[ -z "$out" ] || fail "a second Presentation edit in the session should be silent: $out"
+context layer-docs.sh "$(edit_input "$ROOT/HealthTracker/Presentation/MainView.swift" s1 agent-a)"
+[[ "$out" == *swiftui-specialist* ]] || fail "a subagent's first Presentation edit should be reminded: $out"
+context layer-docs.sh "$(edit_input "$ROOT/HealthTracker/Presentation/MainView.swift" s2)"
+[[ "$out" == *swiftui-specialist* ]] || fail "a new session's first Presentation edit should be reminded: $out"
+context layer-docs.sh "$(edit_input "$ROOT/HealthTracker/Presentation/Intents/LogWaterIntent.swift" s1)"
+[[ "$out" == *"Presentation/Intents/AGENTS.md"* && "$out" == *app-intents-specialist* ]] ||
+  fail "an Intents edit should name its AGENTS.md and app-intents-specialist: $out"
+context layer-docs.sh "$(edit_input "$ROOT/HealthTrackerTests/Domain/DayDataTests.swift" s1)"
+[[ "$out" == *"HealthTrackerTests/AGENTS.md"* && "$out" == *swift-testing-expert* ]] ||
+  fail "a unit-test edit should name its AGENTS.md and swift-testing-expert: $out"
+for layer in HealthTracker/Domain HealthTracker/Data HealthTrackerUITests HealthTrackerIntentsUITests scripts; do
+  context layer-docs.sh "$(edit_input "$ROOT/$layer/Some.swift" s1)"
+  [[ "$out" == *"$layer/AGENTS.md"* ]] || fail "an edit in $layer should name $layer/AGENTS.md: $out"
+done
+context layer-docs.sh "$(edit_input "$ROOT/README.md" s1)"
+[ -z "$out" ] || fail "an edit outside the layers should be silent: $out"
+context layer-docs.sh "$(jq -n '{hook_event_name: "PreToolUse", tool_name: "mcp__xcode__XcodeUpdate", session_id: "s3",
+  tool_input: {filePath: "HealthTracker/HealthTracker/Domain/Entities/DayData.swift"}}')"
+[[ "$out" == *"HealthTracker/Domain/AGENTS.md"* ]] || fail "an Xcode MCP write should be mapped to its layer: $out"
+for tool in Edit Write MultiEdit mcp__xcode__XcodeWrite mcp__xcode__XcodeUpdate; do
+  hook_wired PreToolUse layer-docs.sh "$tool"
+done
+
+# concurrency-skill.sh: an actor-isolation or Sendable diagnostic in a build's output names the skill, once.
+build_output() {
+  jq -n --arg stdout "$1" --arg session "$2" '{hook_event_name: "PostToolUse", tool_name: "Bash", session_id: $session,
+    tool_input: {command: "xcodebuild build"}, tool_response: {stdout: $stdout, stderr: ""}}'
+}
+for diagnostic in \
+  "MainView.swift:12:5: error: main actor-isolated property 'days' can not be referenced from a nonisolated context" \
+  "error: type 'Meal' does not conform to the 'Sendable' protocol" \
+  "error: capture of 'self' with non-Sendable type 'Store' in a '@Sendable' closure" \
+  "error: sending 'value' risks causing data races"; do
+  context concurrency-skill.sh "$(build_output "$diagnostic" "c-$RANDOM$RANDOM")"
+  [[ "$out" == *"swift-concurrency:swift-concurrency"* ]] || fail "should name swift-concurrency for: $diagnostic ($out)"
+done
+context concurrency-skill.sh "$(build_output "error: actor-isolated call" c1)"
+context concurrency-skill.sh "$(build_output "error: actor-isolated call" c1)"
+[ -z "$out" ] || fail "a repeated concurrency diagnostic in a session should be silent: $out"
+context concurrency-skill.sh "$(build_output "** BUILD SUCCEEDED ** (Sendable.swift compiled)" c2)"
+[ -z "$out" ] || fail "output without a concurrency diagnostic should be silent: $out"
+context concurrency-skill.sh "$(jq -n '{hook_event_name: "PostToolUse", tool_name: "mcp__xcode__BuildProject", session_id: "c3",
+  tool_response: [{type: "text", text: "{\"errors\":[{\"message\":\"Main actor-isolated property cannot be referenced\"}]}"}]}')"
+[[ "$out" == *swift-concurrency* ]] || fail "an Xcode MCP build's diagnostic should name swift-concurrency: $out"
+for tool in Bash mcp__xcode__BuildProject mcp__xcode__RunSomeTests mcp__xcode__GetBuildLog mcp__xcode__XcodeRefreshCodeIssuesInFile; do
+  hook_wired PostToolUse concurrency-skill.sh "$tool"
+done
+
+# xcodebuild-runner.sh: a main session's raw xcodebuild gets the MCP reminder; a subagent's does not.
+bash_input() {
+  jq -n --arg command "$1" --arg agent "${2:-}" '{hook_event_name: "PreToolUse", tool_name: "Bash", session_id: "x1",
+    tool_input: {command: $command}} + (if $agent == "" then {} else {agent_id: $agent} end)'
+}
+for command in "xcodebuild -scheme HealthTracker build" "set -o pipefail && xcodebuild test | xcbeautify" \
+  "cd /tmp; NSUnbufferedIO=YES xcodebuild build"; do
+  context xcodebuild-runner.sh "$(bash_input "$command")"
+  [[ "$out" == *mcp__xcode__BuildProject* ]] || fail "a main-session xcodebuild should get the reminder: $command ($out)"
+done
+context xcodebuild-runner.sh "$(bash_input "xcodebuild test" agent-b)"
+[ -z "$out" ] || fail "a subagent's xcodebuild should be silent: $out"
+for command in "grep -rn xcodebuild scripts" "scripts/quality --fast" "git log --grep xcodebuild"; do
+  context xcodebuild-runner.sh "$(bash_input "$command")"
+  [ -z "$out" ] || fail "a command that does not run xcodebuild should be silent: $command ($out)"
+done
+hook_wired PreToolUse xcodebuild-runner.sh Bash
+
+# bootstrap-check.sh: a session starting in a checkout without the pinned tools is told to bootstrap.
+mkdir -p "$WORK/fresh" "$WORK/ready/build/tools/bin"
+git -C "$WORK/fresh" init -q
+git -C "$WORK/ready" init -q
+touch "$WORK/ready/build/tools/bin/swiftlint"
+context bootstrap-check.sh "$(jq -n --arg cwd "$WORK/fresh" '{hook_event_name: "SessionStart", cwd: $cwd}')"
+[ "$code" -eq 0 ] || fail "bootstrap-check should exit 0 (got $code): $out"
+[[ "$out" == *scripts/bootstrap* ]] || fail "a checkout without build/tools/bin/swiftlint should be told to bootstrap: $out"
+context bootstrap-check.sh "$(jq -n --arg cwd "$WORK/ready" '{hook_event_name: "SessionStart", cwd: $cwd}')"
+[ -z "$out" ] || fail "a bootstrapped checkout should be silent: $out"
+hook_wired SessionStart bootstrap-check.sh startup
+
+# format-changed-swift.sh: after a Bash call, Swift files git reports changed since the last call are
+# formatted and linted, so a sed or heredoc edit still goes through format-swift.sh.
+bash_ran() {
+  jq -n --arg cwd "$1" --arg session "$2" '{hook_event_name: "PostToolUse", tool_name: "Bash", session_id: $session, cwd: $cwd,
+    tool_input: {command: "sed -i"}, tool_response: {stdout: ""}}'
+}
+repo="$WORK/bash-edits"
+mkdir -p "$repo/Sources"
+git -C "$repo" init -q
+cp "$FIXTURES/Formatted.swift.fixture" "$repo/Sources/Committed.swift"
+git -C "$repo" add . && git -C "$repo" -c user.name=t -c user.email=t@t commit -qm init
+cp "$FIXTURES/Unformatted.swift.fixture" "$repo/Sources/Committed.swift"
+cp "$FIXTURES/Unformatted.swift.fixture" "$repo/Sources/New.swift"
+cp "$FIXTURES/Unformatted.swift.fixture" "$repo/notes.txt"
+out="$("$HOOKS/format-changed-swift.sh" <<<"$(bash_ran "$repo" f1)" 2>&1)"
+code=$?
+[ "$code" -eq 0 ] || fail "formatting changed files should exit 0 (got $code): $out"
+for file in Committed New; do
+  diff -q "$repo/Sources/$file.swift" "$FIXTURES/Formatted.swift.fixture" >/dev/null || fail "$file.swift was not formatted"
+done
+diff -q "$repo/notes.txt" "$FIXTURES/Unformatted.swift.fixture" >/dev/null || fail "a non-Swift file was modified"
+cp "$FIXTURES/LintViolation.swift.fixture" "$repo/Sources/Caster.swift"
+out="$("$HOOKS/format-changed-swift.sh" <<<"$(bash_ran "$repo" f1)" 2>&1)"
+code=$?
+[ "$code" -eq 2 ] || fail "a lint violation in a Bash-edited file should exit 2 (got $code): $out"
+[[ "$out" == *force_cast* ]] || fail "the violation should be reported: $out"
+out="$("$HOOKS/format-changed-swift.sh" <<<"$(bash_ran "$repo" f1)" 2>&1)"
+code=$?
+[ "$code" -eq 0 ] || fail "files unchanged since the last call should not be checked again (got $code): $out"
+out="$("$HOOKS/format-changed-swift.sh" <<<"$(bash_ran "$WORK/no-repo" f1)" 2>&1)"
+code=$?
+[ "$code" -eq 0 ] || fail "a cwd outside a checkout should exit 0 (got $code): $out"
+hook_wired PostToolUse format-changed-swift.sh Bash
+
 [ "$failures" -eq 0 ]
