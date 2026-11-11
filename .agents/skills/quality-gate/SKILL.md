@@ -18,6 +18,10 @@ scripts/quality --full --json   # done: everything in --fast, plus UI and intent
 
 It tests on `--simulator <udid>` when given; otherwise it reuses or clones a simulator named `HT-<branch>`, so parallel worktrees stay isolated, and shuts that clone down when it exits unless it was already booted. `--full` also runs `HealthTrackerIntentsUITests`, which needs a runtime at least the iPhone simulator SDK's version (iOS 27.2 with Xcode 27.2; its `AppIntentsTesting` fails to load on 27.0): on an older simulator it uses a second clone, `HT-<branch>-ios27` (re-cloned when its runtime falls below that), shut down the same way; with no iPhone on such a runtime the `Intents UI tests` row is `n/a` and the gate prints the fix, `xcodebuild -downloadPlatform iOS`. An exported `SIMULATOR_ID` is ignored on purpose. Delete both clones when the branch is done: `xcrun simctl delete "HT-<branch with / replaced by ->"` and `xcrun simctl delete "HT-<branch with / replaced by ->-ios27"`.
 
+`--full` runs on one Mac take turns, whatever worktree they run in: a second one prints `Lock: waiting for <branch>` and starts when the first exits, so a waiting run is working (`scripts/quality --help` describes the lock). Stop a stuck or unwanted gate with `scripts/quality --stop` in its worktree, never `kill`: it ends the run and its `xcodebuild`, shuts down the simulators the run booted and releases the lock.
+
+**In a cloud session** (a Linux container: no `xcrun`, Xcode MCP disconnected), run the gate on CI instead: [`CLOUD.md`](CLOUD.md), whose **Done when** replaces the one below.
+
 **Done when:** `scripts/quality --full` exits 0; for a change touching only docs or agent config (the paths under `paths-ignore` in `.github/workflows/ci.yml`), when `scripts/quality --fast` exits 0. Paste the table it prints into the final report and PR. Before marking any other PR ready, run it as `CI=true scripts/quality --full`: only `CI=true` turns compiler warnings into errors, as CI does, so a warning that passes locally fails the PR's CI run. It also makes `scripts/doctor` exit 1 before any gate on a missing or mismatched pinned tool or Xcode: run `scripts/bootstrap` first and fix what its `doctor` reports.
 
 ## 2. Read the result
@@ -49,6 +53,7 @@ Every gate turns green through code or tests:
 - **Fitness**: `scripts/fitness/run` prints each violation as `<check>: <file>[:<line>]: <message>`:
   - `localization-parity`, `missing key "k"` / `missing file`: add that key (or `.strings` file) to the named locale, translated.
   - `test-mirror`, `no HealthTrackerTests/**/<Name>Tests.swift`: write that test file for the Domain/Data type. `... is not a unique name`: put the test at the mirrored path the message names. `stale exception`: delete that line from `scripts/fitness/test-mirror-exceptions.txt`.
+  - `notification-center-isolation`, `"<declaration>" is not nonisolated in a file that calls UNUserNotificationCenter`: declare that type or extension `nonisolated` (`HealthTracker/Data/AGENTS.md`, Notifications).
   - `accessibility-ids`, `"<id>" not declared in HealthTracker/Presentation/AccessibilityID.swift`: make the UI tests' `AccessibilityID` match the app's (rename or remove the stale ID, or add the identifier to the app).
 - **Unit tests / UI tests**: the failures are in `build/xcodebuild.log`; reproduce one with the `cli-test` skill's single-test command.
 - **Unused code**: Periphery (`.periphery.yml`, strict, no baseline) scans the index of the gate's own test build and fails on any unused declaration. It prints each finding on stderr as `<file>:<line>:<col>: warning: <finding>` (e.g. `Unused function 'name()'`, `Assign-only property`).
@@ -110,7 +115,7 @@ The pre-push hook runs `scripts/quality --fast` (~2 min, past the Bash tool's 12
 Open every PR as **draft**, with the gate table in its body. Every push to a PR runs CI, drafts included.
 
 - **A docs-only PR** (only `paths-ignore` files) runs just `changes` and `ci-gate` (~30 s). Stop with the link once `--fast` is green.
-- **Any other PR** is marked ready only after a green local `CI=true scripts/quality --full` (section 1):
+- **Any other PR** is marked ready only after a green local `CI=true scripts/quality --full` (section 1; in a cloud session, `CLOUD.md`'s Done when):
   1. Push, then wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run; until then `gh pr checks` has nothing to watch.
   2. `gh pr checks <n> --watch`.
   3. Green: `gh pr ready <n>` (it starts no new run), and stop there with the link. The user approves and merges every PR.

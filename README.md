@@ -72,6 +72,7 @@ scripts/quality --full     # everything in --fast, plus UI and intents UI tests 
 scripts/quality --full --json            # also writes build/quality.json
 scripts/quality --simulator <udid>       # test on a specific simulator
 scripts/quality --fast --update-baseline # raise the coverage ratchets (see below)
+scripts/quality --stop     # stop the gate running in this worktree
 scripts/quality --help
 ```
 
@@ -115,6 +116,8 @@ Exit codes: `0` all gates passed, `1` a gate failed, `2` usage error.
 ### Which simulator it uses
 
 By default each branch or worktree gets its own simulator, named `HT-<branch>` (for example `HT-feat-my-change`). The first run clones it from the iPhone model pinned as `SIMULATOR_DEVICE` in `scripts/tool-versions.env`, on the newest iOS 26 runtime that has one, else the newest iOS runtime that has one. With no shut-down one on any runtime, it clones the first iPhone on the newest iOS 26 (else iOS) runtime and prints a warning. An existing clone of another model is deleted and re-cloned, unless it is booted. This keeps parallel worktrees, and agents, from fighting over one device. An exported `SIMULATOR_ID` is ignored on purpose; use `--simulator <udid>` to pick a device.
+
+`--full` runs on one Mac take turns, whatever worktree they run in, because two at once can exhaust the machine's processes: a second one prints `Lock: waiting for <branch>` and starts when the first exits. The lock is the directory `~/Library/Caches/HealthTracker/quality.lock`; a run that died without releasing it is detected and its lock taken over. `scripts/quality --stop` stops the gate running in the current worktree, with its `xcodebuild`.
 
 `--full` also runs `HealthTrackerIntentsUITests`, which imports `AppIntentsTesting`. That framework links the SDK's iOS release, so the bundle needs a runtime at least the iPhone simulator SDK's version (`xcrun --sdk iphonesimulator --show-sdk-version`): Xcode 27.2's fails to load on iOS 27.0 ("Symbol not found"). On a simulator that meets it, the bundle runs there; otherwise, `--simulator` included, it uses a second clone, `HT-<branch>-ios27`, picked the same way from runtimes at or above that version, newest first (versions compare numerically, so 27.10 beats 27.2). An existing `HT-<branch>-ios27` on an older runtime is deleted and re-cloned, unless it is booted. With no iPhone on a qualifying runtime, the gate prints the version it needs, the `Intents UI tests` row shows `n/a` and the gate fails: install the runtime with `xcodebuild -downloadPlatform iOS` (or Xcode > Settings > Components). The gate shuts down each clone it booted when it exits.
 
@@ -247,9 +250,10 @@ Some rules span several files, which SwiftLint can't see. Small bash scripts in 
 | `localization-parity.sh` | A `.strings` file, or a key in one, exists in `en.lproj` but not `pt-BR.lproj`, or the reverse | `Presentation/AGENTS.md` localization |
 | `test-mirror.sh` | A Domain/Data `.swift` file has no `HealthTrackerTests/**/<Name>Tests.swift`. Protocol-only files don't count. A name shared with another app file needs its test at the mirrored path, `HealthTrackerTests/<dirs>/<Name>Tests.swift` | `HealthTrackerTests/AGENTS.md` (mirrors the production tree) |
 | `accessibility-ids.sh` | An ID in `HealthTrackerUITests/Support/AccessibilityID.swift` isn't declared in `HealthTracker/Presentation/AccessibilityID.swift` | `HealthTrackerUITests/AGENTS.md` rule_2 |
+| `notification-center-isolation.sh` | A file under `HealthTracker/` calls `UNUserNotificationCenter` and declares a type or extension that isn't `nonisolated` (actors pass) | `Data/AGENTS.md` Notifications |
 | `persisted-shape-guard.sh` (warns only) | A `Codable` member of `DayData`, `RecordedDayData`, `Meal`, `Workout`, `Mood` or `DayDataContainer` changed, but neither `HealthTracker/Data/Migration/` nor `DataMigrationTests` did | `Data/AGENTS.md` Data Migrations |
 
-`scripts/fitness/run` runs the first three, prints one `<check>: <file>[:<line>]: <message>` line per violation and then `N violation(s)`, and exits 1 if N > 0.
+`scripts/fitness/run` runs the first four, prints one `<check>: <file>[:<line>]: <message>` line per violation and then `N violation(s)`, and exits 1 if N > 0.
 
 **Exceptions:** `scripts/fitness/test-mirror-exceptions.txt` lists the Domain/Data files allowed to have no mirrored test, one path per line with a reason. The check reports an entry as stale once its file has a test or is gone. Adding an entry is a deliberate decision, like adding a coverage exception: call it out in the PR.
 

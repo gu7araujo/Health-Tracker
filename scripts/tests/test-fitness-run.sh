@@ -42,13 +42,15 @@ put "$TMP/fail" HealthTracker/Resources/en.lproj/Localizable.strings '"title" = 
 "extra" = "Extra";'
 put "$TMP/fail" HealthTracker/Domain/UseCases/Save.swift 'struct Save {}'
 put "$TMP/fail" HealthTrackerUITests/Support/AccessibilityID.swift 'static let b = "b"'
+put "$TMP/fail" HealthTracker/Data/Services/Notifier.swift 'final class Notifier { let center = UNUserNotificationCenter.current() }'
 out="$("$SCRIPT" "$TMP/fail")"
 code=$?
 [ "$code" -eq 1 ] || fail "a tree with violations should exit 1 (got $code)"
 grep -q '^localization-parity: ' <<<"$out" || fail "should run localization-parity: $out"
 grep -q '^test-mirror: ' <<<"$out" || fail "should run test-mirror: $out"
 grep -q '^accessibility-ids: ' <<<"$out" || fail "should run accessibility-ids: $out"
-[ "$(tail -n 1 <<<"$out")" = "3 violation(s)" ] || fail "should end with '3 violation(s)', got: $out"
+grep -q '^notification-center-isolation: ' <<<"$out" || fail "should run notification-center-isolation: $out"
+[ "$(tail -n 1 <<<"$out")" = "5 violation(s)" ] || fail "should end with '5 violation(s)', got: $out"
 
 # The real repository is clean.
 out="$("$SCRIPT")"

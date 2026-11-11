@@ -45,11 +45,12 @@ On a task spanning several files, layers or PRs, the main session is the **orche
 
 - Run independent slices, or a staged pipeline (implement → review → verify), as a Workflow.
 - Brief each subagent as a cold start: the goal, the files, the constraints, its done-criterion, and the shape of the report to return.
-- Agents working at the same time each take their own worktree in `.claude/worktrees/<branch-name>`: `parallel-agents` skill. Create a worktree only when the task requires it or the user asks.
+- Agents working at the same time each take their own worktree in `.claude/worktrees/<branch-name>`, and at most two of them build or test at once: `parallel-agents` skill. Create a worktree only when the task requires it or the user asks.
 
 ## Building and Validating
 
 - Build, test and preview through the Xcode MCP tools. When they are unavailable or failing, fall back to `xcodebuild`: `cli-build` skill to build, `cli-test` skill to run tests.
+- In a cloud session (Linux, no Xcode), CI is your Mac: push the branch, dispatch CI on it and read the result yourself (`quality-gate` skill, `CLOUD.md`). Hand the user a command only for what CI cannot run.
 - Apple API docs: use the Xcode MCP `DocumentationSearch` tool (a `query`, optionally `frameworks`) over training memory, especially for iOS 26 APIs like Liquid Glass.
 - After a UI change, render the view's `#Preview` with the Xcode MCP `RenderPreview` tool and review the snapshot in light, dark and a large Dynamic Type size. Add a `#Preview` first when the view has none.
 - Use the `LSP` tool for go-to-definition and find-references once the checkout has run `scripts/bootstrap` and has one Xcode build (the Xcode MCP `BuildProject`); `scripts/quality` builds into `build/DerivedData`, which swift-lsp does not read. From then on its diagnostics are the compiler's: fix them.
