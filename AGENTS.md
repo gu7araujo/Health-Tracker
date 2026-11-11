@@ -44,7 +44,7 @@ On a task spanning several files, layers or PRs, the main session is the **orche
 
 - Run independent slices, or a staged pipeline (implement → review → verify), as a Workflow.
 - Brief each subagent as a cold start: the goal, the files, the constraints, its done-criterion, and the shape of the report to return. Write each skill it needs as a call in its first step (`Skill("tdd")` for an implementer).
-- Agents working at the same time each take their own worktree in `.claude/worktrees/<branch-name>`, and at most two of them build or test at once; working in any worktree: `parallel-agents` skill. Create a worktree only when the task requires it or the user asks.
+- Agents working at the same time each take their own worktree in `.claude/worktrees/<branch-name>`, and at most two of them build or test at once: `parallel-agents` skill. Create a worktree only when the task requires it or the user asks.
 
 ## Building and Validating
 
@@ -55,18 +55,15 @@ On a task spanning several files, layers or PRs, the main session is the **orche
 | `xcodebuild` (`cli-build`, `cli-test` skills) | Only after an MCP build or test call errored: quote the error. A device or preview tool's error doesn't count; a disconnected MCP means asking the user to run `/mcp` |
 | Cloud session (Linux, no Xcode) | CI: push, dispatch and read it yourself (`quality-gate` skill, `CLOUD.md`); hand the user only what CI can't run |
 
-- Edit `.swift` files with Edit or Write, so the format hook sees each edit.
 - The project uses `PBXFileSystemSynchronizedRootGroup`: adding or deleting a source file needs no `project.pbxproj` edit. A file under `HealthTracker/` that must stay out of the app bundle (an `AGENTS.md`) needs a `membershipExceptions` entry there.
 
 ### Skill and tool routing
 
-Mentioning a skill doesn't load it: make the call.
+A skill loads only when called: make each call below. Layer-specific skills (SwiftUI, App Intents, Swift Testing) are named in that layer's `AGENTS.md`.
 
 | When | Call |
 |---|---|
-| Editing or reviewing a View | `Skill("swiftui-specialist")` (+ `swiftui-whats-new-27` for iOS 27 APIs), then `RenderPreview` in light, dark and a large Dynamic Type size (add a `#Preview` if missing) |
 | An actor-isolation or `Sendable` diagnostic | `Skill("swift-concurrency:swift-concurrency")` before fixing, then fix every call site sharing the cause |
-| Writing tests | `Skill("tdd")`; `Skill("swift-testing-expert:swift-testing-expert")` for traits, parameterized tests, `#expect`/`#require` |
 | Checking behaviour on a device | `device-interaction`; seed data with `mock-sim-data` |
 | An Apple API question | `DocumentationSearch` before training memory |
 | Compile-checking one file | `XcodeRefreshCodeIssuesInFile` |

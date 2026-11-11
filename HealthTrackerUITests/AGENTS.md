@@ -2,8 +2,6 @@
 
 The end-to-end target. Built on **XCUITest**, each suite launches the real app on a simulator and drives it as a black box — tapping, typing, and swiping through user flows, then asserting on accessibility labels. Every test relaunches the app fresh into an isolated temp store (via `-uiTesting`), so suites share no state. Pure logic and view-model behaviour live in the separate `HealthTrackerTests` target.
 
-Checking a flow by hand on the simulator instead: `device-interaction` skill, with data seeded by `mock-sim-data`.
-
 ## Support
 
 The shared machinery every suite leans on, all on `HealthTrackerUITestCase`:

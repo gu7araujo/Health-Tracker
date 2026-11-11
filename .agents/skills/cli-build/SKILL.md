@@ -1,11 +1,11 @@
 ---
 name: cli-build
-description: Build the HealthTracker app or compile the test target from the command line with xcodebuild. Use only after an Xcode MCP build call returned an error you can quote, before the first xcodebuild build of a session. Not for workflow subagents or gates, which use scripts/quality.
+description: Build the HealthTracker app or compile the test target with xcodebuild, the fallback once an Xcode MCP build call has returned an error you can quote. Use before any xcodebuild build in a main session; workflow subagents and gates build through scripts/quality.
 ---
 
 # Build HealthTracker from the CLI
 
-The fallback for a main session whose Xcode MCP `BuildProject` returned an error: quote that error to the user first (root `AGENTS.md`, Building and Validating). A device or preview tool's error is no reason to fall back, and a disconnected MCP means asking the user to run `/mcp`. Pipe every command through `xcbeautify` for readable output.
+The fallback the runner table in root `AGENTS.md` (Building and Validating) allows. Pipe every command through `xcbeautify` for readable output.
 
 Build the app:
 ```bash

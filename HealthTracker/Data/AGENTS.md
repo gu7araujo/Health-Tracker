@@ -12,7 +12,7 @@ Adapts persistence and platform services to the domain: raw I/O, orchestration, 
 ## Notifications
 
 - `UNUserNotificationCenter` is reached only from `Services/NotificationService.swift` and its seam, `Services/UserNotificationCentering.swift`.
-- Every type and extension in a file that calls the center is declared `nonisolated`: the app defaults to MainActor isolation, and the center's synchronous calls (`removeAllPendingNotificationRequests()` and its siblings) stall the UI from the main actor. `scripts/fitness/notification-center-isolation.sh` enforces it. On an actor-isolation or `Sendable` diagnostic, call `Skill("swift-concurrency:swift-concurrency")` before fixing.
+- Every type and extension in a file that calls the center is declared `nonisolated`: the app defaults to MainActor isolation, and the center's synchronous calls (`removeAllPendingNotificationRequests()` and its siblings) stall the UI from the main actor. `scripts/fitness/notification-center-isolation.sh` enforces it.
 
 ## Data Migrations
 

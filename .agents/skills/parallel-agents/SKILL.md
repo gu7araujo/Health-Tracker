@@ -1,6 +1,6 @@
 ---
 name: parallel-agents
-description: Run several agents at once on HealthTracker, one per git worktree, without their Xcode builds, simulators and test runs colliding. Use when fanning work out to parallel agents or a Workflow, when you are an agent working in a worktree while others build or test, or when an Xcode MCP call fails with "Unknown workspace identifier" or "There is already a test running".
+description: Run several agents at once on HealthTracker, one per git worktree, without their Xcode builds, simulators and test runs colliding. Use when fanning work out to parallel agents or a Workflow, when working in a worktree, or when an Xcode MCP call fails with "Unknown workspace identifier" or "There is already a test running".
 ---
 
 # Parallel agents

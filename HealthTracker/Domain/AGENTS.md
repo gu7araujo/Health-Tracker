@@ -2,8 +2,6 @@
 
 The business core: strongly-typed entities, the abstractions the outer layers depend on, and single-responsibility use cases. Owns the health-status rules. No SwiftUI or persistence framework leaks in here — except the small UI affordances (`localizedName`, `color`) some entities expose for the Presentation layer.
 
-A status-rule change starts red: call `Skill("tdd")` and add the boundary cases to `DayDataTests` (rule_4).
-
 ## Health Status
 
 `DayData.status` is the app's core rule. This section is its single source of truth. Only **meal size** counts — `Satisfaction` is ignored everywhere. Workout minutes are summed across the day (`Duration.minutes`, 1–300).
