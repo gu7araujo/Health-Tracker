@@ -1,0 +1,16 @@
+# Must fail: the prompt does not name the root rules, which the action deletes as CLAUDE.md.
+jobs:
+  claude-review:
+    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: CLAUDE.md for the review
+        shell: bash
+        run: |
+          git ls-files -z '*/AGENTS.md' | while IFS= read -r -d '' f; do cp "$f" "${f%AGENTS.md}CLAUDE.md"; done
+          cp scripts/AGENTS.md .github/CLAUDE.md
+          cp scripts/AGENTS.md .githooks/CLAUDE.md
+
+      - name: Run Claude Code Review
+        with:
+          prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
