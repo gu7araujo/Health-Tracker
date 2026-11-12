@@ -28,6 +28,9 @@ enum AccessibilityID {
         "calendarDay_\(offset)"
     }
 
+    /// What every `calendarDay(offset:)` identifier starts with; the rest is the offset.
+    static let calendarDayPrefix = "calendarDay_"
+
     static func mealCard(_ index: Int) -> String {
         "mealCard_\(index)"
     }
