@@ -27,7 +27,7 @@ final class LaunchUITests: HealthTrackerUITestCase {
         XCTAssertEqual(retried, "\(lostLaunch.compactDescription); \(crash.compactDescription)")
 
         XCTExpectFailure("A launch that fails twice fails the test") {
-            launchRetryingOnce { record(lostLaunch) }
+            _ = launchRetryingOnce { record(lostLaunch) }
         }
     }
 }
