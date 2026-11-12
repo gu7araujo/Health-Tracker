@@ -62,7 +62,7 @@ A `your-call` issue replaces Proposed action with **Options**: each option with 
 
 ## 3. Pick up
 
-A `your-call` issue waits for the user's choice in a comment. For any other issue: branch (`git switch -c <type>/<name>`), then follow the root `AGENTS.md` Workflow and Quality Gates through the draft PR. The PR body's first line is `Closes #<n>`, so the merge closes the issue; a PR that does part of it says `Part of #<n>` instead.
+A `your-call` issue waits for the user's choice in a comment. For any other issue: branch (`git switch -c <type>/<name>`), then follow the root `AGENTS.md` Workflow and Quality Gates through the PR. The PR body's first line is `Closes #<n>`, so the merge closes the issue; a PR that does part of it says `Part of #<n>` instead.
 
 ## 4. Close
 

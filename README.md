@@ -336,7 +336,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
   - `git reset --hard`;
   - `gh pr merge`.
 - A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately. If SwiftFormat or SwiftLint can't run, the hook reports that as an error instead of passing. Another (`swift-bash-edits.sh`) refuses a Bash command that writes a `.swift` file in the checkout, so agents' Swift edits go through the first.
-- Agents open PRs as **draft**; every push runs CI, drafts included. They run `CI=true scripts/quality --full` locally, push, wait for the checks, and mark the PR ready once they are green. If `test` goes red, the agent reproduces it locally, fixes it and pushes again; a failure it can't reproduce locally, or a red run after a fix that was green locally, comes to you as a report instead. You review and merge.
+- Agents open PRs **ready for review**, so every push runs CI and the `claude-review` bot. They run `CI=true scripts/quality --full` locally, push, open the PR and wait for the checks. If `test` goes red, the agent reproduces it locally, fixes it and pushes again; a failure it can't reproduce locally, or a red run after a fix that was green locally, comes to you as a report instead. You review and merge.
 
 ## Script reference
 
