@@ -14,7 +14,7 @@ Keep the raw data in `build/retro/` (gitignored; `mkdir -p build/retro`). Save e
 For each merged PR `<n>` (a range: `gh pr list --state merged --search "merged:>=<YYYY-MM-DD>" --limit 200 --json number,title,headRefName,mergedAt`):
 
 ```bash
-gh pr view <n> --json title,body,commits,comments,reviews,mergedAt,headRefName,headRefOid > build/retro/pr-<n>.json
+gh pr view <n> --json title,body,commits,comments,reviews,createdAt,mergedAt,headRefName,headRefOid > build/retro/pr-<n>.json
 gh api 'repos/{owner}/{repo}/pulls/<n>/comments' --paginate > build/retro/pr-<n>-inline.json
 gh api 'repos/{owner}/{repo}/issues/<n>/timeline' --paginate > build/retro/pr-<n>-timeline.json
 gh run list --branch <headRefName> --limit 50 --json databaseId,workflowName,event,conclusion,headSha,createdAt > build/retro/pr-<n>-runs.json
@@ -23,9 +23,9 @@ gh run list --branch <headRefName> --limit 50 --json databaseId,workflowName,eve
 Read, in this order (most catches live in the first two, since PRs are often squashed before the first push):
 
 1. **The PR body**: "How verified" (verifier and Codex findings fixed before the push), "Threshold or rule changes", and any "Follow-up" or "Finding for your decision" section.
-2. **Commit bodies** (`.commits[].messageBody`): a commit that fixes review findings, or any commit dated after the timeline's `ready_for_review` event, is a late catch.
+2. **Commit bodies** (`.commits[].messageBody`): a commit that fixes review findings, or any commit whose `committedDate` falls after the timeline's last `ready_for_review` event (after the PR's `createdAt` when the timeline has none), is a late catch.
 3. **Comments and reviews**: `.comments`, `.reviews` and the inline file. A bot's "No issues found" is a data point about the reviewer (class 5).
-4. **CI runs**: keep only runs whose `headSha` is one of the PR's `.commits[].oid` (a branch name can be reused by another PR). A `failure` is a catch; a `skipped` one is not; read it with `gh run view <id> --log-failed`. A `cancelled` run is a superseded draft run unless the same sha has no successful run. `gh run view <id> --json attempt` above 1 means a re-run; `gh api 'repos/{owner}/{repo}/actions/runs/<id>/attempts/1/jobs'` shows why.
+4. **CI runs**: keep only runs whose `headSha` is one of the PR's `.commits[].oid` (a branch name can be reused by another PR). A `failure` is a catch; a `skipped` one is not; read it with `gh run view <id> --log-failed`. A `cancelled` run is a superseded run (`ci.yml` cancels in-progress PR runs) unless the same sha has no successful run. `gh run view <id> --json attempt` above 1 means a re-run; `gh api 'repos/{owner}/{repo}/actions/runs/<id>/attempts/1/jobs'` shows why.
 5. **CI's numbers**: `gh run view <id> --log | grep -E 'coverage|Per-file|gates passed'` on the PR's last run, against the PR body's local table and `scripts/quality-thresholds.env`.
 6. **Local review logs**, when the session kept them (Codex output, verifier notes in its scratch directory).
 
@@ -70,4 +70,4 @@ No retro log file: the issues are the log, so `gh issue list --label retro --sta
 
 ## 4. Implement the approved rows
 
-Batch a retro's approved rows into one branch and one draft PR whose body starts with a `Closes #<issue>` line per row, through the root `AGENTS.md` Workflow: each row's failing test first, `scripts/quality --full` green, then ready. Thresholds, exception lists, the lint baseline, `swiftlint:disable` and `periphery:ignore` change only in a row the user approved by number, called out under "Threshold or rule changes". The user merges.
+Batch a retro's approved rows into one branch and one PR whose body starts with a `Closes #<issue>` line per row, through the root `AGENTS.md` Workflow: each row's failing test first, `scripts/quality --full` green, then open the PR. Thresholds, exception lists, the lint baseline, `swiftlint:disable` and `periphery:ignore` change only in a row the user approved by number, called out under "Threshold or rule changes". The user merges.
