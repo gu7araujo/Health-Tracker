@@ -1,0 +1,12 @@
+# Must fail: the step right before the review symlinks (Glob and Grep skip symlinks) and runs without pipefail.
+jobs:
+  claude-review:
+    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: CLAUDE.md for the review
+        run: git ls-files -z '*/AGENTS.md' | while IFS= read -r -d '' f; do ln -s AGENTS.md "${f%AGENTS.md}CLAUDE.md"; done
+
+      - name: Run Claude Code Review
+        with:
+          prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/.'
+          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'

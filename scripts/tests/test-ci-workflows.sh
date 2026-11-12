@@ -4,7 +4,7 @@
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
 # wiring, the test job's PR filter, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
 # test-step parity, the weekly failure issue, the simulator runtime step, step and job timeouts,
-# action pinning.
+# action pinning, the Claude review's one granted tool and its CLAUDE.md copies.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
 # checks on scripts/tests/fixtures/ci-workflows to prove they still catch what they are for).
 set -uo pipefail
@@ -169,6 +169,46 @@ grep -qE "^ *if: env.MODE == '--full'( +#.*)? *\$" <<<"$runtime" ||
 grep -qxF "    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository" \
   "$WORKFLOWS/claude-code-review.yml" ||
   fail "claude-code-review.yml: the job must skip draft and fork PRs"
+# The review's --allowedTools grants the inline-comment tool only (#62). Read, Grep and Glob already
+# run inside the checkout without a grant, and a bare one would let a prompt-injected PR comment read
+# outside it (the runner's environment, its token). The plugin grants its own gh commands.
+allowed="$(sed -nE "s/^ *claude_args: '--allowedTools \"([^\"]*)\"' *\$/\1/p" "$WORKFLOWS/claude-code-review.yml" | tr ',' '\n')"
+if [ -z "$allowed" ]; then
+  fail "claude-code-review.yml: claude_args needs an --allowedTools list"
+else
+  while IFS= read -r tool; do
+    [ "$tool" = mcp__github_inline_comment__create_inline_comment ] ||
+      fail "claude-code-review.yml: --allowedTools grants $tool beyond the inline-comment tool"
+  done <<<"$allowed"
+fi
+# The plugin checks CLAUDE.md files only, and only those on a changed file's path; the repo keeps its
+# rules in AGENTS.md: right before the review, a step copies each nested AGENTS.md to a CLAUDE.md
+# beside it, and scripts/AGENTS.md into .github/ and .githooks/, which it also governs. Copies, since
+# Glob and Grep skip symlinks; nested only, since the action resets the root CLAUDE.md to the base
+# branch's (none), so the prompt names the root AGENTS.md instead. Exactly these step lines: shell:
+# bash sets pipefail, so a failing git ls-files fails the step, and no if: or continue-on-error can
+# skip it.
+COPY_STEP="$(
+  cat <<'EOF'
+shell: bash
+run: |
+git ls-files -z '*/AGENTS.md' | while IFS= read -r -d '' f; do cp "$f" "${f%AGENTS.md}CLAUDE.md"; done
+cp scripts/AGENTS.md .github/CLAUDE.md
+cp scripts/AGENTS.md .githooks/CLAUDE.md
+EOF
+)"
+review_steps="$(awk '/^    steps:/ { found = 1; next } found' "$WORKFLOWS/claude-code-review.yml")"
+before_review="$(awk '/^ *- name: Run Claude Code Review *$/ { print prev; exit } /^      - / { prev = $0 }' <<<"$review_steps")"
+copy="$(awk '/^ *- name: CLAUDE.md for the review *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$review_steps")"
+# Blank and comment lines up to the next step are not part of the step's body.
+[[ "$before_review" =~ ^\ *-\ name:\ CLAUDE.md\ for\ the\ review\ *$ ]] &&
+  [ "$(sed 's/^ *//; s/ *$//' <<<"$copy" | grep -vE '^(#|$)')" = "$COPY_STEP" ] ||
+  fail "claude-code-review.yml: a 'CLAUDE.md for the review' step must copy each nested AGENTS.md to CLAUDE.md right before the review"
+read -r REVIEW_PROMPT <<'EOF'
+prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/.'
+EOF
+grep -qxF -- "$REVIEW_PROMPT" <<<"$(sed 's/^ *//; s/ *$//' "$WORKFLOWS/claude-code-review.yml")" ||
+  fail "claude-code-review.yml: the review prompt must name the root AGENTS.md and the UI test rules' reach"
 
 # The public repo's @claude job spends the owner's token: it answers only the owner.
 grep -qxF "      github.actor == 'gu7araujo' && (" "$WORKFLOWS/claude.yml" ||
@@ -261,6 +301,17 @@ if [ $# -eq 0 ]; then
   fixture claude 2
   must "FAIL: claude-code-review.yml: the job must"
   must "FAIL: claude.yml: the job must"
+  fixture review-tools 2
+  must "FAIL: claude-code-review.yml: --allowedTools grants Read beyond the inline-comment tool"
+  must "FAIL: claude-code-review.yml: --allowedTools grants Edit beyond the inline-comment tool"
+  fixture review-args 1
+  must "FAIL: claude-code-review.yml: claude_args needs an --allowedTools list"
+  fixture review-copy 1
+  must "FAIL: claude-code-review.yml: a 'CLAUDE.md for the review' step must copy"
+  fixture review-copy-command 1
+  must "FAIL: claude-code-review.yml: a 'CLAUDE.md for the review' step must copy"
+  fixture review-prompt 1
+  must "FAIL: claude-code-review.yml: the review prompt must name the root AGENTS.md"
   # A checkout path with sed or glob metacharacters (| [ * \) still prints repo-relative paths, from
   # each check that prints file paths.
   odd="$tmp/a|b[*\\c"

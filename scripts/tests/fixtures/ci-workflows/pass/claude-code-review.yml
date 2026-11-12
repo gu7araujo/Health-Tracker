@@ -1,4 +1,18 @@
-# Must pass: the review skips draft and fork PRs.
+# Must pass: the review skips draft and fork PRs, grants only the inline-comment tool, copies the
+# AGENTS.md rules to CLAUDE.md first and names the root rules in its prompt.
 jobs:
   claude-review:
     if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: CLAUDE.md for the review
+        shell: bash
+        run: |
+          git ls-files -z '*/AGENTS.md' | while IFS= read -r -d '' f; do cp "$f" "${f%AGENTS.md}CLAUDE.md"; done
+          cp scripts/AGENTS.md .github/CLAUDE.md
+          cp scripts/AGENTS.md .githooks/CLAUDE.md
+
+      # A comment above the next step is not part of the copy step.
+      - name: Run Claude Code Review
+        with:
+          prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/.'
+          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
