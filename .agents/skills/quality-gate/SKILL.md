@@ -1,6 +1,6 @@
 ---
 name: quality-gate
-description: Run HealthTracker's quality gate (scripts/quality), act on its result, and take a PR from draft to ready. Use when checking whether a task is done, when a gate or CI check is red (format, lint, fitness, tests, unused code, coverage), when finding the least-covered files, when raising coverage thresholds or touching the lint baseline, or when pushing, opening a PR or marking one ready.
+description: Run HealthTracker's quality gate (scripts/quality), act on its result, and take a PR from draft to ready. Use when checking whether a task is done, when a gate or CI check is red (format, lint, fitness, tests, unused code, coverage), when finding the least-covered files, when raising coverage thresholds or touching the lint baseline, or when pushing a branch or marking a PR ready.
 ---
 
 # Quality gate
@@ -114,7 +114,7 @@ A **new** threshold (a new gate, or a value set by hand) waits for one CI run: s
 
 The pre-push hook runs `scripts/quality --fast` (~2 min, past the Bash tool's 120 s default): run `git push` with a 600000 ms timeout.
 
-Open every PR as **draft**, with the gate table in its body and a "How verified" section carrying the root `AGENTS.md` **Definition of done** evidence and the skills that ran. Every push to a PR runs CI, drafts included.
+Open every PR as **draft**; write its title and body with the `file-pr` skill. Every push to a PR runs CI, drafts included.
 
 - **A docs-only PR** (only `paths-ignore` files) runs just `changes` and `ci-gate` (~30 s). Stop with the link once `--fast` is green.
 - **Any other PR** is marked ready only after a green local `CI=true scripts/quality --full` (section 1; in a cloud session, `CLOUD.md`'s Done when):

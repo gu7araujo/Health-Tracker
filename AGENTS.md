@@ -98,6 +98,6 @@ A change to the persisted JSON shape (`DayData`, `Meal`, `Workout`, `Mood`, `Day
 
 - Run `scripts/bootstrap` once per clone and per new worktree: it installs the git hooks and the pinned tools.
 - Branch first (`git switch -c <type>/<name>`): the git hooks refuse commits and pushes to `main`, and run `scripts/quality --fast` before every push. Let them run.
-- Use the `gh` CLI for GitHub work. Open PRs as **draft**; the user approves and merges every PR. Pushing, watching CI and marking a PR ready: `quality-gate` skill.
+- Use the `gh` CLI for GitHub work. Open PRs as **draft**; the user approves and merges every PR. Writing one: `file-pr` skill. Pushing, watching CI and marking a PR ready: `quality-gate` skill.
 - A task that outlives the session becomes a GitHub issue, closed by the PR that does it: `issue-tracking` skill.
 - Once a feature or batch of related PRs is merged, run the `retro` skill over the batch and report its table alongside the requested work; implementing its proposals needs the user's go-ahead.
