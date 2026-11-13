@@ -49,6 +49,19 @@ final class CalendarUITests: HealthTrackerUITestCase {
         XCTAssertFalse(calendarDayCell(offset: 1).isSelected)
     }
 
+    /// Regression for #58: with the strip paged into earlier weeks, yesterday's cell is not
+    /// rendered, and chasing it by its sign ("past = left") paged further away from it.
+    func testPastDaySelectableFromEarlierWeeks() {
+        revealDayCell(offset: 0) // the strip can land a week early at launch
+        let strip = element(AccessibilityID.calendarStrip)
+        for _ in 0 ..< 4 {
+            strip.swipeRight()
+        }
+        assertNotExists(calendarDayCell(offset: -1))
+
+        selectDay(offset: -1)
+    }
+
     // MARK: - Helpers
 
     private func calendarDayCell(offset: Int) -> XCUIElement {
@@ -63,7 +76,8 @@ final class CalendarUITests: HealthTrackerUITestCase {
     /// judged from the cell's `frame` versus the strip's viewport — never `.isHittable`
     /// or `.tap`, which hit-test an off-page cell and hard-fail with "Activation point
     /// invalid…". A rendered-but-clipped cell is nudged toward the edge it hangs off; a
-    /// not-yet-rendered one is chased in its calendar direction (future right, past left).
+    /// not-yet-rendered one is chased from the days that are rendered (later days sit to
+    /// the right), since the strip can be on a week either side of the target.
     @discardableResult
     private func revealDayCell(offset: Int) -> XCUIElement {
         let strip = assertExists(element(AccessibilityID.calendarStrip))
@@ -83,13 +97,23 @@ final class CalendarUITests: HealthTrackerUITestCase {
                 } else {
                     strip.swipeRight() // clipped/off to the left → reveal the left side
                 }
-            } else if offset >= 0 {
-                strip.swipeLeft() // future weeks are to the right
+            } else if (renderedDayOffset() ?? 0) < offset {
+                strip.swipeLeft() // the rendered days are earlier → the target is to the right
             } else {
-                strip.swipeRight() // past weeks are to the left
+                strip.swipeRight() // the rendered days are later → the target is to the left
             }
         }
         return cell
+    }
+
+    /// The offset of one day cell the strip currently renders (they are contiguous, so any
+    /// one tells which side a missing day is on), or `nil` when it renders none.
+    private func renderedDayOffset() -> Int? {
+        let rendered = app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", AccessibilityID.calendarDayPrefix))
+            .firstMatch
+        guard rendered.exists else { return nil }
+        return Int(rendered.identifier.dropFirst(AccessibilityID.calendarDayPrefix.count))
     }
 
     /// Selects the day `offset` days from today, paging the strip into view first.
