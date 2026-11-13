@@ -1,0 +1,3 @@
+interface:
+  display_name: "File PR"
+  short_description: "Concise PR title and description"
