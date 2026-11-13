@@ -52,7 +52,7 @@ Keep every change **tight**:
 On a task spanning several files, layers or PRs, the main session is the **orchestrator**: it keeps the plan, the decisions and the thread with the user, and hands subagents any step it needs back only as a conclusion (a broad search, a long log, a review pass, an independent slice). Work needing the user's judgement or the conversation's history stays in the main session.
 
 - Run independent slices, or a staged pipeline (implement → review → verify), as a Workflow.
-- Brief each subagent as a cold start: the goal, the files, the constraints, its done-criterion, and the shape of the report to return. Write each skill it needs as a call in its first step (`Skill("tdd")` for an implementer).
+- Brief each subagent as a cold start: the goal, the files, the constraints, its done-criterion, and the shape of the report to return. Write each skill it needs as a call in its first step (`Skill("tdd")` for an implementer, plus the skill the hooks require for the files it edits).
 - An implementer's report schema requires the definition of done as fields: `red_evidence` (test name plus failing assertion line), `green_evidence` (the gate table), `scenario` (the en and pt-BR check, for user-facing behaviour), `previews` (snapshots, when Views changed) and `skills_loaded`. The verify stage fails an implementer whose field is empty where it applies, and the PR body's "How verified" lists the skills that ran.
 - Agents working at the same time each take their own worktree in `.claude/worktrees/<branch-name>`, and at most two of them build or test at once: `parallel-agents` skill. Create a worktree only when the task requires it or the user asks.
 
@@ -88,7 +88,7 @@ A skill loads only when called: make each call below. Each layer's `AGENTS.md` n
 - **Iterate** with `scripts/quality --fast` (format, lint, fitness, unit tests, unused code, Domain/Data coverage).
 - **Done** is `scripts/quality --full` exiting 0. A change touching only docs or agent config (the `paths-ignore` paths in `.github/workflows/ci.yml`) is done when `--fast` exits 0. Paste that run's gate table in your final report and PR.
 - **Fix a red gate in code or tests.** Lowering a threshold, editing `scripts/coverage-exceptions.txt` or `scripts/fitness/test-mirror-exceptions.txt`, adding a `swiftlint:disable` or `// periphery:ignore`, or regenerating `.swiftlint-baseline.json` to absorb a new violation is the user's call: propose it, and call each one out in the report and PR.
-- Hooks in `.claude/hooks/` format and lint each `.swift` file you Edit or Write, refuse Bash writes to one, and name the doc, skill or runner a step needs; act on what they report.
+- Hooks in `.claude/hooks/` format and lint each `.swift` file you Edit or Write, refuse Bash writes to one, refuse an edit to a View until `Skill("swiftui-specialist")`, or to a unit-test file until `Skill("swift-testing-expert:swift-testing-expert")`, has been called in that session or subagent, and name the doc, skill or runner a step needs; act on what they report.
 
 ## Data Migrations
 

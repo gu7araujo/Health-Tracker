@@ -355,7 +355,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `.github/workflows/` | `ci.yml` (PRs, pushes to `main`), `weekly.yml` (schedule) and `claude-code-review.yml` (AI review of non-draft PRs, on Linux) |
 | `.githooks/` | pre-commit and pre-push hooks |
 | `.claude/hooks/format-swift.sh` | Claude Code hook that formats and lints each edited Swift file |
-| `.claude/hooks/` (others) | Claude Code hooks that route agents: `layer-docs.sh`, `concurrency-skill.sh`, `xcodebuild-runner.sh`, `bootstrap-check.sh`, `swift-bash-edits.sh`, `gate-reminder.sh` (each header is its spec; tests in `scripts/tests/test-claude-hooks.sh`) |
+| `.claude/hooks/` (others) | Claude Code hooks that route agents: `layer-docs.sh`, `skill-loaded.sh`, `skill-required.sh`, `concurrency-skill.sh`, `xcodebuild-runner.sh`, `bootstrap-check.sh`, `swift-bash-edits.sh`, `gate-reminder.sh` (each header is its spec; tests in `scripts/tests/test-claude-hooks.sh`) |
 
 If you change a script, run its tests:
 

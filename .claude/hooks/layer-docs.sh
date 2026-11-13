@@ -3,30 +3,11 @@
 # names that layer's AGENTS.md and the skill to call. Claude Code loads a nested AGENTS.md only
 # when the Read tool opens a file under it, so an agent that reads code through Bash never sees
 # it.
-#
-# Edit/Write pass an absolute `file_path`, taken relative to the git checkout that holds it; a
-# path outside this project's checkouts (main or worktree) is skipped. The Xcode MCP write tools pass `filePath`,
-# `<project name>/<path inside the checkout>`.
 set -uo pipefail
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 
-path="$(field .tool_input.file_path)"
-if [ -n "$path" ]; then
-  # The file, or even its directory, may not exist yet: resolve the nearest existing ancestor.
-  dir="$(dirname "$path")"
-  while [ ! -d "$dir" ]; do dir="$(dirname "$dir")"; done
-  checkout="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)" || exit 0
-  # Only this project's checkouts (the main one or a worktree) share the hook's git directory.
-  [ "$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = \
-    "$(git -C "$(dirname "$0")" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ] || exit 0
-  full="$(cd "$dir" && pwd -P)${path#"$dir"}"
-  rel="${full#"$checkout"/}"
-  [ "$rel" != "$full" ] || exit 0
-else
-  rel="$(field .tool_input.filePath)"
-  rel="${rel#*/}"
-fi
+rel="$(edited_path)" || exit 0
 
 case "$rel" in
   HealthTracker/Presentation/Intents/*)

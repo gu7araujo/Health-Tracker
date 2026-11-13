@@ -20,6 +20,34 @@ first_time() {
   mkdir -p "$(dirname "$marker")" && touch "$marker"
 }
 
+# skill_marker <skill>: the state name skill-loaded.sh sets and skill-required.sh checks for <skill>.
+skill_marker() { printf 'skill-%s' "${1//[:\/]/_}"; }
+
+# edited_path: the write tool's target, relative to its checkout; prints nothing and fails when the
+# target is outside this project's checkouts (main or worktree). Edit/Write pass an absolute
+# `file_path`; the Xcode MCP write tools pass `filePath`, `<project name>/<path inside the checkout>`.
+edited_path() {
+  local path dir checkout full rel
+  path="$(field .tool_input.file_path)"
+  if [ -z "$path" ]; then
+    rel="$(field .tool_input.filePath)"
+    [ -n "$rel" ] || return 1
+    printf '%s' "${rel#*/}"
+    return
+  fi
+  # The file, or even its directory, may not exist yet: resolve the nearest existing ancestor.
+  dir="$(dirname "$path")"
+  while [ ! -d "$dir" ]; do dir="$(dirname "$dir")"; done
+  checkout="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)" || return 1
+  # Only this project's checkouts (the main one or a worktree) share the hook's git directory.
+  [ "$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = \
+    "$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ] || return 1
+  full="$(cd "$dir" && pwd -P)${path#"$dir"}"
+  rel="${full#"$checkout"/}"
+  [ "$rel" != "$full" ] || return 1
+  printf '%s' "$rel"
+}
+
 # simple_commands: the Bash call's command as one simple command per line, each starting at its
 # command word. Continued lines are joined; heredoc bodies (up to their terminator), VAR=value
 # prefixes and wrappers (env, time, xcrun, exec, nohup, if/then/else, do/while/until, !) are
