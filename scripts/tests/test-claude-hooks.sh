@@ -284,9 +284,17 @@ load() {
   [ "$code" -eq 0 ] || fail "skill-loaded should exit 0 (got $code): $raw"
   [ -z "$raw" ] || fail "skill-loaded should print nothing: $raw"
 }
-mkdir -p "$WORK/claude-config/plugins"
-echo '{"version": 2, "plugins": {"swift-testing-expert@swift-testing-agent-skill": []}}' >"$WORK/claude-config/plugins/installed_plugins.json"
-export CLAUDE_CONFIG_DIR="$WORK/claude-config"
+# A project with swift-testing-expert installed for it and enabled in its settings.
+mkdir -p "$WORK/project/.claude" "$WORK/claude-config/plugins"
+git -C "$WORK/project" init -q
+PROJECT="$(cd "$WORK/project" && pwd -P)"
+installed() { # installed <scope> <project path>: writes installed_plugins.json with swift-testing-expert
+  jq -n --arg scope "$1" --arg path "$2" '{version: 2, plugins: {"swift-testing-expert@swift-testing-agent-skill":
+    [{scope: $scope, projectPath: $path}]}}' >"$WORK/claude-config/plugins/installed_plugins.json"
+}
+installed project "$PROJECT"
+echo '{"enabledPlugins": {"swift-testing-expert@swift-testing-agent-skill": true}}' >"$PROJECT/.claude/settings.json"
+export CLAUDE_CONFIG_DIR="$WORK/claude-config" CLAUDE_PROJECT_DIR="$PROJECT"
 VIEW="$ROOT/HealthTracker/Presentation/Views/MainView.swift"
 deny skill-required.sh "$(edit_input "$VIEW" k1)"
 [ "$code" -eq 0 ] || fail "skill-required should exit 0 (got $code): $out"
@@ -342,6 +350,19 @@ CLAUDE_CONFIG_DIR="$WORK/bare-config" deny skill-required.sh "$(edit_input "$TES
 [ "$code" -eq 0 ] && [ -z "$out" ] || fail "a unit-test edit should pass when its plugin is not installed (code $code): $out"
 CLAUDE_CONFIG_DIR="$WORK/bare-config" deny skill-required.sh "$(edit_input "$VIEW" k9)"
 [[ "$out" == deny* ]] || fail "a project skill should still gate its View without plugins: $out"
+installed project /elsewhere/Health-Tracker
+deny skill-required.sh "$(edit_input "$TEST_FILE" k9)"
+[ -z "$out" ] || fail "a plugin installed for another clone should not gate this one: $out"
+installed user ""
+deny skill-required.sh "$(edit_input "$TEST_FILE" k9)"
+[[ "$out" == deny* ]] || fail "a plugin installed for the user should gate: $out"
+echo '{"enabledPlugins": {"swift-testing-expert@swift-testing-agent-skill": false}}' >"$PROJECT/.claude/settings.local.json"
+deny skill-required.sh "$(edit_input "$TEST_FILE" k9)"
+[ -z "$out" ] || fail "a plugin disabled in settings.local.json should not gate: $out"
+rm "$PROJECT/.claude/settings.local.json" "$PROJECT/.claude/settings.json"
+deny skill-required.sh "$(edit_input "$TEST_FILE" k9)"
+[ -z "$out" ] || fail "a plugin no settings file enables should not gate: $out"
+unset CLAUDE_CONFIG_DIR CLAUDE_PROJECT_DIR
 hook_wired PostToolUse skill-loaded.sh Skill
 for tool in Edit Write MultiEdit mcp__xcode__XcodeWrite mcp__xcode__XcodeUpdate; do
   hook_wired PreToolUse skill-required.sh "$tool"

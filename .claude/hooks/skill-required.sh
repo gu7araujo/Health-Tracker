@@ -15,10 +15,23 @@ case "$rel" in
   *) exit 0 ;;
 esac
 [ ! -e "$(state_path "$(skill_marker "$skill")")" ] || exit 0
-# A plugin skill can only be loaded where its plugin is installed (a cloud session may lack it).
+# A plugin skill can only be loaded where its plugin is installed, for the user or for this project
+# (a worktree shares its main checkout's install), and enabled by the merged settings (local over
+# project over user). A cloud session or another clone may lack it.
 if [[ "$skill" == *:* ]]; then
-  jq -e --arg plugin "${skill%%:*}@" '.plugins | keys | any(startswith($plugin))' \
-    "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/installed_plugins.json" >/dev/null 2>&1 || exit 0
+  config="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+  project="${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}"
+  main="$(git -C "$project" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || exit 0
+  id="$(jq -r --arg prefix "${skill%%:*}@" --arg main "${main%/.git}" 'first(.plugins | to_entries[]
+    | select((.key | startswith($prefix)) and any(.value[]; .scope == "user" or .projectPath == $main)) | .key) // empty' \
+    "$config/plugins/installed_plugins.json" 2>/dev/null)"
+  [ -n "$id" ] || exit 0
+  settings=()
+  for file in "$config/settings.json" "$project/.claude/settings.json" "$project/.claude/settings.local.json"; do
+    [ ! -f "$file" ] || settings+=("$file")
+  done
+  [ "${#settings[@]}" -gt 0 ] && jq -e -s --arg id "$id" 'map(.enabledPlugins // {} | select(has($id)) | .[$id]) | last == true' \
+    "${settings[@]}" >/dev/null 2>&1 || exit 0
 fi
 
 jq -n --arg reason "Editing $rel needs Skill(\"$skill\") loaded in this session first ($doc). Call it, then retry the edit." \
