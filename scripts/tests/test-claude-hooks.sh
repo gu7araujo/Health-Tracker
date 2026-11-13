@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests the Claude Code hooks in .claude/hooks (format-swift.sh, then the routing hooks:
-# layer-docs.sh, concurrency-skill.sh, xcodebuild-runner.sh, bootstrap-check.sh,
-# swift-bash-edits.sh, gate-reminder.sh) and their wiring in .claude/settings.json, by feeding each
+# layer-docs.sh, skill-loaded.sh, skill-required.sh, concurrency-skill.sh, xcodebuild-runner.sh,
+# bootstrap-check.sh, swift-bash-edits.sh, gate-reminder.sh) and their wiring in .claude/settings.json, by feeding each
 # hook JSON for files in a temp dir. Set TEST_TMPDIR to choose where.
 set -uo pipefail
 
@@ -263,6 +263,90 @@ for tool in Edit Write MultiEdit mcp__xcode__XcodeWrite mcp__xcode__XcodeUpdate;
   hook_wired PreToolUse layer-docs.sh "$tool"
 done
 
+# skill-loaded.sh and skill-required.sh: an edit to a View or a unit-test file is refused until its
+# skill has been loaded in that session and agent.
+# deny <hook> <input JSON> -> sets out (the permission decision and reason, or the raw output), code
+deny() {
+  local raw
+  raw="$("$HOOKS/$1" <<<"$2" 2>&1)"
+  code=$?
+  out="$(jq -r '.hookSpecificOutput | "\(.permissionDecision) \(.permissionDecisionReason)"' <<<"$raw" 2>/dev/null || printf '%s' "$raw")"
+}
+skill_input() { # skill_input <skill> <session> [agent]
+  jq -n --arg skill "$1" --arg session "$2" --arg agent "${3:-}" \
+    '{hook_event_name: "PostToolUse", tool_name: "Skill", session_id: $session, tool_input: {skill: $skill}} + (if $agent == "" then {} else {agent_id: $agent} end)'
+}
+# load <skill> <session> [agent]: runs skill-loaded.sh, which must exit 0 silently.
+load() {
+  local raw
+  raw="$("$HOOKS/skill-loaded.sh" <<<"$(skill_input "$@")" 2>&1)"
+  code=$?
+  [ "$code" -eq 0 ] || fail "skill-loaded should exit 0 (got $code): $raw"
+  [ -z "$raw" ] || fail "skill-loaded should print nothing: $raw"
+}
+mkdir -p "$WORK/claude-config/plugins"
+echo '{"version": 2, "plugins": {"swift-testing-expert@swift-testing-agent-skill": []}}' >"$WORK/claude-config/plugins/installed_plugins.json"
+export CLAUDE_CONFIG_DIR="$WORK/claude-config"
+VIEW="$ROOT/HealthTracker/Presentation/Views/MainView.swift"
+deny skill-required.sh "$(edit_input "$VIEW" k1)"
+[ "$code" -eq 0 ] || fail "skill-required should exit 0 (got $code): $out"
+[[ "$out" == deny* && "$out" == *'Skill("swiftui-specialist")'* && "$out" == *"Presentation/AGENTS.md"* ]] ||
+  fail "a View edit without swiftui-specialist should be denied, naming the skill and doc: $out"
+load swiftui-specialist k1
+deny skill-required.sh "$(edit_input "$VIEW" k1)"
+[ -z "$out" ] || fail "a View edit after loading swiftui-specialist should pass: $out"
+load swiftui-specialist k2 agent-a
+deny skill-required.sh "$(edit_input "$VIEW" k2 agent-a)"
+[ -z "$out" ] || fail "a subagent's own load should let its View edit pass: $out"
+deny skill-required.sh "$(edit_input "$VIEW" k2)"
+[[ "$out" == deny* ]] || fail "a subagent's load should not cover the main session: $out"
+deny skill-required.sh "$(edit_input "$VIEW" k2 agent-b)"
+[[ "$out" == deny* ]] || fail "a subagent's load should not cover another subagent: $out"
+load swiftui-specialist k3
+deny skill-required.sh "$(edit_input "$VIEW" k3 agent-a)"
+[[ "$out" == deny* ]] || fail "a main-session load should not cover a subagent: $out"
+TEST_FILE="$ROOT/HealthTrackerTests/Domain/DayDataTests.swift"
+deny skill-required.sh "$(edit_input "$TEST_FILE" k4)"
+[[ "$out" == deny* && "$out" == *'Skill("swift-testing-expert:swift-testing-expert")'* && "$out" == *"HealthTrackerTests/AGENTS.md"* ]] ||
+  fail "a unit-test edit without swift-testing-expert should be denied, naming the skill and doc: $out"
+load swiftui-specialist k4
+deny skill-required.sh "$(edit_input "$TEST_FILE" k4)"
+[[ "$out" == deny* ]] || fail "swiftui-specialist should not unlock a unit-test file: $out"
+load swift-testing-expert:swift-testing-expert k4
+deny skill-required.sh "$(edit_input "$TEST_FILE" k4)"
+[ -z "$out" ] || fail "a unit-test edit after loading swift-testing-expert should pass: $out"
+load swift-testing-expert:swift-testing-expert k8
+deny skill-required.sh "$(edit_input "$VIEW" k8)"
+[[ "$out" == deny* ]] || fail "swift-testing-expert should not unlock a View: $out"
+for rel in HealthTracker/Presentation/ViewModels/MainViewModel.swift HealthTracker/Presentation/Intents/LogWaterIntent.swift \
+  HealthTracker/Presentation/AccessibilityID.swift HealthTracker/Resources/en.lproj/Localizable.strings \
+  HealthTrackerTests/AGENTS.md HealthTrackerUITests/Some.swift HealthTracker/Domain/Entities/Meal.swift README.md; do
+  deny skill-required.sh "$(edit_input "$ROOT/$rel" k5)"
+  [ "$code" -eq 0 ] && [ -z "$out" ] || fail "an edit to $rel should not need a skill (code $code): $out"
+done
+deny skill-required.sh "$(edit_input "$WORK/outside/HealthTracker/Presentation/Views/X.swift" k5)"
+[ -z "$out" ] || fail "a View path outside the checkout should not need a skill: $out"
+xcode_write() {
+  jq -n --arg session "$1" '{hook_event_name: "PreToolUse", tool_name: "mcp__xcode__XcodeWrite", session_id: $session,
+    tool_input: {filePath: "HealthTracker/HealthTracker/Presentation/Views/Components/CardView.swift"}}'
+}
+deny skill-required.sh "$(xcode_write k6)"
+[[ "$out" == deny* ]] || fail "an Xcode MCP write to a View should be denied without the skill: $out"
+load swiftui-specialist k6
+deny skill-required.sh "$(xcode_write k6)"
+[ -z "$out" ] || fail "an Xcode MCP write to a View should pass after the load: $out"
+deny skill-required.sh "$(edit_input "$ROOT/HealthTracker/Presentation/Views/New/BrandNewView.swift" k7)"
+[[ "$out" == deny* ]] || fail "a new View file should be denied without the skill: $out"
+# A plugin skill whose plugin is not installed (a cloud session) cannot be loaded, so its files pass.
+CLAUDE_CONFIG_DIR="$WORK/bare-config" deny skill-required.sh "$(edit_input "$TEST_FILE" k9)"
+[ "$code" -eq 0 ] && [ -z "$out" ] || fail "a unit-test edit should pass when its plugin is not installed (code $code): $out"
+CLAUDE_CONFIG_DIR="$WORK/bare-config" deny skill-required.sh "$(edit_input "$VIEW" k9)"
+[[ "$out" == deny* ]] || fail "a project skill should still gate its View without plugins: $out"
+hook_wired PostToolUse skill-loaded.sh Skill
+for tool in Edit Write MultiEdit mcp__xcode__XcodeWrite mcp__xcode__XcodeUpdate; do
+  hook_wired PreToolUse skill-required.sh "$tool"
+done
+
 # concurrency-skill.sh: a concurrency diagnostic in a build's output, or its failure, names the skill once.
 build_output() {
   jq -n --arg stdout "$1" --arg session "$2" --arg command "${3:-xcodebuild build}" '{hook_event_name: "PostToolUse",
@@ -354,11 +438,8 @@ hook_wired SessionStart bootstrap-check.sh startup
 # through Edit/Write and the format hook.
 # decision <command> -> sets out (the permission decision and reason), code
 decision() {
-  local raw
-  raw="$("$HOOKS/swift-bash-edits.sh" <<<"$(jq -n --arg command "$1" --arg cwd "${2:-$ROOT}" '{hook_event_name: "PreToolUse",
-    tool_name: "Bash", session_id: "w1", cwd: $cwd, tool_input: {command: $command}}')" 2>&1)"
-  code=$?
-  out="$(jq -r '.hookSpecificOutput | "\(.permissionDecision) \(.permissionDecisionReason)"' <<<"$raw" 2>/dev/null || printf '%s' "$raw")"
+  deny swift-bash-edits.sh "$(jq -n --arg command "$1" --arg cwd "${2:-$ROOT}" '{hook_event_name: "PreToolUse",
+    tool_name: "Bash", session_id: "w1", cwd: $cwd, tool_input: {command: $command}}')"
 }
 for command in "sed -i '' 's/a/b/' HealthTracker/Domain/Entities/Meal.swift" \
   "sed -Ei 's/a/b/' \"HealthTracker/My File.swift\"" "sed --in-place 's/a/b/' x.swift" \

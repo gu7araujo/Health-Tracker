@@ -2,7 +2,7 @@
 
 The SwiftUI UI: an `@Observable` ViewModel that owns the screen's mutable state, stateless section views that render it, and reusable Liquid Glass components. The only layer that touches SwiftUI. It reaches the domain solely through use cases — never a repository or data source directly. Constructing a repository or data source here fails SwiftLint rule `presentation_no_data_layer`; the production convenience init (below) and `Intents/IntentUseCaseFactory` are the composition roots and carry its `swiftlint:disable:next`.
 
-Before editing or reviewing a View, call `Skill("swiftui-specialist")` (+ `swiftui-whats-new-27` for iOS 27 APIs); after the change, render its `#Preview` with `RenderPreview` in light, dark and a large Dynamic Type size, adding a `#Preview` first when it has none.
+Before editing or reviewing a View, call `Skill("swiftui-specialist")` (+ `swiftui-whats-new-27` for iOS 27 APIs) — a hook refuses edits under `Views/` until it is loaded; after the change, render its `#Preview` with `RenderPreview` in light, dark and a large Dynamic Type size, adding a `#Preview` first when it has none.
 
 ## State & Data Flow
 
