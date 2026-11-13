@@ -6,7 +6,7 @@ The end-to-end target. Built on **XCUITest**, each suite launches the real app o
 
 The shared machinery every suite leans on, all on `HealthTrackerUITestCase`:
 
-- **Launch** — `setUp` relaunches the app with `-uiTesting` (`HealthTracker/UITestingSupport.swift`: temp-dir store, skipped migration + permission prompts) forced to English `en_GB`. The 24-hour `en_GB` clock exposes the workout duration wheel as hours 0-23, exactly as the duration model expects.
+- **Launch** — `setUp` relaunches the app with `-uiTesting` (`HealthTracker/UITestingSupport.swift`: temp-dir store, skipped migration + permission prompts) forced to English `en_GB`, through `launchRetryingOnce`: a first launch that records a failure is relaunched once (#58, XCUITest losing a launch that succeeded). The 24-hour `en_GB` clock exposes the workout duration wheel as hours 0-23, exactly as the duration model expects.
 - **Lookup + waits** — `element(_:)` resolves any element by identifier; `assertExists` / `assertNotExists` / `assertSelected` poll for a condition; `scrollTo` swipes an off-screen row into view. All time out rather than sleep.
 - **Flow helpers** — `openAddModal`, `addMeal`, `addWorkout`, `saveModal`, `cancelModal`, `selectMenuOption`, `setDurationWheels`, `tapSwipeAction`. Compose a flow from these rather than re-scripting taps.
 
@@ -17,7 +17,7 @@ The `Support/` files are also members of the `HealthTrackerIntentsUITests` targe
 Black-box and isolated — each test drives the shipping app through its accessibility surface, nothing else.
 
 <rule_1>
-**XCUITEST, NOT SWIFT TESTING** — `import XCTest`; subclass `HealthTrackerUITestCase`; name cases `func testSubjectExpectation()` with `XCTAssert` checks. No `@testable import` — reach the app only through `app` and accessibility identifiers, never its internal types. Enforced by SwiftLint rule `ui_tests_no_testable_import`. The target builds in Swift 6 mode and `XCUIApplication` / `XCUIElement` are main-actor API, so `HealthTrackerUITestCase` is `@MainActor` (suites inherit it) and launches in `override func setUp() async throws`; keep new overrides and helpers on the main actor.
+**XCUITEST, NOT SWIFT TESTING** — `import XCTest`; subclass `HealthTrackerUITestCase`; name cases `func testSubjectExpectation()` with `XCTAssert` checks. No `@testable import` — reach the app only through `app` and accessibility identifiers, never its internal types. Enforced by SwiftLint rule `ui_tests_no_testable_import`. The target builds in Swift 6 mode and `XCUIApplication` / `XCUIElement` are main-actor API, so `HealthTrackerUITestCase` is `@MainActor` (suites inherit it) and launches in `override func setUp() async throws`; keep new overrides and helpers on the main actor. The exception is `record(_:)`, which XCTest calls from any thread: its override is nonisolated and keeps its state in a `Mutex`.
 </rule_1>
 
 <rule_2>

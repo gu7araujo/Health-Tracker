@@ -5,7 +5,7 @@ description: File a concise HealthTracker pull request - title and description a
 
 # File PR
 
-Pushing, the draft rule and taking the PR to ready live in the `quality-gate` skill, section 6. This skill writes what the reviewer reads.
+Pushing, when to open the PR and watching its CI live in the `quality-gate` skill, section 6. This skill writes what the reviewer reads.
 
 ## 1. Check the branch
 
@@ -44,6 +44,6 @@ Delete the template's comments and any line that does not apply.
 
 ## 4. Open it
 
-Push first (`git push -u origin HEAD`, with the timeout `quality-gate` section 6 gives), then `gh pr create --draft --title ... --body-file ...` (or `gh pr edit`). Continue at `quality-gate` section 6.
+Open it once the gate `quality-gate` section 6 names is green: push (`git push -u origin HEAD`, with that section's timeout), then `gh pr create --title ... --body-file ...` (or `gh pr edit`), ready for review. Continue at section 6 to watch CI.
 
-**Done when:** `gh pr view --json title,body,isDraft` shows your title and body on a draft PR, and the user has the link.
+**Done when:** `gh pr view --json title,body,isDraft` shows your title and body with `isDraft` false, and the user has the link.

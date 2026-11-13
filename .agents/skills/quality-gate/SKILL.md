@@ -1,6 +1,6 @@
 ---
 name: quality-gate
-description: Run HealthTracker's quality gate (scripts/quality), act on its result, and take a PR from draft to ready. Use when checking whether a task is done, when a gate or CI check is red (format, lint, fitness, tests, unused code, coverage), when finding the least-covered files, when raising coverage thresholds or touching the lint baseline, or when pushing a branch or marking a PR ready.
+description: Run HealthTracker's quality gate (scripts/quality), act on its result, and ship a PR. Use when checking whether a task is done, when a gate or CI check is red (format, lint, fitness, tests, unused code, coverage), when finding the least-covered files, when raising coverage thresholds or touching the lint baseline, or when pushing a branch or watching a PR's CI.
 ---
 
 # Quality gate
@@ -22,7 +22,7 @@ It tests on `--simulator <udid>` when given; otherwise it reuses or clones a sim
 
 **In a cloud session** (a Linux container: no `xcrun`, Xcode MCP disconnected), run the gate on CI instead: [`CLOUD.md`](CLOUD.md), whose **Done when** replaces the one below.
 
-**Done when:** `scripts/quality --full` exits 0; for a change touching only docs or agent config (the paths under `paths-ignore` in `.github/workflows/ci.yml`), when `scripts/quality --fast` exits 0. Paste the table it prints into the final report and PR. Before marking any other PR ready, run it as `CI=true scripts/quality --full`: only `CI=true` turns compiler warnings into errors, as CI does, so a warning that passes locally fails the PR's CI run. It also makes `scripts/doctor` exit 1 before any gate on a missing or mismatched pinned tool or Xcode: run `scripts/bootstrap` first and fix what its `doctor` reports.
+**Done when:** `scripts/quality --full` exits 0; for a change touching only docs or agent config (the paths under `paths-ignore` in `.github/workflows/ci.yml`), when `scripts/quality --fast` exits 0. Paste the table it prints into the final report and PR. Before opening any other PR, run it as `CI=true scripts/quality --full`: only `CI=true` turns compiler warnings into errors, as CI does, so a warning that passes locally fails the PR's CI run. It also makes `scripts/doctor` exit 1 before any gate on a missing or mismatched pinned tool or Xcode: run `scripts/bootstrap` first and fix what its `doctor` reports.
 
 ## 2. Read the result
 
@@ -114,13 +114,13 @@ A **new** threshold (a new gate, or a value set by hand) waits for one CI run: s
 
 The pre-push hook runs `scripts/quality --fast` (~2 min, past the Bash tool's 120 s default): run `git push` with a 600000 ms timeout.
 
-Open every PR as **draft**; write its title and body with the `file-pr` skill. Every push to a PR runs CI, drafts included.
+Open every PR **ready for review** (`gh pr create`, no `--draft`); write its title and body with the `file-pr` skill. Every push to a PR runs CI and the `claude-review` bot.
 
-- **A docs-only PR** (only `paths-ignore` files) runs just `changes` and `ci-gate` (~30 s). Stop with the link once `--fast` is green.
-- **Any other PR** is marked ready only after a green local `CI=true scripts/quality --full` (section 1; in a cloud session, `CLOUD.md`'s Done when):
-  1. Push, then wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run; until then `gh pr checks` has nothing to watch.
+- **A docs-only PR** (only `paths-ignore` files) runs just `changes`, `ci-gate` and `claude-review`. Open it once `--fast` is green, and stop with the link.
+- **Any other PR** is opened only after a green local `CI=true scripts/quality --full` (section 1; in a cloud session, `CLOUD.md`'s Done when):
+  1. Push and open the PR, then wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run; until then `gh pr checks` has nothing to watch.
   2. `gh pr checks <n> --watch`.
-  3. Green: `gh pr ready <n>` (it starts no new run), and stop there with the link. The user approves and merges every PR.
+  3. Green: stop there with the link. The user approves and merges every PR.
   4. Red: section 7.
 
 ## 7. CI

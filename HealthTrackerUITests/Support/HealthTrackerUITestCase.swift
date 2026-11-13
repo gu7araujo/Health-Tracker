@@ -3,6 +3,7 @@
 //  HealthTrackerUITests
 //
 
+import Synchronization
 import XCTest
 
 /// Base class for all UI tests: launches the app with an isolated temp data
@@ -21,7 +22,51 @@ class HealthTrackerUITestCase: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchArguments += ["-uiTesting", "-AppleLanguages", "(en)", "-AppleLocale", "en_GB"]
-        app.launch()
+        launchRetryingOnce { app.launch() }
+    }
+
+    // MARK: - Launch
+
+    private enum LaunchAttempt { case none, first, firstFailed(String) }
+
+    /// Where `launchRetryingOnce` is; a `Mutex` because XCTest can record an issue from any thread.
+    private let launchAttempt = Mutex(LaunchAttempt.none)
+
+    /// Runs `launch`, and once more when that attempt records a failure. On a loaded CI
+    /// simulator XCUITest can lose track of a launch that succeeded ("Application … does not
+    /// have a process ID", #58), which fails a test before it starts. A second failed
+    /// attempt fails the test as usual. Returns the first attempt's failures, when retried;
+    /// the relaunch activity is named after them too, so a result bundle shows what was retried.
+    @discardableResult
+    func launchRetryingOnce(_ launch: () -> Void) -> String? {
+        launchAttempt.withLock { $0 = .first }
+        launch()
+        let firstFailure: String? = launchAttempt.withLock { attempt in
+            defer { attempt = .none }
+            guard case let .firstFailed(description) = attempt else { return nil }
+            return description
+        }
+        if let firstFailure {
+            XCTContext.runActivity(named: "Relaunch: the first launch attempt failed: \(firstFailure)") { _ in
+                launch()
+            }
+        }
+        return firstFailure
+    }
+
+    /// Holds back the failures of `launchRetryingOnce`'s first attempt.
+    override nonisolated func record(_ issue: XCTIssue) {
+        let heldBack = launchAttempt.withLock { attempt in
+            switch attempt {
+            case .none: return false
+            case .first: attempt = .firstFailed(issue.compactDescription)
+            case let .firstFailed(earlier): attempt = .firstFailed("\(earlier); \(issue.compactDescription)")
+            }
+            return true
+        }
+        if !heldBack {
+            super.record(issue)
+        }
     }
 
     // MARK: - Element Lookup
