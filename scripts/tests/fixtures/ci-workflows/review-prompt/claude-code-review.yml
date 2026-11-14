@@ -1,4 +1,4 @@
-# Must fail: the prompt does not override step 1's stop on a trivial or Claude-written PR.
+# Must fail: the prompt lets step 1 stop on a trivial or Claude-written PR, and step 4 be skipped.
 jobs:
   claude-review:
     if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository

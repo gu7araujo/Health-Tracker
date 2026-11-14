@@ -204,13 +204,14 @@ copy="$(awk '/^ *- name: CLAUDE.md for the review *$/ { found = 1; next } found 
 [[ "$before_review" =~ ^\ *-\ name:\ CLAUDE.md\ for\ the\ review\ *$ ]] &&
   [ "$(sed 's/^ *//; s/ *$//' <<<"$copy" | grep -vE '^(#|$)')" = "$COPY_STEP" ] ||
   fail "claude-code-review.yml: a 'CLAUDE.md for the review' step must copy each nested AGENTS.md to CLAUDE.md right before the review"
-# The plugin's step 1 stops on a PR it judges trivial or automated, and every PR here is written with
-# Claude Code, so the prompt overrides it; a stop it still makes posts its reason (#62).
+# The plugin's step 1 stops on a PR it judges trivial or automated, every PR here is written with
+# Claude Code, and on a small diff the model skips step 4's agents: the prompt asks for every step,
+# and an early stop it still makes posts its reason (#62).
 read -r REVIEW_PROMPT <<'EOF'
-prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/. Review every open PR in full: this workflow already excludes drafts and forks, and a PR written with Claude Code, or one that looks small, still needs the review. Stop early only when the PR is closed or Claude has already commented on it. If you stop before step 4 anyway, post a comment with gh pr comment that says why.'
+prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/. Run every step on every open PR, with step 4's four agents whatever the diff's size: this workflow already excludes drafts and forks, and a PR written with Claude Code still needs the review. Stop early only when the PR is closed or Claude has already commented on it. If you stop before step 4 anyway, post a comment with gh pr comment that says why.'
 EOF
 grep -qxF -- "$REVIEW_PROMPT" <<<"$(sed 's/^ *//; s/ *$//' "$WORKFLOWS/claude-code-review.yml")" ||
-  fail "claude-code-review.yml: the review prompt must name the root AGENTS.md and the UI test rules' reach, and override step 1's trivial-PR stop"
+  fail "claude-code-review.yml: the review prompt must name the root AGENTS.md and the UI test rules' reach, and ask for every step on every open PR"
 # The action hides the review's output, so a run that stopped early looked like one that passed (#62):
 # right after the review, a step prints the result message's turn count, denial count and closing
 # text, and nothing else from the run (tool results can hold secrets on this public repo).
