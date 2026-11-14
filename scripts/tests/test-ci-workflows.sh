@@ -28,7 +28,7 @@ for workflow in "$WORKFLOWS"/*.yml; do
   name="$(basename "$workflow")"
   # The checks below read lines, not YAML: GitHub rejects a file that does not parse, and a stray
   # quote in a single-quoted value parses wrong without breaking any line (#62).
-  ruby -ryaml -e 'YAML.load_file(ARGV[0])' "$workflow" 2>/dev/null || fail "$name is not valid YAML"
+  ruby -ryaml -e 'Psych.parse_file(ARGV[0])' "$workflow" || fail "$name is not valid YAML"
   # The Summary step's lines, from "- name: Summary" up to the next step.
   step="$(awk '
     /^ *- name: Summary *$/ { found = 1; print; next }
@@ -349,6 +349,9 @@ if [ $# -eq 0 ]; then
   must "FAIL: claude-code-review.yml: the review prompt must name the root AGENTS.md"
   fixture review-outcome 1
   must "FAIL: claude-code-review.yml: a 'Review outcome' step right after the review"
+  fixture review-denials 2
+  must "FAIL: claude-code-review.yml: a 'Review outcome' step right after the review"
+  must "FAIL: claude-code-review.yml: the 'Review outcome' step must print 'turns=N denials=N'"
   fixture yaml 1
   must "FAIL: unquoted.yml is not valid YAML"
   # A checkout path with sed or glob metacharacters (| [ * \) still prints repo-relative paths, from
