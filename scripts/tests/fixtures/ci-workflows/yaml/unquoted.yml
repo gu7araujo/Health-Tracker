@@ -1,0 +1,7 @@
+# Must fail: an apostrophe ends the single-quoted value early, so the file does not parse.
+jobs:
+  review:
+    steps:
+      - name: Review
+        with:
+          prompt: 'run step 4's agents'
