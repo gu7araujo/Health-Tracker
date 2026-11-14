@@ -114,7 +114,7 @@ A **new** threshold (a new gate, or a value set by hand) waits for one CI run: s
 
 The pre-push hook runs `scripts/quality --fast` (~2 min, past the Bash tool's 120 s default): run `git push` with a 600000 ms timeout.
 
-Open every PR **ready for review** (`gh pr create`, no `--draft`); write its title and body with the `file-pr` skill. Every push to a PR runs CI and the `claude-review` bot.
+Open every PR **ready for review** (`gh pr create`, no `--draft`); write its title and body with the `file-pr` skill. Every push to a PR runs CI and the `claude-review` bot. A green `claude-review` check can still mean it reviewed nothing: its `Review outcome` step prints the turn count and the model's closing text (`gh run view <run-id> --log | grep -A5 'Review outcome'`).
 
 - **A docs-only PR** (only `paths-ignore` files) runs just `changes`, `ci-gate` and `claude-review`. Open it once `--fast` is green, and stop with the link.
 - **Any other PR** is opened only after a green local `CI=true scripts/quality --full` (section 1; in a cloud session, `CLOUD.md`'s Done when):

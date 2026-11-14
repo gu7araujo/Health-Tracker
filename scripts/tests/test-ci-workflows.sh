@@ -4,7 +4,7 @@
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
 # wiring, the test job's PR filter, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
 # test-step parity, the weekly failure issue, the simulator runtime step, step and job timeouts,
-# action pinning, the Claude review's one granted tool and its CLAUDE.md copies.
+# action pinning, the Claude review's one granted tool, its CLAUDE.md copies, prompt and outcome step.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
 # checks on scripts/tests/fixtures/ci-workflows to prove they still catch what they are for).
 set -uo pipefail
@@ -204,11 +204,32 @@ copy="$(awk '/^ *- name: CLAUDE.md for the review *$/ { found = 1; next } found 
 [[ "$before_review" =~ ^\ *-\ name:\ CLAUDE.md\ for\ the\ review\ *$ ]] &&
   [ "$(sed 's/^ *//; s/ *$//' <<<"$copy" | grep -vE '^(#|$)')" = "$COPY_STEP" ] ||
   fail "claude-code-review.yml: a 'CLAUDE.md for the review' step must copy each nested AGENTS.md to CLAUDE.md right before the review"
+# The plugin's step 1 stops on a PR it judges trivial or automated, and every PR here is written with
+# Claude Code, so the prompt overrides it; a stop it still makes posts its reason (#62).
 read -r REVIEW_PROMPT <<'EOF'
-prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/.'
+prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/. Review every open PR in full: this workflow already excludes drafts and forks, and a PR written with Claude Code, or one that looks small, still needs the review. Stop early only when the PR is closed or Claude has already commented on it. If you stop before step 4 anyway, post a comment with gh pr comment that says why.'
 EOF
 grep -qxF -- "$REVIEW_PROMPT" <<<"$(sed 's/^ *//; s/ *$//' "$WORKFLOWS/claude-code-review.yml")" ||
-  fail "claude-code-review.yml: the review prompt must name the root AGENTS.md and the UI test rules' reach"
+  fail "claude-code-review.yml: the review prompt must name the root AGENTS.md and the UI test rules' reach, and override step 1's trivial-PR stop"
+# The action hides the review's output, so a run that stopped early looked like one that passed (#62):
+# right after the review, a step prints the result message's turn count, denial count and closing
+# text, and nothing else from the run (tool results can hold secrets on this public repo).
+OUTCOME_STEP="$(
+  cat <<'EOF'
+if: always() && steps.claude-review.outputs.execution_file != ''
+shell: bash
+env:
+EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
+run: jq -r '.[] | select(.type == "result") | "turns=\(.num_turns) denials=\(.permission_denials_count)\n\(.result // "")"' "$EXECUTION_FILE"
+EOF
+)"
+review="$(awk '/^ *- name: Run Claude Code Review *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$review_steps")"
+after_review="$(awk '/^      - / { if (prev ~ /^ *- name: Run Claude Code Review *$/) { print; exit } prev = $0 }' <<<"$review_steps")"
+outcome="$(awk '/^ *- name: Review outcome *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$review_steps")"
+grep -qE '^ *id: claude-review *$' <<<"$review" &&
+  [[ "$after_review" =~ ^\ *-\ name:\ Review\ outcome\ *$ ]] &&
+  [ "$(sed 's/^ *//; s/ *$//' <<<"$outcome" | grep -vE '^(#|$)')" = "$OUTCOME_STEP" ] ||
+  fail "claude-code-review.yml: a 'Review outcome' step right after the review (id: claude-review) must print only the result's turns, denials and text"
 
 # The public repo's @claude job spends the owner's token: it answers only the owner.
 grep -qxF "      github.actor == 'gu7araujo' && (" "$WORKFLOWS/claude.yml" ||
@@ -312,6 +333,8 @@ if [ $# -eq 0 ]; then
   must "FAIL: claude-code-review.yml: a 'CLAUDE.md for the review' step must copy"
   fixture review-prompt 1
   must "FAIL: claude-code-review.yml: the review prompt must name the root AGENTS.md"
+  fixture review-outcome 1
+  must "FAIL: claude-code-review.yml: a 'Review outcome' step right after the review"
   # A checkout path with sed or glob metacharacters (| [ * \) still prints repo-relative paths, from
   # each check that prints file paths.
   odd="$tmp/a|b[*\\c"
