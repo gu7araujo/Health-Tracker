@@ -98,17 +98,22 @@ class HealthTrackerUITestCase: XCTestCase {
         )
     }
 
-    /// Waits until the element reports `isSelected == true` (selection updates can lag taps).
+    /// Waits until the element reports `isSelected == true` (selection updates can lag taps). Polls the
+    /// element itself: a predicate expectation abandons a slow accessibility query at the timeout, and
+    /// on a loaded simulator one query can outlast it (#96). Polling stops only after a query that
+    /// started past the deadline, so a slow query may overrun `timeout`, and a stale answer that
+    /// arrives late gets one more poll. One snapshot per poll, which throws rather than fails while
+    /// the element is missing.
     func assertSelected(_ element: XCUIElement, timeout: TimeInterval = 5,
                         file: StaticString = #filePath, line: UInt = #line)
     {
-        let selected = NSPredicate(format: "isSelected == true")
-        let expectation = XCTNSPredicateExpectation(predicate: selected, object: element)
-        XCTAssertEqual(
-            XCTWaiter().wait(for: [expectation], timeout: timeout), .completed,
-            "Expected element to be selected: \(element)",
-            file: file, line: line
-        )
+        let deadline = ContinuousClock.now + .seconds(timeout)
+        var pollStart: ContinuousClock.Instant
+        repeat {
+            pollStart = .now
+            if (try? element.snapshot())?.isSelected == true { return }
+        } while pollStart < deadline
+        XCTFail("Expected element to be selected: \(element)", file: file, line: line)
     }
 
     /// Swipes up until the element is on screen (List rows below the fold may not exist yet).
