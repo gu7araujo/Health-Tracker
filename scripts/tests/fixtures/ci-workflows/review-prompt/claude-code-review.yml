@@ -21,4 +21,4 @@ jobs:
         shell: bash
         env:
           EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
-        run: jq -r '.[] | select(.type == "result") | "turns=\(.num_turns) denials=\(.permission_denials_count)\n\(.result // "")"' "$EXECUTION_FILE"
+        run: jq -r '.[] | select(.type == "result") | "turns=\(.num_turns) denials=\(.permission_denials // [] | length)\n\(.result // "")"' "$EXECUTION_FILE"

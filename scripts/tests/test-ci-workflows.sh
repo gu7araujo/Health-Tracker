@@ -4,7 +4,8 @@
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
 # wiring, the test job's PR filter, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
 # test-step parity, the weekly failure issue, the simulator runtime step, step and job timeouts,
-# action pinning, the Claude review's one granted tool, its CLAUDE.md copies, prompt and outcome step.
+# action pinning, valid YAML, the Claude review's one granted tool, its CLAUDE.md copies, prompt and
+# outcome step.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
 # checks on scripts/tests/fixtures/ci-workflows to prove they still catch what they are for).
 set -uo pipefail
@@ -25,6 +26,9 @@ strip_root() { while IFS= read -r line; do printf '%s\n' "${line#"$ROOT/"}"; don
 
 for workflow in "$WORKFLOWS"/*.yml; do
   name="$(basename "$workflow")"
+  # The checks below read lines, not YAML: GitHub rejects a file that does not parse, and a stray
+  # quote in a single-quoted value parses wrong without breaking any line (#62).
+  ruby -ryaml -e 'YAML.load_file(ARGV[0])' "$workflow" 2>/dev/null || fail "$name is not valid YAML"
   # The Summary step's lines, from "- name: Summary" up to the next step.
   step="$(awk '
     /^ *- name: Summary *$/ { found = 1; print; next }
@@ -208,20 +212,21 @@ copy="$(awk '/^ *- name: CLAUDE.md for the review *$/ { found = 1; next } found 
 # Claude Code, and on a small diff the model skips step 4's agents: the prompt asks for every step,
 # and an early stop it still makes posts its reason (#62).
 read -r REVIEW_PROMPT <<'EOF'
-prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/. Run every step on every open PR, with step 4's four agents whatever the diff's size: this workflow already excludes drafts and forks, and a PR written with Claude Code still needs the review. Stop early only when the PR is closed or Claude has already commented on it. If you stop before step 4 anyway, post a comment with gh pr comment that says why.'
+prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/. Run every step on every open PR, with the four agents of step 4 whatever the diff size: this workflow already excludes drafts and forks, and a PR written with Claude Code still needs the review. Stop early only when the PR is closed or Claude has already commented on it. If you stop before step 4 for any other reason, post a comment with gh pr comment that says why.'
 EOF
 grep -qxF -- "$REVIEW_PROMPT" <<<"$(sed 's/^ *//; s/ *$//' "$WORKFLOWS/claude-code-review.yml")" ||
   fail "claude-code-review.yml: the review prompt must name the root AGENTS.md and the UI test rules' reach, and ask for every step on every open PR"
-# The action hides the review's output, so a run that stopped early looked like one that passed (#62):
-# right after the review, a step prints the result message's turn count, denial count and closing
-# text, and nothing else from the run (tool results can hold secrets on this public repo).
+# The action logs a run's counts but hides the model's closing text, so a run that stopped early
+# looked like one that passed (#62): right after the review, a step prints the result message's turn
+# count, denial count and closing text, and nothing else from the run (tool results can hold secrets
+# on this public repo).
 OUTCOME_STEP="$(
   cat <<'EOF'
 if: always() && steps.claude-review.outputs.execution_file != ''
 shell: bash
 env:
 EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
-run: jq -r '.[] | select(.type == "result") | "turns=\(.num_turns) denials=\(.permission_denials_count)\n\(.result // "")"' "$EXECUTION_FILE"
+run: jq -r '.[] | select(.type == "result") | "turns=\(.num_turns) denials=\(.permission_denials // [] | length)\n\(.result // "")"' "$EXECUTION_FILE"
 EOF
 )"
 review="$(awk '/^ *- name: Run Claude Code Review *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$review_steps")"
@@ -231,6 +236,14 @@ grep -qE '^ *id: claude-review *$' <<<"$review" &&
   [[ "$after_review" =~ ^\ *-\ name:\ Review\ outcome\ *$ ]] &&
   [ "$(sed 's/^ *//; s/ *$//' <<<"$outcome" | grep -vE '^(#|$)')" = "$OUTCOME_STEP" ] ||
   fail "claude-code-review.yml: a 'Review outcome' step right after the review (id: claude-review) must print only the result's turns, denials and text"
+# The step's command, run on an execution file shaped like the action's (raw SDK messages, whose
+# result carries a permission_denials array), prints the counts and the closing text.
+outcome_run="$(sed -nE 's/^ *run: //p' <<<"$outcome")"
+sample="$(mktemp)"
+printf '%s' '[{"type":"system"},{"type":"result","num_turns":3,"permission_denials":[{"tool_name":"Read"}],"result":"Stopped: closed."}]' >"$sample"
+[ -z "$outcome_run" ] || [ "$(EXECUTION_FILE="$sample" bash -c "$outcome_run" 2>&1)" = $'turns=3 denials=1\nStopped: closed.' ] ||
+  fail "claude-code-review.yml: the 'Review outcome' step must print 'turns=N denials=N' and the closing text from the raw result message"
+rm -f "$sample"
 
 # The public repo's @claude job spends the owner's token: it answers only the owner.
 grep -qxF "      github.actor == 'gu7araujo' && (" "$WORKFLOWS/claude.yml" ||
@@ -336,6 +349,8 @@ if [ $# -eq 0 ]; then
   must "FAIL: claude-code-review.yml: the review prompt must name the root AGENTS.md"
   fixture review-outcome 1
   must "FAIL: claude-code-review.yml: a 'Review outcome' step right after the review"
+  fixture yaml 1
+  must "FAIL: unquoted.yml is not valid YAML"
   # A checkout path with sed or glob metacharacters (| [ * \) still prints repo-relative paths, from
   # each check that prints file paths.
   odd="$tmp/a|b[*\\c"
