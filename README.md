@@ -31,7 +31,7 @@ brew install swiftlint swiftformat xcbeautify jq
 
 and the pinned [Periphery](https://github.com/peripheryapp/periphery) binary for the Unused code gate, which `scripts/bootstrap` (step 2) installs.
 
-The SwiftLint, SwiftFormat, Periphery and Xcode versions are pinned in `scripts/tool-versions.env`. Pinning matters because formatter and linter rules change between releases: a different version can flag code that passes on another machine.
+The SwiftLint, SwiftFormat, ShellCheck, Periphery and Xcode versions are pinned in `scripts/tool-versions.env`. Pinning matters because formatter and linter rules change between releases: a different version can flag code that passes on another machine.
 
 **2. Bootstrap the clone (once per clone or worktree):**
 
@@ -41,7 +41,7 @@ scripts/bootstrap
 
 This does four things:
 - It points git at the repo's hooks (`git config core.hooksPath .githooks`). The path is relative, so every worktree uses its own `.githooks`. If a different hooks path was set before, it tells you it replaced it.
-- It runs `scripts/ci/install-tools.sh build/tools/bin`, which downloads the pinned Periphery, SwiftLint and SwiftFormat (each release zip sha256-checked) into `build/tools/bin`. The gate, `doctor`, the hooks and the script tests run tools from there before `PATH`. A fresh worktree has no `build/tools/bin`, so bootstrap it before its first push: without Periphery the pre-push gate fails.
+- It runs `scripts/ci/install-tools.sh build/tools/bin`, which downloads the pinned Periphery, SwiftLint, SwiftFormat and ShellCheck (each release archive sha256-checked) into `build/tools/bin`. The gate, `doctor`, the hooks and the script tests run tools from there before `PATH`. A fresh worktree has no `build/tools/bin`, so bootstrap it before its first push: without Periphery the pre-push gate fails.
 - On macOS it also installs the pinned [xcode-build-server](https://github.com/SolaWing/xcode-build-server) and writes a gitignored `buildServer.json`, so `sourcekit-lsp` (the swift-lsp plugin) resolves the app module. Diagnostics are accurate once the checkout has been built in Xcode (`scripts/quality` builds into `build/DerivedData`, which does not count).
 - It runs `scripts/doctor`, which compares your installed tools with the pins and prints a fix command for each mismatch.
 
@@ -53,7 +53,7 @@ Running `scripts/bootstrap` again is safe.
 git switch -c feat/my-change            # 1. branch: committing on main is refused
 # ...edit code and tests (red → green)...
 scripts/quality --fast                  # 2. iterate: ~2 min
-git commit -m "..."                     # 3. pre-commit hook formats + lints staged Swift files, runs fitness checks
+git commit -m "..."                     # 3. pre-commit hook formats + lints staged Swift files, runs fitness checks and ShellCheck
 CI=true scripts/quality --full          # 4. ready check: ~8 min, the same bar CI uses
 git push -u origin feat/my-change       # 5. pre-push hook re-runs --fast; pushing to main is refused
 gh pr create --draft                    # 6. open as draft, mark ready when step 4 is green
@@ -269,7 +269,8 @@ Enabled by `scripts/bootstrap`. They live in `.githooks/`.
 - refuses when a staged `.swift` file also has unstaged changes, because re-staging after formatting would sweep those changes into the commit (stage or stash them first);
 - formats the staged `.swift` files with SwiftFormat and re-stages them;
 - lints them with `swiftlint --strict`, and fails on any violation;
-- when a `.swift` or `.strings` file is staged, runs `scripts/fitness/run` on the staged snapshot (unstaged or `git add -N` tests and translations don't count), and fails on any violation.
+- when a `.swift` or `.strings` file is staged, runs `scripts/fitness/run` on the staged snapshot (unstaged or `git add -N` tests and translations don't count), and fails on any violation;
+- when a shell script under `scripts`, `.githooks` or `.claude/hooks` is staged, runs the pinned ShellCheck on its staged version with the shebang regex and severity of CI's `lint` job, and fails on any finding.
 
 **pre-push** (~2 min):
 - refuses to push to `main`;
@@ -295,7 +296,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 
 **`changes`** runs first, on `ubuntu-24.04` (seconds). On a PR it feeds the changed files to `scripts/ci/docs-only.sh`; when every one is docs or agent config, `lint` and `test` are skipped. Other events always run them.
 
-**`lint`** runs on `ubuntu-24.04` (~1 min). It installs the pinned SwiftLint and SwiftFormat (`scripts/ci/install-tools.sh`), checks formatting, lints, and runs the [fitness checks](#fitness-functions) (on PRs also the persisted-shape guard, which only warns). SwiftLint violations show inline on the PR diff; SwiftFormat failures show in the step log. Linux SwiftLint skips the rules that need SourceKit (`custom_rules`, `statement_position`), so this job is a fast pre-filter: the full lint runs again in `test`. It also runs ShellCheck on the scripts and hooks and actionlint on the workflows.
+**`lint`** runs on `ubuntu-24.04` (~1 min). It installs the pinned SwiftLint, SwiftFormat and ShellCheck (`scripts/ci/install-tools.sh`), checks formatting, lints, and runs the [fitness checks](#fitness-functions) (on PRs also the persisted-shape guard, which only warns). SwiftLint violations show inline on the PR diff; SwiftFormat failures show in the step log. Linux SwiftLint skips the rules that need SourceKit (`custom_rules`, `statement_position`), so this job is a fast pre-filter: the full lint runs again in `test`. It also runs ShellCheck on the scripts and hooks and actionlint on the workflows.
 
 **`test`** runs only after `lint` passes, on `runs-on: xcode-27` (macOS 27). It selects the pinned Xcode (`scripts/ci/select-xcode.sh`) and installs the pinned tools. Then it runs the scripts' own tests (`scripts/tests/run`), on `--full` runs makes sure a simulator runtime at the SDK's iOS version is installed (`scripts/ci/install-simulator-runtime.sh`: the `xcode-27` image ships only iOS 27.0, so it runs `xcodebuild -downloadPlatform iOS`, a several-minute download, 20-minute step limit; pushes to `main` run `--fast` and skip it), and runs `scripts/quality` with `CI=true`, so `scripts/doctor` fails on any version drift and compiler warnings fail the build (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `GCC_TREAT_WARNINGS_AS_ERRORS`; locally they stay warnings). The gate table appears in the run's summary. Compile errors and test failures are rendered as GitHub annotations (`xcbeautify --renderer github-actions`).
 
@@ -345,13 +346,13 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `scripts/quality` | The quality gate (see above) |
 | `scripts/bootstrap` | One-time setup per clone or worktree: enables `.githooks`, installs the pinned tools into `build/tools/bin`, writes `buildServer.json`, runs `doctor` |
 | `scripts/doctor` | Compares installed tools with the pins. Warns locally, fails when `CI=true` |
-| `scripts/tool-versions.env` | Pinned SwiftLint / SwiftFormat / Periphery / Xcode versions and test simulator model |
+| `scripts/tool-versions.env` | Pinned SwiftLint / SwiftFormat / ShellCheck / Periphery / Xcode versions and test simulator model |
 | `scripts/quality-thresholds.env` | Coverage thresholds and ratchets |
 | `scripts/coverage-exceptions.txt` | Files grandfathered below the per-file floor |
 | `scripts/fitness/` | [Fitness functions](#fitness-functions): the cross-file checks, `run`, and `test-mirror-exceptions.txt` |
 | `scripts/lib/` | Pieces used by `scripts/quality` (coverage math, simulator picking, report table). Each has tests |
 | `scripts/tests/run` | Runs every `scripts/tests/test-*.sh` (the scripts' own tests, no simulator needed) |
-| `scripts/ci/` | CI helpers: `install-tools.sh` (pinned SwiftLint/SwiftFormat, and Periphery on macOS), `select-xcode.sh` (pinned Xcode), `install-simulator-runtime.sh` (an iOS runtime at the SDK's version, for the intents UI tests), `summary.sh` (gate table for the job summary), `docs-only.sh` (whether a PR touches only docs or agent config, for the `changes` job) |
+| `scripts/ci/` | CI helpers: `install-tools.sh` (pinned SwiftLint/SwiftFormat/ShellCheck, and Periphery on macOS), `select-xcode.sh` (pinned Xcode), `install-simulator-runtime.sh` (an iOS runtime at the SDK's version, for the intents UI tests), `summary.sh` (gate table for the job summary), `docs-only.sh` (whether a PR touches only docs or agent config, for the `changes` job) |
 | `.github/workflows/` | `ci.yml` (PRs, pushes to `main`), `weekly.yml` (schedule) and `claude-code-review.yml` (AI review of non-draft PRs, on Linux) |
 | `.githooks/` | pre-commit and pre-push hooks |
 | `.claude/hooks/format-swift.sh` | Claude Code hook that formats and lints each edited Swift file |

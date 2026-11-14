@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-time setup per clone or worktree: enables the repo's git hooks, installs the pinned
-# SwiftLint, SwiftFormat, Periphery and xcode-build-server into build/tools/bin, writes this
+# SwiftLint, SwiftFormat, ShellCheck, Periphery and xcode-build-server into build/tools/bin, writes this
 # checkout's buildServer.json (swift-lsp's build settings), and checks tool versions. Safe to re-run.
 set -euo pipefail
 

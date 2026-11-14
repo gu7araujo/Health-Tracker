@@ -36,6 +36,8 @@ check SwiftFormat swiftformat "$SWIFTFORMAT_VERSION" "$(swiftformat --version 2>
   "brew install swiftformat, or https://github.com/nicklockwood/SwiftFormat/releases/tag/$SWIFTFORMAT_VERSION"
 check Periphery periphery "$PERIPHERY_VERSION" "$(periphery version 2>/dev/null)" \
   "scripts/ci/install-tools.sh build/tools/bin (scripts/quality runs tools from there first)"
+check ShellCheck shellcheck "$SHELLCHECK_VERSION" "$(shellcheck --version 2>/dev/null | awk '/^version:/ { print $2 }')" \
+  "scripts/ci/install-tools.sh build/tools/bin (the pre-commit hook runs tools from there first)"
 check Xcode xcodebuild "$XCODE_VERSION" "$(xcodebuild -version 2>/dev/null | awk 'NR == 1 { print $2 }')" \
   "install Xcode $XCODE_VERSION, then sudo xcode-select -s <path to that Xcode.app> (on CI: scripts/ci/select-xcode.sh)"
 

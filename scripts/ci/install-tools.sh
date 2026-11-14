@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Installs the SwiftLint and SwiftFormat release binaries pinned in scripts/tool-versions.env, on
-# macOS the Periphery release, and on macOS outside CI xcode-build-server (swift-lsp's build server).
+# Installs the SwiftLint, SwiftFormat and ShellCheck release binaries pinned in scripts/tool-versions.env,
+# on macOS the Periphery release, and on macOS outside CI xcode-build-server (swift-lsp's build server).
 # Every archive's sha256 is verified against its pin before unpacking.
 #
 # Usage: scripts/ci/install-tools.sh [<bin-dir>]
@@ -20,12 +20,15 @@ case "$(uname -s)-$(uname -m)" in
   Darwin-*)
     lint_asset="portable_swiftlint.zip" lint_bin="swiftlint" lint_sha="$SWIFTLINT_SHA256_MACOS"
     format_asset="swiftformat.zip" format_bin="swiftformat" format_sha="$SWIFTFORMAT_SHA256_MACOS"
+    # This repo's Macs and the xcode-27 runner are arm64.
+    shellcheck_asset="shellcheck-v$SHELLCHECK_VERSION.darwin.aarch64.tar.gz" shellcheck_sha="$SHELLCHECK_SHA256_MACOS"
     periphery="yes"
     ;;
   # The Linux SwiftLint zip also holds a dynamically linked `swiftlint`; the static one has no system deps.
   Linux-x86_64)
     lint_asset="swiftlint_linux_amd64.zip" lint_bin="swiftlint-static" lint_sha="$SWIFTLINT_SHA256_LINUX"
     format_asset="swiftformat_linux.zip" format_bin="swiftformat_linux" format_sha="$SWIFTFORMAT_SHA256_LINUX"
+    shellcheck_asset="shellcheck-v$SHELLCHECK_VERSION.linux.x86_64.tar.gz" shellcheck_sha="$SHELLCHECK_SHA256_LINUX"
     periphery=""
     ;;
   *)
@@ -48,12 +51,16 @@ verify() {
   }
 }
 
-# install <tool> <owner/repo> <version> <asset> <binary> <sha256>: verifies and unzips the asset and
-# installs <binary> as <tool>.
+# install <tool> <owner/repo> <tag> <asset> <binary> <sha256>: verifies and unpacks the asset (a zip,
+# or a .tar.gz whose single top-level dir is stripped) and installs <binary> as <tool>.
 install_tool() {
-  curl -fsSL --retry 3 -o "$work/$1.zip" "https://github.com/$2/releases/download/$3/$4"
-  verify "$work/$1.zip" "$4" "$6"
-  unzip -q -o "$work/$1.zip" -d "$work/$1"
+  curl -fsSL --retry 3 -o "$work/$4" "https://github.com/$2/releases/download/$3/$4"
+  verify "$work/$4" "$4" "$6"
+  mkdir -p "$work/$1"
+  case "$4" in
+    *.tar.gz) tar -xzf "$work/$4" --strip-components 1 -C "$work/$1" ;;
+    *) unzip -q -o "$work/$4" -d "$work/$1" ;;
+  esac
   [ -f "$work/$1/$5" ] || {
     echo "error: no $5 in $4" >&2
     exit 1
@@ -64,6 +71,8 @@ install_tool() {
 
 install_tool swiftlint realm/SwiftLint "$SWIFTLINT_VERSION" "$lint_asset" "$lint_bin" "$lint_sha"
 install_tool swiftformat nicklockwood/SwiftFormat "$SWIFTFORMAT_VERSION" "$format_asset" "$format_bin" "$format_sha"
+# The tarball holds shellcheck-v<version>/shellcheck beside its docs.
+install_tool shellcheck koalaman/shellcheck "v$SHELLCHECK_VERSION" "$shellcheck_asset" shellcheck "$shellcheck_sha"
 
 # Periphery (macOS only): keep the zip's layout, since periphery loads the libIndexStore.dylib
 # that ships beside it.
@@ -105,6 +114,7 @@ check() {
 }
 check SwiftLint "$("$BIN/swiftlint" version)" "$SWIFTLINT_VERSION"
 check SwiftFormat "$("$BIN/swiftformat" --version)" "$SWIFTFORMAT_VERSION"
+check ShellCheck "$("$BIN/shellcheck" --version | awk '/^version:/ { print $2 }')" "$SHELLCHECK_VERSION"
 [ -z "$periphery" ] || check Periphery "$("$BIN/periphery" version)" "$PERIPHERY_VERSION"
 # It has no version command; misc.py holds the constant.
 [ -z "$xbs" ] || check xcode-build-server "$(awk -F'"' '/^VERSION = / { print $2 }' "$xbs/misc.py")" "$XCODE_BUILD_SERVER_VERSION"

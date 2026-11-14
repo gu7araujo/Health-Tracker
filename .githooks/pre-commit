@@ -2,7 +2,8 @@
 # Refuses commits on main, formats staged Swift files with SwiftFormat and
 # re-stages them, then lints them with SwiftLint --strict. When a staged change
 # touches a .swift or .strings file, the cross-file fitness checks
-# (scripts/fitness/run) must pass too.
+# (scripts/fitness/run) must pass too. Staged shell scripts under scripts, .githooks and
+# .claude/hooks must pass ShellCheck as CI's lint job runs it.
 set -euo pipefail
 
 if [ "$(git symbolic-ref --short -q HEAD || true)" = "main" ]; then
@@ -16,17 +17,52 @@ cd "$(git rev-parse --show-toplevel)"
 source scripts/lib/tools-path.sh
 prepend_tools_path "$PWD"
 
+# The tree the commit will record, exported once into $staged by the first check that needs it.
+staged=""
+trap 'rm -rf ${staged:+"$staged"}' EXIT
+snapshot_staged() {
+  if [ -z "$staged" ]; then
+    staged="$(mktemp -d)"
+    # checkout-index would also write intent-to-add (`git add -N`) entries as empty files,
+    # making an uncommitted test look present.
+    git archive "$(git write-tree)" | tar -x -C "$staged"
+  fi
+}
+
 # Any staged .swift/.strings change, deletions and renames included, can break a cross-file
 # rule (key parity, test mirroring, accessibility IDs). The checks read the staged snapshot, so an
 # unstaged test or translation cannot make the commit look complete.
 if [ -x scripts/fitness/run ] && [ -n "$(git diff --cached --name-only -- '*.swift' '*.strings')" ]; then
-  staged="$(mktemp -d)"
-  trap 'rm -rf "$staged"' EXIT
-  # Export the tree the commit will record: checkout-index would also write intent-to-add
-  # (`git add -N`) entries as empty files, making an uncommitted test look present.
-  git archive "$(git write-tree)" | tar -x -C "$staged"
+  snapshot_staged
   if ! scripts/fitness/run "$staged" >&2; then
     echo "pre-commit: fitness checks failed; fix the violations above (scripts/fitness/run)" >&2
+    exit 1
+  fi
+fi
+
+# ShellCheck on the staged blobs, so an unstaged fix cannot hide a staged finding. The shebang
+# regex and severity are those of CI's "ShellCheck" step (.github/workflows/ci.yml).
+shell_shebang='^#!(/usr/bin/env (ba)?sh|/bin/(ba)?sh)'
+changed=()
+while IFS= read -r -d '' file; do
+  changed+=("$file")
+# Every staged path but deletions: a moved script is a rename (R), not an add.
+done < <(git diff --cached --name-only --diff-filter=d -z -- scripts .githooks .claude/hooks)
+shell_files=()
+if [ "${#changed[@]}" -gt 0 ]; then
+  while IFS= read -r -d '' file; do
+    shell_files+=("$file")
+  done < <(git --literal-pathspecs grep --cached --no-color -l -z -E "$shell_shebang" -- "${changed[@]}")
+fi
+if [ "${#shell_files[@]}" -gt 0 ]; then
+  if ! command -v shellcheck >/dev/null; then
+    echo "pre-commit: shellcheck not installed; run scripts/bootstrap" >&2
+    exit 1
+  fi
+  snapshot_staged
+  # CI reads no ~/.shellcheckrc or SHELLCHECK_OPTS, so neither may hide a finding here.
+  if ! (cd "$staged" && SHELLCHECK_OPTS="" shellcheck --norc --severity=warning -- "${shell_files[@]}") >&2; then
+    echo "pre-commit: shellcheck failed; fix the findings above" >&2
     exit 1
   fi
 fi
