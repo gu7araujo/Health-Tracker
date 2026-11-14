@@ -207,6 +207,121 @@ test_commit_without_swift_or_strings_skips_fitness() {
   [ ! -e "$WORK/fitness-ran" ] || { echo "fitness ran"; return 1; }
 }
 
+# A bash script at $1 that echoes an unassigned variable (ShellCheck SC2154). Written inline: a
+# fixture with a shebang under scripts/ would be linted, and fail, in CI's ShellCheck step.
+write_unassigned_variable_script() {
+  printf '#!/usr/bin/env bash\necho "$%s"\n' never_assigned > "$1"
+}
+
+test_commit_with_shellcheck_violation_is_refused() {
+  new_repo shellcheck-red
+  git switch -q -c feat/shellcheck
+  write_unassigned_variable_script scripts/broken.sh && git add scripts/broken.sh
+  local out
+  if out="$(git commit -m add 2>&1)"; then echo "commit succeeded"; return 1; fi
+  [[ "$out" == *SC2154*"pre-commit: shellcheck failed"* ]] || { echo "violation not reported: $out"; return 1; }
+}
+
+test_commit_with_clean_shell_script_succeeds() {
+  new_repo shellcheck-green
+  git switch -q -c feat/shellcheck
+  printf '#!/usr/bin/env bash\necho "hello"\n' > scripts/clean.sh && git add scripts/clean.sh
+  local out
+  out="$(git commit -m add 2>&1)" || { echo "commit failed: $out"; return 1; }
+}
+
+test_commit_lints_the_staged_shell_script_not_its_unstaged_fix() {
+  new_repo shellcheck-staged
+  git switch -q -c feat/shellcheck
+  write_unassigned_variable_script scripts/broken.sh && git add scripts/broken.sh
+  printf '#!/usr/bin/env bash\necho "fixed"\n' > scripts/broken.sh
+  local out
+  if out="$(git commit -m add 2>&1)"; then echo "commit succeeded on its unstaged fix"; return 1; fi
+  [[ "$out" == *SC2154* ]] || { echo "violation not reported: $out"; return 1; }
+}
+
+test_commit_lints_a_renamed_and_edited_shell_script() {
+  new_repo shellcheck-rename
+  git switch -q -c feat/rename
+  printf '#!/usr/bin/env bash\necho "hello"\necho "there"\necho "from a script long enough to stay a rename"\n' > scripts/a.sh
+  git add scripts/a.sh && git commit -q -m add || { echo "first commit failed"; return 1; }
+  git mv scripts/a.sh scripts/b.sh
+  printf 'echo "$%s"\n' never_assigned >> scripts/b.sh && git add scripts/b.sh
+  local out
+  if out="$(git commit -m rename 2>&1)"; then echo "commit succeeded with a renamed script's finding"; return 1; fi
+  [[ "$out" == *SC2154* ]] || { echo "violation not reported: $out"; return 1; }
+}
+
+test_commit_with_color_always_still_lints_a_clean_script() {
+  new_repo shellcheck-color
+  git switch -q -c feat/color
+  git config color.ui always
+  printf '#!/usr/bin/env bash\necho "hello"\n' > scripts/clean.sh && git add scripts/clean.sh
+  local out
+  out="$(git commit -m add 2>&1)" || { echo "commit failed: $out"; return 1; }
+}
+
+# CI has no ~/.shellcheckrc or SHELLCHECK_OPTS, so a personal one must not hide a finding.
+test_commit_ignores_personal_shellcheck_config() {
+  new_repo shellcheck-rc
+  git switch -q -c feat/rc
+  mkdir -p "$WORK/home" && echo 'disable=SC2154' > "$WORK/home/.shellcheckrc"
+  write_unassigned_variable_script scripts/broken.sh && git add scripts/broken.sh
+  local out
+  if out="$(HOME="$WORK/home" SHELLCHECK_OPTS='--exclude=SC2154' git commit -m add 2>&1)"; then
+    echo "commit succeeded with SC2154 disabled by personal config"; return 1
+  fi
+  [[ "$out" == *SC2154* ]] || { echo "violation not reported: $out"; return 1; }
+}
+
+test_commit_with_a_shell_script_but_no_shellcheck_is_refused() {
+  if [ -x /usr/bin/shellcheck ] || [ -x /bin/shellcheck ]; then return 0; fi
+  new_repo shellcheck-missing
+  git switch -q -c feat/missing
+  printf '#!/usr/bin/env bash\necho "hello"\n' > scripts/clean.sh && git add scripts/clean.sh
+  local out
+  if out="$(PATH="/usr/bin:/bin" git commit -m add 2>&1)"; then echo "commit succeeded without shellcheck"; return 1; fi
+  [[ "$out" == *"shellcheck not installed; run scripts/bootstrap"* ]] || { echo "missing message: $out"; return 1; }
+}
+
+test_commit_skips_a_shell_script_outside_the_linted_dirs() {
+  new_repo shellcheck-outside
+  git switch -q -c feat/outside
+  mkdir bin tools && stub bin/shellcheck "$WORK/shellcheck-ran" 1
+  write_unassigned_variable_script tools/broken.sh && git add tools/broken.sh
+  PATH="$PWD/bin:$PATH" git commit -q -m outside || { echo "commit failed"; return 1; }
+  [ ! -e "$WORK/shellcheck-ran" ] || { echo "shellcheck ran outside scripts, .githooks and .claude/hooks"; return 1; }
+}
+
+test_commit_without_shell_scripts_skips_shellcheck() {
+  new_repo shellcheck-skip
+  git switch -q -c feat/docs
+  mkdir bin && stub bin/shellcheck "$WORK/shellcheck-ran" 1
+  echo hi > notes.txt && git add notes.txt
+  PATH="$PWD/bin:$PATH" git commit -q -m docs || { echo "commit failed"; return 1; }
+  [ ! -e "$WORK/shellcheck-ran" ] || { echo "shellcheck ran"; return 1; }
+}
+
+test_commit_skips_a_staged_non_shell_file_under_scripts() {
+  new_repo shellcheck-env
+  git switch -q -c feat/env
+  mkdir bin && stub bin/shellcheck "$WORK/shellcheck-ran" 1
+  echo 'TOOL_VERSION=1.0' > scripts/notes.env && git add scripts/notes.env
+  PATH="$PWD/bin:$PATH" git commit -q -m env || { echo "commit failed"; return 1; }
+  [ ! -e "$WORK/shellcheck-ran" ] || { echo "shellcheck ran on a non-shell file"; return 1; }
+}
+
+# The hook lints what CI's lint job lints: the same shebang regex, at the same severity.
+test_pre_commit_shellcheck_regex_matches_ci() {
+  local regex step
+  regex="$(sed -n "s/^shell_shebang='\(.*\)'\$/\1/p" "$ROOT/.githooks/pre-commit")"
+  [ -n "$regex" ] || { echo "no shell_shebang='...' line in .githooks/pre-commit"; return 1; }
+  grep -qF -- "--severity=warning" "$ROOT/.githooks/pre-commit" || { echo "pre-commit does not run --severity=warning"; return 1; }
+  step="$(awk '/- name: ShellCheck$/ { getline; print; exit }' "$ROOT/.github/workflows/ci.yml")"
+  [[ "$step" == *"'$regex'"* ]] || { echo "CI's ShellCheck step does not use $regex: $step"; return 1; }
+  [[ "$step" == *"--severity=warning"* ]] || { echo "CI's ShellCheck step is not --severity=warning: $step"; return 1; }
+}
+
 # The real scripts/fitness checks, AccessibilityID files and matching en/pt-BR Localizable.strings,
 # committed on branch $2.
 new_fitness_repo() {

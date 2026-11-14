@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/ci/install-tools.sh with stubbed uname/curl/unzip/shasum on PATH (no network):
+# scripts/ci/install-tools.sh with stubbed uname/curl/unzip/tar/shasum on PATH (no network):
 # it must fetch the pinned release asset for the OS, install the binaries (Periphery on macOS only,
 # sha256-verified) and extend GITHUB_PATH.
 set -uo pipefail
@@ -69,21 +69,38 @@ case "\$asset" in
   swiftformat.zip) sha="${SWIFTFORMAT_SHA256_MACOS:-}" ;;
   swiftformat_linux.zip) sha="${SWIFTFORMAT_SHA256_LINUX:-}" ;;
   v$XCODE_BUILD_SERVER_VERSION.tar.gz) sha="$XCODE_BUILD_SERVER_SHA256" ;;
+  shellcheck-v$SHELLCHECK_VERSION.darwin.aarch64.tar.gz) sha="${SHELLCHECK_SHA256_MACOS:-}" ;;
+  shellcheck-v$SHELLCHECK_VERSION.linux.x86_64.tar.gz) sha="${SHELLCHECK_SHA256_LINUX:-}" ;;
   *) sha="$PERIPHERY_SHA256" ;;
 esac
 echo "\$sha  \$last"
 EOF
-# tar unpacks the xcode-build-server source archive: the launcher and the module holding its version.
+# tar unpacks a ShellCheck release (the binary, which prints its version on one of several lines,
+# and its docs) or the xcode-build-server source archive (the launcher and the module holding its version).
+# Both real archives hold one top-level dir, which only --strip-components 1 removes.
 cat >"$TMP/stubs/tar" <<EOF
 #!/bin/sh
+archive=""
 dir=""
+strip=""
 while [ \$# -gt 0 ]; do
-  [ "\$1" = "-C" ] && dir="\$2"
+  case "\$1" in -C) dir="\$2"; shift ;; --strip-components) strip="\$2"; shift ;; *.tar.gz) archive="\$1" ;; esac
   shift
 done
-printf '#!/bin/sh\necho launcher\n' >"\$dir/xcode-build-server"
-chmod +x "\$dir/xcode-build-server"
-printf 'import os\n\nVERSION = "%s"\n' "\${XBS_VERSION:-$XCODE_BUILD_SERVER_VERSION}" >"\$dir/misc.py"
+[ "\$strip" = 1 ] || { dir="\$dir/top-level"; mkdir -p "\$dir"; }
+case "\$(cat "\$archive")" in
+  shellcheck-v*)
+    printf '#!/bin/sh\necho "ShellCheck - shell script analysis tool"\necho "version: %s"\necho "license: GNU GPLv3"\n' \
+      "\${SC_VERSION:-$SHELLCHECK_VERSION}" >"\$dir/shellcheck"
+    chmod +x "\$dir/shellcheck"
+    echo license >"\$dir/LICENSE.txt"
+    ;;
+  *)
+    printf '#!/bin/sh\necho launcher\n' >"\$dir/xcode-build-server"
+    chmod +x "\$dir/xcode-build-server"
+    printf 'import os\n\nVERSION = "%s"\n' "\${XBS_VERSION:-$XCODE_BUILD_SERVER_VERSION}" >"\$dir/misc.py"
+    ;;
+esac
 EOF
 chmod +x "$TMP/stubs/"*
 
@@ -123,6 +140,22 @@ grep -qx "$xbs_url" "$TMP/curl.calls" || fail "macOS should fetch $xbs_url, got:
 [ -f "$TMP/libexec/xcode-build-server/misc.py" ] || fail "the xcode-build-server sources should sit in libexec beside the bin dir"
 [[ "$out" == *"xcode-build-server $XCODE_BUILD_SERVER_VERSION"* ]] || fail "should print the installed xcode-build-server version, got: $out"
 
+# ShellCheck: the pinned release tarball, on macOS as on Linux (pre-commit and CI's lint job run it).
+sc_macos="shellcheck-v$SHELLCHECK_VERSION.darwin.aarch64.tar.gz"
+sc_linux="shellcheck-v$SHELLCHECK_VERSION.linux.x86_64.tar.gz"
+# assert_shellcheck <label> <asset>
+assert_shellcheck() {
+  grep -qx "$release/koalaman/shellcheck/releases/download/v$SHELLCHECK_VERSION/$2" "$TMP/curl.calls" ||
+    fail "$1 should fetch $2, got: $(cat "$TMP/curl.calls")"
+  [[ "$("$TMP/bin/shellcheck" --version 2>&1)" == *"version: $SHELLCHECK_VERSION"* ]] ||
+    fail "$1: shellcheck should be installed in the bin dir"
+  [[ "$out" == *"ShellCheck $SHELLCHECK_VERSION"* ]] || fail "$1 should print the installed ShellCheck version, got: $out"
+}
+assert_shellcheck macOS "$sc_macos"
+
+install Darwin arm64 SC_VERSION=0.1.0
+[ "$code" -ne 0 ] || fail "a shellcheck that is not the pinned version should fail the install"
+
 install Darwin arm64 XBS_VERSION=0.1.0
 [ "$code" -ne 0 ] || fail "an xcode-build-server that is not the pinned version should fail the install"
 
@@ -144,6 +177,8 @@ install Darwin arm64 CI=true
 [ "$code" -eq 0 ] || fail "macOS CI install should succeed (got $code): $out"
 ! grep -q xcode-build-server "$TMP/curl.calls" || fail "CI should not fetch xcode-build-server"
 [ ! -e "$TMP/bin/xcode-build-server" ] || fail "CI should not install xcode-build-server"
+# scripts/quality runs doctor, which fails CI without the pinned ShellCheck: macOS CI installs it too.
+assert_shellcheck "macOS CI" "$sc_macos"
 
 # A zip whose sha256 is not the pinned one is never installed.
 # bad_sha <os> <arch> <asset> <tool>
@@ -159,6 +194,8 @@ bad_sha Darwin arm64 portable_swiftlint.zip swiftlint
 bad_sha Darwin arm64 swiftformat.zip swiftformat
 bad_sha Linux x86_64 swiftlint_linux_amd64.zip swiftlint
 bad_sha Linux x86_64 swiftformat_linux.zip swiftformat
+bad_sha Darwin arm64 "$sc_macos" shellcheck
+bad_sha Linux x86_64 "$sc_linux" shellcheck
 
 install Linux x86_64
 [ "$code" -eq 0 ] || fail "Linux install should succeed (got $code): $out"
@@ -168,6 +205,7 @@ grep -q '/swiftlint_linux_amd64.zip$' "$TMP/curl.calls" && grep -q '/swiftformat
 [ "$("$TMP/bin/swiftlint")" = "$SWIFTLINT_VERSION" ] || fail "swiftlint-static should be installed as swiftlint on Linux"
 ! grep -q periphery "$TMP/curl.calls" || fail "Linux has no Periphery release; it should not fetch one"
 ! grep -q xcode-build-server "$TMP/curl.calls" || fail "xcode-build-server is macOS only; Linux should not fetch it"
+assert_shellcheck Linux "$sc_linux"
 
 install Linux x86_64 LINT_VERSION=0.1.0
 [ "$code" -ne 0 ] || fail "a binary that is not the pinned version should fail the install"

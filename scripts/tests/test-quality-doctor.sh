@@ -29,10 +29,11 @@ write_build_server() {
 }
 write_build_server "$TMP/DerivedData/HealthTracker-abc"
 
-# stub <dir> <swiftlint version> <swiftformat version> <xcode version> <periphery version>
+# stub <dir> <swiftlint version> <swiftformat version> <xcode version> <periphery version> <shellcheck version>
 stub() {
   mkdir -p "$1"
   printf '#!/bin/sh\necho %s\n' "$2" >"$1/swiftlint"
+  printf '#!/bin/sh\necho "ShellCheck - shell script analysis tool"\necho "version: %s"\n' "$6" >"$1/shellcheck"
   printf '#!/bin/sh\necho %s\n' "$3" >"$1/swiftformat"
   printf '#!/bin/sh\n[ "$1" = version ] && echo %s\n' "$5" >"$1/periphery"
   printf '#!/bin/sh\necho "Xcode %s"\necho "Build version X"\n' "$4" >"$1/xcodebuild"
@@ -48,8 +49,8 @@ run_doctor() {
   code=$?
 }
 
-stub "$TMP/ok" "$SWIFTLINT_VERSION" "$SWIFTFORMAT_VERSION" "$XCODE_VERSION" "$PERIPHERY_VERSION"
-stub "$TMP/drift" "0.1.0" "0.2.0" "1.0" "0.3.0"
+stub "$TMP/ok" "$SWIFTLINT_VERSION" "$SWIFTFORMAT_VERSION" "$XCODE_VERSION" "$PERIPHERY_VERSION" "$SHELLCHECK_VERSION"
+stub "$TMP/drift" "0.1.0" "0.2.0" "1.0" "0.3.0" "0.1.0"
 
 # Matching versions: silent success, locally and in CI.
 run_doctor "$TMP/ok"
@@ -65,6 +66,7 @@ run_doctor "$TMP/drift"
 [[ "$out" == *"SwiftFormat 0.2.0"*"$SWIFTFORMAT_VERSION"* ]] || fail "should report SwiftFormat drift: $out"
 [[ "$out" == *"Xcode 1.0"*"$XCODE_VERSION"* ]] || fail "should report Xcode drift: $out"
 [[ "$out" == *"Periphery 0.3.0"*"$PERIPHERY_VERSION"* ]] || fail "should report Periphery drift: $out"
+[[ "$out" == *"ShellCheck 0.1.0"*"$SHELLCHECK_VERSION"* ]] || fail "should report ShellCheck drift: $out"
 [[ "$out" == *"fix:"* ]] || fail "should print a fix command: $out"
 # The Xcode fix names no app path: installs are named Xcode.app, runners use _Release_Candidate etc.
 [[ "$out" == *"install Xcode $XCODE_VERSION, then sudo xcode-select -s <path to that Xcode.app>"*"scripts/ci/select-xcode.sh"* ]] ||
@@ -90,9 +92,21 @@ run_doctor "$TMP/ok"
 [[ "$out" == *"Periphery not installed"*"scripts/ci/install-tools.sh build/tools/bin"* ]] ||
   fail "should report missing Periphery with the local install command: $out"
 
+# Missing shellcheck, the only gap: pre-commit and CI's lint job run it, so CI fails without it.
+# run_doctor keeps /usr/bin and /bin on PATH, where a Linux distro installs its own shellcheck.
+if [ ! -x /usr/bin/shellcheck ] && [ ! -x /bin/shellcheck ]; then
+  stub "$TMP/no-shellcheck" "$SWIFTLINT_VERSION" "$SWIFTFORMAT_VERSION" "$XCODE_VERSION" "$PERIPHERY_VERSION" "$SHELLCHECK_VERSION"
+  rm "$TMP/no-shellcheck/shellcheck"
+  run_doctor "$TMP/no-shellcheck"
+  [[ "$out" == *"ShellCheck not installed"*"fix: scripts/ci/install-tools.sh build/tools/bin"* ]] ||
+    fail "should report missing ShellCheck with the local install command, which CI can run too: $out"
+  run_doctor "$TMP/no-shellcheck" true
+  [ "$code" -eq 1 ] || fail "missing ShellCheck in CI should exit 1 (got $code): $out"
+fi
+
 # Tools only in build/tools/bin (where install-tools.sh puts them and scripts/quality looks first)
 # count as installed.
-stub "$TMP/repo/build/tools/bin" "$SWIFTLINT_VERSION" "$SWIFTFORMAT_VERSION" "$XCODE_VERSION" "$PERIPHERY_VERSION"
+stub "$TMP/repo/build/tools/bin" "$SWIFTLINT_VERSION" "$SWIFTFORMAT_VERSION" "$XCODE_VERSION" "$PERIPHERY_VERSION" "$SHELLCHECK_VERSION"
 out="$(PATH="/usr/bin:/bin" CI=true "$DOCTOR" 2>&1)"
 code=$?
 [ "$code" -eq 0 ] || fail "tools in build/tools/bin should count as installed (got $code): $out"
@@ -101,7 +115,7 @@ code=$?
 LSP="$TMP/lsp"
 # The case above left a full tool set in the repo copy's build/tools/bin.
 mv "$TMP/repo/build" "$TMP/build.aside"
-stub "$LSP" "$SWIFTLINT_VERSION" "$SWIFTFORMAT_VERSION" "$XCODE_VERSION" "$PERIPHERY_VERSION"
+stub "$LSP" "$SWIFTLINT_VERSION" "$SWIFTFORMAT_VERSION" "$XCODE_VERSION" "$PERIPHERY_VERSION" "$SHELLCHECK_VERSION"
 run_doctor "$LSP"
 [[ "$out" != *warning* ]] || fail "a bootstrapped, built checkout should not warn: $out"
 
