@@ -26,7 +26,7 @@ strip_root() { while IFS= read -r line; do printf '%s\n' "${line#"$ROOT/"}"; don
 
 for workflow in "$WORKFLOWS"/*.yml; do
   name="$(basename "$workflow")"
-  # The checks below read lines, not YAML: GitHub rejects a file that does not parse, and a stray
+  # Most checks below read lines, not YAML: GitHub rejects a file that does not parse, and a stray
   # quote in a single-quoted value parses wrong without breaking any line (#62).
   ruby -ryaml -e 'Psych.parse_file(ARGV[0])' "$workflow" || fail "$name is not valid YAML"
   # The Summary step's lines, from "- name: Summary" up to the next step.
@@ -244,6 +244,15 @@ printf '%s' '[{"type":"system"},{"type":"result","num_turns":3,"permission_denia
 [ -z "$outcome_run" ] || [ "$(EXECUTION_FILE="$sample" bash -c "$outcome_run" 2>&1)" = $'turns=3 denials=1\nStopped: closed.' ] ||
   fail "claude-code-review.yml: the 'Review outcome' step must print 'turns=N denials=N' and the closing text from the raw result message"
 rm -f "$sample"
+# The action reads only the session's first result, and the review ran its agents in the background:
+# the session ended at "I'll wait for their results" with nothing reviewed (#62, PR #107's run). The
+# review step disables background tasks, so every agent runs and returns within the one result. Parsed,
+# not grepped: only the step's env: reaches the process, and an unknown with: input is ignored.
+ruby -ryaml -e '
+  step = YAML.safe_load(File.read(ARGV[0]), aliases: true)["jobs"]["claude-review"]["steps"].find { |s| s["name"] == "Run Claude Code Review" }
+  exit((step["env"] || {})["CLAUDE_CODE_DISABLE_BACKGROUND_TASKS"].to_s == "1")
+' "$WORKFLOWS/claude-code-review.yml" ||
+  fail "claude-code-review.yml: the review step needs env CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'"
 
 # The public repo's @claude job spends the owner's token: it answers only the owner.
 grep -qxF "      github.actor == 'gu7araujo' && (" "$WORKFLOWS/claude.yml" ||
@@ -352,6 +361,11 @@ if [ $# -eq 0 ]; then
   fixture review-denials 2
   must "FAIL: claude-code-review.yml: a 'Review outcome' step right after the review"
   must "FAIL: claude-code-review.yml: the 'Review outcome' step must print 'turns=N denials=N'"
+  fixture review-background 1
+  must "FAIL: claude-code-review.yml: the review step needs env CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'"
+  fixture review-background-alias 0
+  fixture review-background-with 1
+  must "FAIL: claude-code-review.yml: the review step needs env CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'"
   fixture yaml 1
   must "FAIL: unquoted.yml is not valid YAML"
   # A checkout path with sed or glob metacharacters (| [ * \) still prints repo-relative paths, from

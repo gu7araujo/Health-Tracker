@@ -1,6 +1,6 @@
 # Must pass: the review skips draft and fork PRs, grants only the inline-comment tool, copies the
 # AGENTS.md rules to CLAUDE.md first, names the root rules and asks for every step in its prompt, and
-# prints the review's outcome.
+# prints the review's outcome, with background tasks off.
 jobs:
   claude-review:
     if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository
@@ -15,6 +15,8 @@ jobs:
       # A comment above the next step is not part of the copy step.
       - name: Run Claude Code Review
         id: claude-review
+        env:
+          CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'
         with:
           prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/. Run every step on every open PR, with the four agents of step 4 whatever the diff size: this workflow already excludes drafts and forks, and a PR written with Claude Code still needs the review. Stop early only when the PR is closed or Claude has already commented on it. If you stop before step 4 for any other reason, post a comment with gh pr comment that says why.'
           claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
