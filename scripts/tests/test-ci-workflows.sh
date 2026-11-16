@@ -246,8 +246,12 @@ printf '%s' '[{"type":"system"},{"type":"result","num_turns":3,"permission_denia
 rm -f "$sample"
 # The action reads only the session's first result, and the review ran its agents in the background:
 # the session ended at "I'll wait for their results" with nothing reviewed (#62, PR #107's run). The
-# review step disables background tasks, so every agent runs and returns within the one result.
-grep -qE "^ *CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1' *\$" <<<"$review" ||
+# review step disables background tasks, so every agent runs and returns within the one result. Parsed,
+# not grepped: only the step's env: reaches the process, and an unknown with: input is ignored.
+ruby -ryaml -e '
+  step = YAML.safe_load(File.read(ARGV[0]))["jobs"]["claude-review"]["steps"].find { |s| s["name"] == "Run Claude Code Review" }
+  exit((step["env"] || {})["CLAUDE_CODE_DISABLE_BACKGROUND_TASKS"].to_s == "1")
+' "$WORKFLOWS/claude-code-review.yml" 2>/dev/null ||
   fail "claude-code-review.yml: the review step needs env CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'"
 
 # The public repo's @claude job spends the owner's token: it answers only the owner.
@@ -358,6 +362,8 @@ if [ $# -eq 0 ]; then
   must "FAIL: claude-code-review.yml: a 'Review outcome' step right after the review"
   must "FAIL: claude-code-review.yml: the 'Review outcome' step must print 'turns=N denials=N'"
   fixture review-background 1
+  must "FAIL: claude-code-review.yml: the review step needs env CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'"
+  fixture review-background-with 1
   must "FAIL: claude-code-review.yml: the review step needs env CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'"
   fixture yaml 1
   must "FAIL: unquoted.yml is not valid YAML"
