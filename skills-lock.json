@@ -1,33 +1,54 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
+    "claude-handoff": {
+      "source": "mattpocock/skills",
+      "commit": "5863806dd4e15c63174bee4e7515a4256792ecfa",
+      "sourceType": "github",
+      "skillPath": "skills/in-progress/claude-handoff/SKILL.md",
+      "computedHash": "e903af941877ac195671a1eff550ba42266f5f5a4028ebeae4cd1fec82b88dd4"
+    },
+    "diagnosing-bugs": {
+      "source": "mattpocock/skills",
+      "commit": "5863806dd4e15c63174bee4e7515a4256792ecfa",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/diagnosing-bugs/SKILL.md",
+      "computedHash": "87c78ae966e591f9ceb177789cc5cc9de69277cd26679ffd36ca5300f430d513"
+    },
+    "grilling": {
+      "source": "mattpocock/skills",
+      "commit": "5863806dd4e15c63174bee4e7515a4256792ecfa",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/grilling/SKILL.md",
+      "computedHash": "485451958784497cd4c4dbea13cb5bbb579da58fac0d0e45f3bcb310fab68ac7"
+    },
     "handoff": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/productivity/handoff/SKILL.md",
-      "computedHash": "20e5f4afdef502637510bc5c64d27645d3c85c88df9cb006824bbb0980166319"
+      "computedHash": "8f843422dbcedef905ef2d694ec5422f48799514f80ab9335b89de08228ae72f"
     },
     "tdd": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/engineering/tdd/SKILL.md",
-      "computedHash": "e753a5da75292bbe59d302d89566bc2c53d0e73944da2f0e944a7578883c07d0"
+      "computedHash": ""
     },
     "wait-what": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/productivity/wait-what/SKILL.md",
-      "computedHash": "71a9a1f1773d4b1ff70a9d496db63855ef83a7fe906c72b70cdebf4815a2c4c1"
+      "computedHash": ""
     },
     "writing-for-agents": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/productivity/writing-for-agents/SKILL.md",
-      "computedHash": "95da47fc97af998e85b7d7e6d57b3ac76727c1e290cfe9ea09005aacb826959f"
+      "computedHash": "e79a2476b2417b228922453478d9505a6b9af19f3a412e560728ce62ed3555ca"
     }
   },
   "local": {
-    "comment": "Skills in .agents/skills that the skills CLI does not manage, and local edits to the ones it does. A CLI update of an edited skill overwrites the edit: re-apply it.",
+    "comment": "Skills in .agents/skills that the skills CLI does not manage, and local edits to the ones it does. A CLI update of an edited skill overwrites the edit: re-apply it. A CLI install rewrites this file and drops this block: restore it from git afterwards.",
     "vendoredFromXcode": [
       "app-intents-specialist",
       "app-intents-whats-new-27",
@@ -35,9 +56,15 @@
       "swiftui-specialist",
       "swiftui-whats-new-27"
     ],
+    "vendoredByCopy": {
+      "pr-post-audit": "akitaonrails/my-skills@1aba042, pr-post-audit",
+      "unslop": "cursor/plugins@3dbd22f, pstack/skills/unslop"
+    },
     "repoOwned": [
+      "agent-docs-placement",
       "cli-build",
       "cli-test",
+      "file-pr",
       "issue-tracking",
       "mock-sim-data",
       "parallel-agents",
@@ -46,8 +73,11 @@
       "reviewing"
     ],
     "edited": {
-      "tdd": "fitted to the iOS repo (#25)",
+      "tdd": "fitted to the iOS repo (#25); evidence-path.md adapted from akitaonrails/my-skills@1aba042 verification-planning",
       "wait-what": "fitted to the iOS repo (#25)",
+      "diagnosing-bugs": "fitted to the iOS repo: Xcode MCP loops in place of web ones, an earlier-fix search before hypothesising, repo skill pointers",
+      "pr-post-audit": "rewritten for a solo repo whose PRs the user merges: contributor-trust, changelog and deploy phases removed, the interaction sweep fitted to HealthTracker",
+      "unslop": "model-invoked, scoped to prose people read; examples swapped for this repo's",
       "device-interaction": "tool name fixed (#73); triggers in the description, start recipe and HealthTracker examples (#69)",
       "swiftui-specialist": "description starts with \"Use whenever writing, editing or reviewing SwiftUI views.\" (#70)"
     }
