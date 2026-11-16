@@ -26,7 +26,7 @@ strip_root() { while IFS= read -r line; do printf '%s\n' "${line#"$ROOT/"}"; don
 
 for workflow in "$WORKFLOWS"/*.yml; do
   name="$(basename "$workflow")"
-  # The checks below read lines, not YAML: GitHub rejects a file that does not parse, and a stray
+  # Most checks below read lines, not YAML: GitHub rejects a file that does not parse, and a stray
   # quote in a single-quoted value parses wrong without breaking any line (#62).
   ruby -ryaml -e 'Psych.parse_file(ARGV[0])' "$workflow" || fail "$name is not valid YAML"
   # The Summary step's lines, from "- name: Summary" up to the next step.
@@ -249,9 +249,9 @@ rm -f "$sample"
 # review step disables background tasks, so every agent runs and returns within the one result. Parsed,
 # not grepped: only the step's env: reaches the process, and an unknown with: input is ignored.
 ruby -ryaml -e '
-  step = YAML.safe_load(File.read(ARGV[0]))["jobs"]["claude-review"]["steps"].find { |s| s["name"] == "Run Claude Code Review" }
+  step = YAML.safe_load(File.read(ARGV[0]), aliases: true)["jobs"]["claude-review"]["steps"].find { |s| s["name"] == "Run Claude Code Review" }
   exit((step["env"] || {})["CLAUDE_CODE_DISABLE_BACKGROUND_TASKS"].to_s == "1")
-' "$WORKFLOWS/claude-code-review.yml" 2>/dev/null ||
+' "$WORKFLOWS/claude-code-review.yml" ||
   fail "claude-code-review.yml: the review step needs env CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'"
 
 # The public repo's @claude job spends the owner's token: it answers only the owner.
