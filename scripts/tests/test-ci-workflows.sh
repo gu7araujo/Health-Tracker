@@ -363,6 +363,7 @@ if [ $# -eq 0 ]; then
   must "FAIL: claude-code-review.yml: the 'Review outcome' step must print 'turns=N denials=N'"
   fixture review-background 1
   must "FAIL: claude-code-review.yml: the review step needs env CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'"
+  fixture review-background-alias 0
   fixture review-background-with 1
   must "FAIL: claude-code-review.yml: the review step needs env CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'"
   fixture yaml 1
