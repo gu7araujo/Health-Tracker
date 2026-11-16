@@ -46,7 +46,7 @@ case "\$1 \$2" in
   "--sdk iphonesimulator") echo "\${SDK_VERSION:-27.0}" ;;
   "xccov view") cat "$TMP/coverage.json" ;;
   "llvm-cov export") echo "\$*" >>"$TMP/llvm-cov.calls" && cat "$TMP/regions.json" ;;
-  "xcresulttool get") if [ -e "\${6:-}/unmeasured" ]; then echo '{"testNodes":[]}'; else cat "$TMP/tests.json"; fi ;;
+  "xcresulttool get") if [ -n "\${NO_RESULT:-}" ]; then echo '{"testNodes":[]}'; elif [ -e "\${6:-}/runner-error" ]; then cat "$FIX/test-results-runner-error.json"; else cat "$TMP/tests.json"; fi ;;
   "simctl shutdown") echo "\$*" >>"$TMP/simctl.calls" ;;
   "simctl clone") echo "\$*" >>"$TMP/clone.calls" && echo CLONED-UDID ;;
   "simctl bootstatus") echo "\$*" >>"$TMP/boot.calls" ;;
@@ -56,8 +56,8 @@ esac
 EOF
 # xcodebuild: prints $XCODEBUILD_ERROR when set; blocks while $TMP/hold exists (a run caught mid-build); the unit run writes the profile and the app binary ($APP_BINARY, unless $NO_PROFILE);
 # the UI run replaces the profile, so the region rows must read it in between. Like the real one, it refuses an
-# existing -resultBundlePath. While \$TMP/unmeasured.<bundle> holds N > 0, the next N runs of <bundle> never reach
-# the test runner: an error: line, and a result bundle the xcresulttool stub reports as not run.
+# existing -resultBundlePath. While \$TMP/runner-error.<bundle> holds N > 0, the next N runs of <bundle> never reach
+# the test runner, logged and reported as in #111: a "System Failures" case, and no error: line.
 cat >"$TMP/bin/xcodebuild" <<EOF
 #!/bin/sh
 echo "\$*" >>"$TMP/xcodebuild.calls"
@@ -67,11 +67,11 @@ bundle="\$(echo "\$*" | sed -n 's/.*-only-testing:\([^ ]*\).*/\1/p')"
 if [ -n "\$result" ]; then
   [ ! -e "\$result" ] || { echo "error: Existing file at -resultBundlePath \"\$result\""; exit 70; }
   mkdir -p "\$result"
-  left="\$(cat "$TMP/unmeasured.\$bundle" 2>/dev/null || echo 0)"
+  left="\$(cat "$TMP/runner-error.\$bundle" 2>/dev/null || echo 0)"
   if [ "\$left" -gt 0 ]; then
-    echo \$((left - 1)) >"$TMP/unmeasured.\$bundle"
-    touch "\$result/unmeasured"
-    echo "error: Failed to establish communication with the test runner. (Underlying Error: Channel disconnected)"
+    echo \$((left - 1)) >"$TMP/runner-error.\$bundle"
+    touch "\$result/runner-error"
+    printf 'Testing failed:\n\t%s-Runner encountered an error (Failed to establish communication with the test runner.)\n' "\$bundle"
     exit 65
   fi
 fi
@@ -270,13 +270,13 @@ done
 ! grep -q -- '-only-testing:HealthTrackerTests .*-test-timeouts-enabled' "$TMP/xcodebuild.calls" ||
   fail "the unit run should keep xcodebuild's test timeouts, got: $(cat "$TMP/xcodebuild.calls")"
 
-# A UI bundle that never reached its test runner (no failing case, just an error: line) is run once more
-# before it counts as unmeasured (#111). A bundle with a failing case is never rerun.
+# A UI bundle whose only failures are the test runner's own ("System Failures": it never connected, #111)
+# is run once more. A bundle with a failing test case, or with no result at all (a build failure), is not.
 for pair in "HealthTrackerUITests:UI tests" "HealthTrackerIntentsUITests:Intents UI tests"; do
   bundle="${pair%%:*}"
   name="${pair#*:}"
   : >"$TMP/xcodebuild.calls"
-  echo 1 >"$TMP/unmeasured.$bundle"
+  echo 1 >"$TMP/runner-error.$bundle"
   # A previous run's first attempt is cleared, never mixed into this run's evidence.
   mkdir -p "$REPO/build/${name%% *}.attempt1.xcresult/stale"
   run_quality '[]' --full
@@ -284,42 +284,50 @@ for pair in "HealthTrackerUITests:UI tests" "HealthTrackerIntentsUITests:Intents
     fail "a previous run's $bundle first attempt should be cleared"
   grep -qE "^$name +0  <= 0 +✓\$" <<<"$out" || fail "a $bundle run that connects on the rerun should pass its row, got: $out"
   [ "$(grep -c -- "-only-testing:$bundle " "$TMP/xcodebuild.calls")" -eq 2 ] ||
-    fail "an unmeasured $bundle run should be rerun once, got: $(cat "$TMP/xcodebuild.calls")"
-  grep -q "^$name: reran once after: error: Failed to establish communication with the test runner." <<<"$out" ||
+    fail "a $bundle run that never reached its runner should be rerun once, got: $(cat "$TMP/xcodebuild.calls")"
+  runner_error="$bundle-Runner encountered an error: Failed to establish communication with the test runner."
+  grep -qF "$name: reran once after: $runner_error" <<<"$out" ||
     fail "the details should name the $bundle rerun and why, got: $out"
+  ! grep -qF "$name: $runner_error" <<<"$out" || fail "a runner error the rerun absorbed is not a test failure, got: $out"
   [[ "$out" != *"::warning::"* ]] || fail "outside GitHub Actions the rerun should not print an annotation, got: $out"
-  [ -e "$REPO/build/${name%% *}.attempt1.xcresult/unmeasured" ] ||
-    fail "the first $bundle attempt's result bundle should be kept for the CI artifact"
-  # On GitHub Actions the rerun is also an annotation, so a flake the rerun absorbed still shows on the PR.
-  echo 1 >"$TMP/unmeasured.$bundle"
+  [ -e "$REPO/build/${name%% *}.attempt1.xcresult/runner-error" ] ||
+    fail "the first $bundle attempt's result bundle should be kept"
+  # On GitHub Actions the rerun is also an annotation, so a flake the rerun absorbed still shows on the run.
+  echo 1 >"$TMP/runner-error.$bundle"
   GHA=true run_quality '[]' --full
-  [[ "$out" == *"::warning::$name: reran once after: error: Failed to establish communication"* ]] ||
+  grep -qF "::warning::$name: reran once after: $runner_error" <<<"$out" ||
     fail "on GitHub Actions the $bundle rerun should be a warning annotation, got: $out"
   : >"$TMP/xcodebuild.calls"
-  echo 2 >"$TMP/unmeasured.$bundle"
+  echo 2 >"$TMP/runner-error.$bundle"
   run_quality '[]' --full
   [ "$(grep -c -- "-only-testing:$bundle " "$TMP/xcodebuild.calls")" -eq 2 ] ||
-    fail "a $bundle run unmeasured twice should not be rerun again, got: $(cat "$TMP/xcodebuild.calls")"
-  grep -qE "^$name +n/a  <= 0 +✗\$" <<<"$out" || fail "a $bundle run unmeasured twice should report n/a, got: $out"
-  rm -f "$TMP/unmeasured.$bundle"
+    fail "a $bundle run that fails to connect twice should not be rerun again, got: $(cat "$TMP/xcodebuild.calls")"
+  grep -qE "^$name +1  <= 0 +✗\$" <<<"$out" || fail "a $bundle run that fails to connect twice should fail its row, got: $out"
+  grep -qF "$name: $runner_error" <<<"$out" || fail "the second runner error should be listed as a failure, got: $out"
+  rm -f "$TMP/runner-error.$bundle"
 done
 # Past the rerun deadline (counted from the first test run) a rerun could outlast the CI step and lose
-# the whole table, so the bundle stays n/a and the details say why.
+# the whole table, so the bundle keeps its failure and the details say why.
 : >"$TMP/xcodebuild.calls"
-echo 1 >"$TMP/unmeasured.HealthTrackerUITests"
+echo 1 >"$TMP/runner-error.HealthTrackerUITests"
 RERUN_DEADLINE=0 run_quality '[]' --full
 [ "$(grep -c -- '-only-testing:HealthTrackerUITests ' "$TMP/xcodebuild.calls")" -eq 1 ] ||
   fail "past the rerun deadline the UI run should not be rerun, got: $(cat "$TMP/xcodebuild.calls")"
 grep -qE '^UI tests: not rerun: [0-9]+ min into the tests, past the 0 min rerun deadline$' <<<"$out" ||
   fail "the details should say why the UI run was not rerun, got: $out"
-rm -f "$TMP/unmeasured.HealthTrackerUITests"
+rm -f "$TMP/runner-error.HealthTrackerUITests"
 # The unit run is never rerun.
 : >"$TMP/xcodebuild.calls"
-echo 1 >"$TMP/unmeasured.HealthTrackerTests"
+echo 1 >"$TMP/runner-error.HealthTrackerTests"
 run_quality '[]' --full
 [ "$(grep -c -- '-only-testing:HealthTrackerTests ' "$TMP/xcodebuild.calls")" -eq 1 ] ||
-  fail "an unmeasured unit run should not be rerun, got: $(cat "$TMP/xcodebuild.calls")"
-rm -f "$TMP/unmeasured.HealthTrackerTests"
+  fail "a unit run that never reached its runner should not be rerun, got: $(cat "$TMP/xcodebuild.calls")"
+rm -f "$TMP/runner-error.HealthTrackerTests"
+# No result at all (a build failure) is not rerun: running it again would fail the same way.
+: >"$TMP/xcodebuild.calls"
+NO_RESULT=1 run_quality '[]' --full
+[ "$(grep -c -- '-only-testing:HealthTrackerUITests ' "$TMP/xcodebuild.calls")" -eq 1 ] ||
+  fail "a UI run with no result should not be rerun, got: $(cat "$TMP/xcodebuild.calls")"
 cp "$TMP/tests.json" "$TMP/tests.passing.json"
 cp "$FIX/test-results.json" "$TMP/tests.json"
 : >"$TMP/xcodebuild.calls"

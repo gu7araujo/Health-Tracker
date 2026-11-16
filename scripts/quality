@@ -13,9 +13,9 @@ Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-b
                      Intents UI tests need a runtime at least the iphonesimulator SDK's version
                      (iOS 27.2 with Xcode 27.2): on an older simulator they run on a second clone,
                      "HT-<branch>-ios27". Install a missing runtime: xcodebuild -downloadPlatform iOS.
-                     Each UI test case gets 180 s; a UI bundle that ends with no failing case but
-                     unmeasured (runner never connected, or crashed) is run once more (first attempt kept as build/<UI|Intents>.attempt1.xcresult)
-                     unless the tests have run 15 min ($QUALITY_RERUN_DEADLINE seconds).
+                     Each UI test case gets 180 s. A UI bundle whose only failures are its test
+                     runner's own ("System Failures") is run once more, the first attempt kept as
+                     build/<UI|Intents>.attempt1.xcresult, unless the tests have run 15 min.
   --json             Accepted for compatibility: every run writes build/quality.json.
   --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
                      (an exported SIMULATOR_ID is ignored so worktrees never share a device).
@@ -320,12 +320,13 @@ for bundle in "${bundles[@]}"; do
   if [ "$bundle" != "HealthTrackerTests" ]; then
     test_args+=(-test-timeouts-enabled YES -default-test-execution-time-allowance "$UI_TEST_ALLOWANCE"
       -maximum-test-execution-time-allowance "$UI_TEST_ALLOWANCE")
-    # A UI run that never reached its test runner (no failing case) gets one more try (#111);
-    # a run with a failing case is never rerun.
+    # A UI run whose only failures are the test runner's own (it never connected, #111) gets one more
+    # try; a run with a failing test case, or no result at all (a build failure), is never rerun.
     runs=2
   fi
   for ((run = 1; run <= runs; run++)); do
     log_start=$(($(wc -l <build/xcodebuild.log) + 1))
+    [ "$run" -eq 1 ] || xcrun simctl bootstatus "$destination" -b >/dev/null
     xcodebuild test \
       -scheme HealthTracker \
       -destination "platform=iOS Simulator,id=$destination" \
@@ -336,10 +337,10 @@ for bundle in "${bundles[@]}"; do
       -resultBundlePath "$bundle_result" 2>&1 | tee -a build/xcodebuild.log | "${beautify[@]}"
     xcrun xcresulttool get test-results tests --path "$bundle_result" >build/test-results.json 2>/dev/null
     failed="$("$LIB/test-failures.sh" build/test-results.json "$bundle")"
-    [ -z "$failed" ] || break
-    reason="$(tail -n +"$log_start" build/xcodebuild.log | grep 'error:' | tail -n 1)"
-    reason="${reason:-no error: line in build/xcodebuild.log}"
     [ "$run" -lt "$runs" ] || break
+    runner_errors="$("$LIB/test-failures.sh" build/test-results.json "$bundle" --system)"
+    [ -n "$runner_errors" ] && [ "$failed" -eq "$(grep -c . <<<"$runner_errors")" ] || break
+    reason="$(tail -n 1 <<<"$runner_errors")"
     elapsed=$((SECONDS - tests_start))
     if [ "$elapsed" -ge "$RERUN_DEADLINE" ]; then
       details+="$name: not rerun: $((elapsed / 60)) min into the tests, past the $((RERUN_DEADLINE / 60)) min rerun deadline"$'\n'
@@ -348,13 +349,14 @@ for bundle in "${bundles[@]}"; do
     details+="$name: reran once after: $reason"$'\n'
     # An annotation keeps a flake the rerun absorbed visible on the CI run.
     [ "${GITHUB_ACTIONS:-}" = "true" ] && echo "::warning::$name: reran once after: $reason"
-    # Kept as the flake's evidence (CI uploads build/*.xcresult), and out of the way: xcodebuild refuses
-    # an existing -resultBundlePath.
+    # Kept as the flake's evidence (CI uploads build/*.xcresult when the gate fails), and out of the way:
+    # xcodebuild refuses an existing -resultBundlePath.
     [ ! -e "$bundle_result" ] || mv "$bundle_result" "${bundle_result%.xcresult}.attempt1.xcresult"
   done
   count_row "$name" "$failed"
   if [ -z "$failed" ]; then
-    details+="$name n/a: $reason"$'\n'
+    reason="$(tail -n +"$log_start" build/xcodebuild.log | grep 'error:' | tail -n 1)"
+    details+="$name n/a: ${reason:-no error: line in build/xcodebuild.log}"$'\n'
   elif [ "$failed" -gt 0 ]; then
     details+="$("$LIB/test-failures.sh" build/test-results.json "$bundle" --list | sed "s/^/$name: /")"$'\n'
   fi

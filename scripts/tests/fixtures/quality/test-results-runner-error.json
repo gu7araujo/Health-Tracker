@@ -1,0 +1,16 @@
+{"testNodes":[{"name":"HealthTracker","nodeType":"Test Plan","result":"Failed","children":[
+  {"name":"HealthTrackerUITests","nodeType":"UI test bundle","result":"Failed","children":[
+    {"name":"System Failures","nodeType":"Test Suite","result":"Failed","children":[
+      {"name":"HealthTrackerUITests-Runner encountered an error","nodeIdentifier":"HealthTrackerUITests-Runner encountered an error","nodeType":"Test Case","result":"Failed","children":[
+        {"name":"Failed to establish communication with the test runner. (Underlying Error: Channel disconnected)","nodeType":"Failure Message"}]}]}]},
+  {"name":"HealthTrackerIntentsUITests","nodeType":"UI test bundle","result":"Failed","children":[
+    {"name":"System Failures","nodeType":"Test Suite","result":"Failed","children":[
+      {"name":"HealthTrackerIntentsUITests-Runner encountered an error","nodeIdentifier":"HealthTrackerIntentsUITests-Runner encountered an error","nodeType":"Test Case","result":"Failed","children":[
+        {"name":"Failed to establish communication with the test runner. (Underlying Error: Channel disconnected)","nodeType":"Failure Message"}]}]}]},
+  {"name":"MixedTests","nodeType":"UI test bundle","result":"Failed","children":[
+    {"name":"System Failures","nodeType":"Test Suite","result":"Failed","children":[
+      {"name":"MixedTests-Runner encountered an error","nodeIdentifier":"MixedTests-Runner encountered an error","nodeType":"Test Case","result":"Failed","children":[
+        {"name":"Failed to establish communication with the test runner. (Underlying Error: Channel disconnected)","nodeType":"Failure Message"}]}]},
+    {"name":"AppIntentsUITests","nodeType":"Test Suite","result":"Failed","children":[
+      {"name":"testAddMealShowsCardInApp()","nodeIdentifier":"AppIntentsUITests/testAddMealShowsCardInApp()","nodeType":"Test Case","result":"Failed","children":[
+        {"name":"Test crashed with signal term.","nodeType":"Failure Message"}]}]}]}]}]}
