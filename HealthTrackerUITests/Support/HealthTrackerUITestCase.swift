@@ -98,21 +98,26 @@ class HealthTrackerUITestCase: XCTestCase {
         )
     }
 
-    /// Waits until the element reports `isSelected == true` (selection updates can lag taps). Polls the
-    /// element itself: a predicate expectation abandons a slow accessibility query at the timeout, and
-    /// on a loaded simulator one query can outlast it (#96). Polling stops only after a query that
-    /// started past the deadline, so a slow query may overrun `timeout`, and a stale answer that
-    /// arrives late gets one more poll. One snapshot per poll, which throws rather than fails while
-    /// the element is missing.
-    func assertSelected(_ element: XCUIElement, timeout: TimeInterval = 5,
-                        file: StaticString = #filePath, line: UInt = #line)
-    {
+    /// Polls `condition` until it holds, returning whether it did. Polls directly: a predicate
+    /// expectation abandons a slow accessibility query at the timeout, and on a loaded simulator one
+    /// query can outlast it (#96). Polling stops only after a query that started past the deadline, so
+    /// a slow query may overrun `timeout`, and a stale answer that arrives late gets one more poll.
+    /// Read elements through `snapshot()`, which throws rather than fails while an element is missing.
+    func waitUntil(timeout: TimeInterval = 5, _ condition: () -> Bool) -> Bool {
         let deadline = ContinuousClock.now + .seconds(timeout)
         var pollStart: ContinuousClock.Instant
         repeat {
             pollStart = .now
-            if (try? element.snapshot())?.isSelected == true { return }
+            if condition() { return true }
         } while pollStart < deadline
+        return false
+    }
+
+    /// Waits until the element reports `isSelected == true` (selection updates can lag taps).
+    func assertSelected(_ element: XCUIElement, timeout: TimeInterval = 5,
+                        file: StaticString = #filePath, line: UInt = #line)
+    {
+        if waitUntil(timeout: timeout, { (try? element.snapshot())?.isSelected == true }) { return }
         XCTFail("Expected element to be selected: \(element)", file: file, line: line)
     }
 

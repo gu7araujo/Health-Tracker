@@ -12,13 +12,16 @@ struct CalendarStrip: View {
     @Binding var selectedDate: Date
     let days: [DayData]
 
-    @State private var dates: [Date] = []
+    @State private var dates: [Date]
     @State private var isLoadingPast = false
     @State private var needsMorePastDates = false
-    @State private var needsInitialScroll = true
+    // periphery:ignore - used only via $binding (iOS 27 @State macro)
+    /// The first day of the week on screen. Starts on the current week, so the strip's first layout
+    /// already shows it, and SwiftUI keeps that week in place when earlier weeks are prepended.
+    @State private var visibleWeekStart: Date?
 
     /// Calendar configuration using system locale and timezone, with Monday as first day of week.
-    private var brazilianCalendar: Calendar {
+    private static var brazilianCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = Locale.current
         calendar.timeZone = TimeZone.current
@@ -26,52 +29,50 @@ struct CalendarStrip: View {
         return calendar
     }
 
+    private var brazilianCalendar: Calendar {
+        Self.brazilianCalendar
+    }
+
+    init(selectedDate: Binding<Date>, days: [DayData]) {
+        _selectedDate = selectedDate
+        self.days = days
+        let calendar = Self.brazilianCalendar
+        let startOfCurrentWeek = calendar.dateInterval(of: .weekOfYear, for: Date())?.start
+        _dates = State(initialValue: startOfCurrentWeek.map { Self.initialDates(from: $0, calendar: calendar) } ?? [])
+        _visibleWeekStart = State(initialValue: startOfCurrentWeek)
+    }
+
     var body: some View {
         GeometryReader { outerGeometry in
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 0) {
-                        ForEach(dates, id: \.self) { date in
-                            let isSelected = brazilianCalendar.isDate(date, inSameDayAs: selectedDate)
-                            let isFuture = isFutureDate(date)
-                            let status = dayStatus(for: date)
-                            CalendarStripDay(
-                                weekdayLetter: weekdayLetter(from: date),
-                                dayNumber: dayNumber(from: date),
-                                isSelected: isSelected,
-                                isFuture: isFuture,
-                                status: status
-                            ) {
-                                selectedDate = date
-                            }
-                            .accessibilityElement(children: .combine)
-                            .accessibilityIdentifier(AccessibilityID.calendarDay(offset: dayOffset(for: date)))
-                            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-                            .frame(width: outerGeometry.size.width / 7)
-                            .id(date)
-                            .onAppear {
-                                checkAndLoadPast(for: date)
-                            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 0) {
+                    ForEach(dates, id: \.self) { date in
+                        let isSelected = brazilianCalendar.isDate(date, inSameDayAs: selectedDate)
+                        let isFuture = isFutureDate(date)
+                        let status = dayStatus(for: date)
+                        CalendarStripDay(
+                            weekdayLetter: weekdayLetter(from: date),
+                            dayNumber: dayNumber(from: date),
+                            isSelected: isSelected,
+                            isFuture: isFuture,
+                            status: status
+                        ) {
+                            selectedDate = date
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier(AccessibilityID.calendarDay(offset: dayOffset(for: date)))
+                        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+                        .frame(width: outerGeometry.size.width / 7)
+                        .onAppear {
+                            checkAndLoadPast(for: date)
                         }
                     }
                 }
-                .scrollTargetBehavior(.paging)
-                .accessibilityIdentifier(AccessibilityID.calendarStrip)
-                .onAppear {
-                    if dates.isEmpty {
-                        loadInitialDates()
-                    }
-                }
-                .onChange(of: dates) { _, newDates in
-                    guard needsInitialScroll, !newDates.isEmpty else { return }
-                    needsInitialScroll = false
-                    if let startOfCurrentWeek = brazilianCalendar.dateInterval(of: .weekOfYear, for: Date())?.start {
-                        Task { @MainActor in
-                            proxy.scrollTo(startOfCurrentWeek, anchor: .leading)
-                        }
-                    }
-                }
+                .scrollTargetLayout()
             }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $visibleWeekStart, anchor: .leading)
+            .accessibilityIdentifier(AccessibilityID.calendarStrip)
         }.frame(height: 65)
     }
 
@@ -115,14 +116,8 @@ struct CalendarStrip: View {
 
     // MARK: - Date Loading
 
-    private func loadInitialDates() {
-        let calendar = brazilianCalendar
-        let today = Date()
-
-        guard let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: today)?.start else {
-            return
-        }
-
+    /// Last week and the current week, the strip's dates before any past week is loaded.
+    private static func initialDates(from startOfWeek: Date, calendar: Calendar) -> [Date] {
         var tempDates: [Date] = []
 
         // Load PAST week (7 days before current week)
@@ -139,7 +134,7 @@ struct CalendarStrip: View {
             }
         }
 
-        dates = tempDates
+        return tempDates
     }
 
     private func checkAndLoadPast(for date: Date) {
