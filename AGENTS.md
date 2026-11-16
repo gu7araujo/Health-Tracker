@@ -74,6 +74,7 @@ A skill loads only when called: make each call below. Each layer's `AGENTS.md` n
 
 | When | Call |
 |---|---|
+| Main session, before the first reply to the user | `Skill("unslop")`, then apply it to every reply the user reads |
 | An actor-isolation or `Sendable` diagnostic | `Skill("swift-concurrency:swift-concurrency")` before fixing, then fix every call site sharing the cause |
 | Checking behaviour on a device | `device-interaction`; seed data with `mock-sim-data` |
 | An Apple API question | `DocumentationSearch` before training memory |
