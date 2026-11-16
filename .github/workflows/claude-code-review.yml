@@ -47,10 +47,14 @@ jobs:
 
       # The plugin's step 1 stops, silently, on a PR it judges trivial or automated, every PR here is
       # written with Claude Code, and on a small diff the model skips step 4's agents (#62): the prompt's
-      # tail asks for every step and makes any early stop post why.
+      # tail asks for every step and makes any early stop post why. The action reads only the session's
+      # first result, and the plugin's agents ran in the background, so the session ended while they
+      # ran ("I'll wait for their results", PR #107): background tasks are off, so each agent returns.
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@d70510b174a1244958df0b03166a54912811f3e6 # v1.0.264
+        env:
+          CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
