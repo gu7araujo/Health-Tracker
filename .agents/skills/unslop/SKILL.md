@@ -1,6 +1,6 @@
 ---
 name: unslop
-description: Cut AI tells from prose a person reads. Use when writing or editing the README, a PR or issue body, a commit message, release notes or App Store text, or when asked to unslop or humanize text.
+description: Cut AI tells from prose a person reads. Use for every reply the user reads in a main session, and when writing or editing the README, a PR or issue body, a commit message, release notes or App Store text, or when asked to unslop or humanize text.
 ---
 
 # Unslop
