@@ -29,7 +29,7 @@ Black-box and isolated — each test drives the shipping app through its accessi
 </rule_3>
 
 <rule_4>
-**SCROLL BEFORE YOU TAP** — SwiftUI `List` rows and pickers below the fold may not exist yet, and controls pushed past the sheet's bottom edge report hittable while taps land dead. `scrollTo` (or swipe the list) the target into view first; reveal card swipe actions through `tapSwipeAction`, which falls back to the visible label when the identifier is not surfaced by the swipe host. Reach a `CalendarStrip` day through `CalendarUITests.revealDayCell`, which swipes the `calendarStrip` container until the cell is hittable. The strip is a paged week view (weeks start Monday) that can reset to an adjacent week on re-layout (after a modal, or racing the launch scroll), so a direct `.tap()` on a day cell can land on an off-screen or clipped frame and record `"Activation point invalid…"`.
+**SCROLL BEFORE YOU TAP** — SwiftUI `List` rows and pickers below the fold may not exist yet, and controls pushed past the sheet's bottom edge report hittable while taps land dead. `scrollTo` (or swipe the list) the target into view first; reveal card swipe actions through `tapSwipeAction`, which falls back to the visible label when the identifier is not surfaced by the swipe host. Reach a `CalendarStrip` day through `CalendarUITests.revealDayCell`, which swipes the `calendarStrip` container until the cell is hittable. The strip is a paged week view (weeks start Monday) that can reset to an adjacent week on re-layout (after a modal), so a direct `.tap()` on a day cell can land on an off-screen or clipped frame and record `"Activation point invalid…"`.
 </rule_4>
 
 <rule_5>

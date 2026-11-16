@@ -9,6 +9,7 @@ final class CalendarUITests: HealthTrackerUITestCase {
     /// Smoke test: validates the launch hook, temp-dir isolation, and identifier plumbing.
     func testTodaySelectedOnLaunchAndEmptyStates() {
         let today = assertExists(calendarDayCell(offset: 0))
+        assertOnVisiblePage(today)
         XCTAssertTrue(today.isSelected)
         assertExists(app.buttons[AccessibilityID.addRecordButton])
         assertExists(element(AccessibilityID.mealsEmptyState))
@@ -52,9 +53,12 @@ final class CalendarUITests: HealthTrackerUITestCase {
     /// Regression for #58: with the strip paged into earlier weeks, yesterday's cell is not
     /// rendered, and chasing it by its sign ("past = left") paged further away from it.
     func testPastDaySelectableFromEarlierWeeks() {
-        revealDayCell(offset: 0) // the strip can land a week early at launch
+        revealDayCell(offset: 0) // wait for the strip before swiping it
         let strip = element(AccessibilityID.calendarStrip)
-        for _ in 0 ..< 4 {
+        strip.swipeRight()
+        // Paging back prepends earlier weeks; the strip must stay on the week it paged to.
+        assertOnVisiblePage(calendarDayCell(offset: -7))
+        for _ in 0 ..< 3 {
             strip.swipeRight()
         }
         assertNotExists(calendarDayCell(offset: -1))
@@ -71,13 +75,13 @@ final class CalendarUITests: HealthTrackerUITestCase {
     /// Pages the horizontally-paged weekly strip until the day `offset` days from
     /// today sits fully inside the visible page, then returns it. The strip's scroll
     /// position is not guaranteed to sit on today's week — it can reset to an adjacent
-    /// week on re-layout (e.g. after the add-record modal, or racing the launch scroll),
-    /// and a day on another page reports an off-screen or clipped frame. Reachability is
-    /// judged from the cell's `frame` versus the strip's viewport — never `.isHittable`
-    /// or `.tap`, which hit-test an off-page cell and hard-fail with "Activation point
-    /// invalid…". A rendered-but-clipped cell is nudged toward the edge it hangs off; a
-    /// not-yet-rendered one is chased from the days that are rendered (later days sit to
-    /// the right), since the strip can be on a week either side of the target.
+    /// week on re-layout (e.g. after the add-record modal), and a day on another page
+    /// reports an off-screen or clipped frame. Reachability is judged from the cell's
+    /// `frame` versus the strip's viewport — never `.isHittable` or `.tap`, which hit-test
+    /// an off-page cell and hard-fail with "Activation point invalid…". A rendered-but-
+    /// clipped cell is nudged toward the edge it hangs off; a not-yet-rendered one is
+    /// chased from the days that are rendered (later days sit to the right), since the
+    /// strip can be on a week either side of the target.
     @discardableResult
     private func revealDayCell(offset: Int) -> XCUIElement {
         let strip = assertExists(element(AccessibilityID.calendarStrip))
@@ -86,10 +90,7 @@ final class CalendarUITests: HealthTrackerUITestCase {
             if cell.exists {
                 let cellFrame = cell.frame
                 let viewport = strip.frame
-                if cellFrame.width > 1,
-                   cellFrame.minX >= viewport.minX - 0.5,
-                   cellFrame.maxX <= viewport.maxX + 0.5
-                {
+                if isOnVisiblePage(cellFrame, viewport: viewport) {
                     return cell // fully on the visible page → safe to tap
                 }
                 if cellFrame.midX > viewport.midX {
@@ -104,6 +105,30 @@ final class CalendarUITests: HealthTrackerUITestCase {
             }
         }
         return cell
+    }
+
+    /// Whether a cell's frame lies fully inside the strip's viewport. A lazy stack also renders the
+    /// cells of the pages next to the visible one, so existing is not the same as being shown.
+    private func isOnVisiblePage(_ cellFrame: CGRect, viewport: CGRect) -> Bool {
+        cellFrame.width > 1
+            && cellFrame.minX >= viewport.minX - 0.5
+            && cellFrame.maxX <= viewport.maxX + 0.5
+    }
+
+    /// Waits, without swiping, until the cell is on the strip's visible page.
+    private func assertOnVisiblePage(_ cell: XCUIElement, timeout: TimeInterval = 5,
+                                     file: StaticString = #filePath, line: UInt = #line)
+    {
+        let strip = element(AccessibilityID.calendarStrip)
+        var lastSeen = "nothing"
+        let shown = waitUntil(timeout: timeout) {
+            guard let cellFrame = (try? cell.snapshot())?.frame,
+                  let viewport = (try? strip.snapshot())?.frame else { return false }
+            lastSeen = "\(cellFrame) in the strip's \(viewport)"
+            return isOnVisiblePage(cellFrame, viewport: viewport)
+        }
+        XCTAssertTrue(shown, "Expected \(cell) on the strip's visible page, last saw \(lastSeen)",
+                      file: file, line: line)
     }
 
     /// The offset of one day cell the strip currently renders (they are contiguous, so any
