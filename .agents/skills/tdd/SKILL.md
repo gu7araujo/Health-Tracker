@@ -7,6 +7,10 @@ description: Test-driven development, the red → green loop. Use when writing o
 
 TDD is the red → green loop from the root `AGENTS.md` **Workflow**. This skill is the reference that makes each cycle produce tests worth keeping. Every section applies on every cycle; consult it before and during the loop. The test suite's mechanics (Swift Testing, `Mocks/` knobs, `TestDataBuilder`, `subject_expectation` names, `@MainActor`) live in `HealthTrackerTests/AGENTS.md`; follow them.
 
+## Before the first red
+
+Workflow step 1 asks how you'll verify the change. When one unit test at an obvious seam answers it, start the loop. Read [`evidence-path.md`](evidence-path.md) first when it does not: a flaky or timing-dependent behaviour, a change that crosses layers or the app and intent boundary, a persisted-shape change, or anything visible only in the running app.
+
 ## Rules of the loop
 
 - **Red before green.** Write the test, run it, and watch it fail for the reason you expect. Then write only enough code to pass it. A bug fix starts red: a regression test that reproduces the bug.
