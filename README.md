@@ -277,7 +277,7 @@ Enabled by `scripts/bootstrap`. They live in `.githooks/`.
 - runs `scripts/fitness/persisted-shape-guard.sh origin/main`, which only warns (also with `SKIP_QUALITY=1`);
 - runs `scripts/quality --fast`, and blocks the push if a gate is red.
 
-Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). CI still runs the gate on every push to an open PR, drafts included, unless the PR touches only docs or agent config. Use it rarely, and run `--full` before marking the PR ready.
+Escape hatch: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). Use it in an emergency, or in a cloud session, which has no Xcode to run the gate. CI still runs the gate on every push to an open PR, drafts included, unless the PR touches only docs or agent config. Use it rarely, and run `--full` before marking the PR ready.
 
 ## Xcode build phase
 
@@ -332,7 +332,6 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 - "Done" means `scripts/quality --full` exits 0; for a change touching only docs or agent config (the `paths-ignore` list in `ci.yml`), `scripts/quality --fast`. Agents paste the gate table into their report and PR.
 - `.claude/settings.json` stops Claude Code from bypassing the gate. It denies:
   - `--no-verify` / `-n` and `git -c core.hooksPath`;
-  - `SKIP_QUALITY=`;
   - pushes to `main` and force-pushes;
   - `git reset --hard`;
   - `gh pr merge`.
