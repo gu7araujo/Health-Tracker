@@ -106,6 +106,19 @@ test_commit_with_staged_swift_deletion_succeeds() {
   git commit -q -m delete || { echo "deletion commit failed"; return 1; }
 }
 
+test_commit_formats_a_renamed_and_edited_swift_file() {
+  new_repo swift-rename
+  git switch -q -c feat/rename
+  cp "$FIXTURES/Formatted.swift.fixture" Greeter.swift && git add Greeter.swift
+  git commit -q -m add || { echo "first commit failed"; return 1; }
+  git mv Greeter.swift Welcomer.swift
+  printf 'let   spaced=1\n' >> Welcomer.swift && git add Welcomer.swift
+  [[ "$(git diff --cached --name-status)" == R* ]] || { echo "not staged as a rename: $(git diff --cached --name-status)"; return 1; }
+  git commit -q -m rename || { echo "rename commit failed"; return 1; }
+  [[ "$(git show HEAD:Welcomer.swift)" == *"let spaced = 1"* ]] ||
+    { echo "renamed file not formatted: $(git show HEAD:Welcomer.swift)"; return 1; }
+}
+
 test_commit_runs_doctor_but_only_warns() {
   new_repo doctor
   git switch -q -c feat/doctor
