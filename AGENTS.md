@@ -28,13 +28,13 @@ The core loop is **red → green**: write a failing test, then make it pass. Fol
 2. Write that test first and watch it fail (**red**). Every bug fix starts with a regression test that reproduces the bug.
 3. Implement the minimum code to pass it (**green**). On app or test code, then run the `simplify` skill over the diff.
 4. Run `scripts/quality --fast` and iterate until it exits 0, so review sees a diff that passes the gates.
-5. Review the diff in a fresh-context subagent, never in the session that wrote it: `reviewing` skill (passes by risk tier, rounds that converge).
-6. Run `scripts/quality --full` (`--fast` for a change touching only docs or agent config) and iterate until it exits 0: the bar for **done** ([Quality Gates](#quality-gates)).
+5. Review the diff in a fresh-context subagent, never in the session that wrote it: `reviewing` skill.
+6. Run `scripts/quality --full` and iterate until it exits 0: the bar for **done** ([Quality Gates](#quality-gates)).
 
-**Definition of done**, in every session, interactive or workflow: the final report and PR carry the evidence, each item that applies.
+**Definition of done**, in every session: the final report and PR carry the evidence, each item that applies.
 
 1. **Red**: the failing test's name and its failing assertion line, quoted.
-2. **Gate**: the table from the last `scripts/quality` run, after the last edit. A Stop hook sends the main session back, once per gate run, when Swift changed since the last green run's `build/quality.json`.
+2. **Gate**: the table from the last `scripts/quality` run, after the last edit.
 3. **Scenario**: for user-facing behaviour, the scenario checked in `en` and `pt-BR` (an AppIntentsTesting or UI test, or `device-interaction`).
 4. **Previews**: for an edited View, the `RenderPreview` snapshots `HealthTracker/Presentation/AGENTS.md` asks for.
 5. **Review**: each pass the `reviewing` skill's tier calls for (or why one was unavailable), with its findings and what became of each.
@@ -49,20 +49,14 @@ Keep every change **tight**:
 
 ### Delegating
 
-On a task spanning several files, layers or PRs, the main session is the **orchestrator**: it keeps the plan, the decisions and the thread with the user, and hands subagents any step it needs back only as a conclusion (a broad search, a long log, a review pass, an independent slice). Work needing the user's judgement or the conversation's history stays in the main session.
-
-- Run independent slices, or a staged pipeline (implement → review → verify), as a Workflow.
-- Brief each subagent as a cold start: the goal, the files, the constraints, its done-criterion, and the shape of the report to return. Write each skill it needs as a call in its first step (`Skill("tdd")` for an implementer, plus the skill the hooks require for the files it edits).
-- An implementer's report schema requires the definition of done as fields: `red_evidence` (test name plus failing assertion line), `green_evidence` (the gate table), `scenario` (the en and pt-BR check, for user-facing behaviour), `previews` (snapshots, when Views changed) and `skills_loaded`. The verify stage fails an implementer whose field is empty where it applies, and the PR body's "How verified" lists the skills that ran.
-- Agents working at the same time each take their own worktree in `.claude/worktrees/<branch-name>`, and at most two of them build or test at once: `parallel-agents` skill. Create a worktree only when the task requires it or the user asks.
+On a task spanning several files, layers or PRs, the main session is the **orchestrator**: it keeps the plan, the decisions and the thread with the user. Briefing a subagent or Workflow, and running several at once (at most two build or test): `parallel-agents` skill. An implementer's report carries the definition of done as fields (`red_evidence`, `green_evidence`, `scenario`, `previews`, `skills_loaded`); the verify stage fails one left empty where it applies.
 
 ## Building and Validating
 
 | Where | Build and test with |
 |---|---|
-| Main session, inner loop | Xcode MCP `BuildProject`, `RunSomeTests` |
-| Workflow subagent, any gate | `scripts/quality`, or the MCP per the `parallel-agents` skill |
-| `xcodebuild` (`cli-build`, `cli-test` skills) | Only after an MCP build or test call errors, quoting that error (a device or preview tool's doesn't count). MCP disconnected: ask the user to run `/mcp` |
+| Main session | Xcode MCP `BuildProject`, `RunSomeTests`. `xcodebuild` only as the `cli-build`, `cli-test` fallback. MCP disconnected: ask the user to run `/mcp` |
+| Workflow subagent | `scripts/quality`, or the MCP per `parallel-agents` |
 | Cloud session (Linux, no Xcode) | CI: push, dispatch and read it yourself (`quality-gate` skill, `CLOUD.md`); hand the user only what CI can't run |
 
 - The project uses `PBXFileSystemSynchronizedRootGroup`: adding or deleting a source file needs no `project.pbxproj` edit. A file under `HealthTracker/` that must stay out of the app bundle (an `AGENTS.md`) needs a `membershipExceptions` entry there.
@@ -86,7 +80,7 @@ A skill loads only when called: make each call below. Each layer's `AGENTS.md` n
 
 `scripts/quality` is the one gate: it prints a pass/fail table and exits 0 only when every gate passes. Reading its output, fixing a red gate, chasing coverage, the lint baseline and CI: `quality-gate` skill.
 
-- **Iterate** with `scripts/quality --fast` (format, lint, fitness, unit tests, unused code, Domain/Data coverage).
+- **Iterate** with `scripts/quality --fast`.
 - **Done** is `scripts/quality --full` exiting 0. A change touching only docs or agent config (the `paths-ignore` paths in `.github/workflows/ci.yml`) is done when `--fast` exits 0. Paste that run's gate table in your final report and PR.
 - **Fix a red gate in code or tests.** Lowering a threshold, editing `scripts/coverage-exceptions.txt` or `scripts/fitness/test-mirror-exceptions.txt`, adding a `swiftlint:disable` or `// periphery:ignore`, or regenerating `.swiftlint-baseline.json` to absorb a new violation is the user's call: propose it, and call each one out in the report and PR.
 - Hooks in `.claude/hooks/` format and lint each `.swift` file you Edit or Write, refuse Bash writes to one, refuse an edit to a View until `Skill("swiftui-specialist")`, or to a unit-test file until `Skill("swift-testing-expert:swift-testing-expert")`, has been called in that session or subagent, and name the doc, skill or runner a step needs; act on what they report.
