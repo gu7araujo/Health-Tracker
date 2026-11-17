@@ -108,7 +108,7 @@ All output is in `build/`, which git ignores:
 |---|---|
 | `build/xcodebuild.log` | Full xcodebuild output |
 | `build/Test.xcresult` | Result bundle: open it in Xcode to browse failures and coverage |
-| `build/quality.json` | One entry per gate (`name`, `value`, `threshold`, `passed`) |
+| `build/quality.json` | Top-level `mode` and `passed`, and a `gates[]` array with one entry per gate (`name`, `value`, `threshold`, `comparator`, `passed`) |
 
 Exit codes: `0` all gates passed, `1` a gate failed, `2` usage error.
 
