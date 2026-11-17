@@ -10,10 +10,17 @@ import XCTest
 /// inside the app `setUp` launched with `-uiTesting`, so they share its isolated store.
 /// Intents, enums, and raw values are addressed by their persisted names, so a rename fails here first.
 final class AppIntentsUITests: HealthTrackerUITestCase {
-    override func setUp() {
-        super.setUp()
+    /// Whether this run has warmed up its intents, or tried to: see `warmUpIntents()`.
+    private static var warmUpAttempted = false
+
+    override func setUp() async throws {
+        try await super.setUp()
         // In an async test a stop-on-failure kills the runner, and xcodebuild stalls on the restart
         continueAfterFailure = true
+        // Once per run: a warm-up that failed would fail the same way for every test
+        guard !Self.warmUpAttempted else { return }
+        Self.warmUpAttempted = true
+        try await warmUpIntents()
     }
 
     // MARK: - Write Intents
@@ -161,6 +168,36 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
         async throws -> ResolvedIntentResult
     {
         try await definitions.intents[intent].makeIntent.dynamicallyCall(withKeywordArguments: parameters).run()
+    }
+
+    /// On a freshly installed or erased simulator the system isn't ready for this app's intents: the first
+    /// calls fail with "… is not present" until it registers the app's metadata, then the first writes time out
+    /// at 30 s (`LNConnectionErrorDomain` 1014) for up to about a minute (#86). Retries one write on those two
+    /// errors until it succeeds, then relaunches so the test starts on a fresh store: a write that timed out may
+    /// still have saved. Any other error is a real failure and is thrown at once.
+    private func warmUpIntents() async throws {
+        let deadline = Duration.seconds(100)
+        let start = ContinuousClock.now
+        while true {
+            do {
+                try await run("LogWaterIntent", ["amount": 500])
+                break
+            } catch {
+                let notReady = [("AppIntentsServicesMetadataErrorDomain", 400), ("LNConnectionErrorDomain", 1014)]
+                    .contains { $0 == ((error as NSError).domain, (error as NSError).code) }
+                guard notReady else { throw error }
+                guard ContinuousClock.now - start < deadline else {
+                    throw IntentsNotReady(description: "App Intents service not ready after \(deadline): \(error)")
+                }
+                // A back-off between failed calls, not a UI wait: "not present" fails in milliseconds
+                try await Task.sleep(for: .seconds(1))
+            }
+        }
+        launchRetryingOnce { app.launch() }
+    }
+
+    private struct IntentsNotReady: Error, CustomStringConvertible {
+        let description: String
     }
 
     private func enumCase(_ type: String, _ rawValue: String) -> AnyAppEnum {
