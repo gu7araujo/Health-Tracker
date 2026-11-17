@@ -16,11 +16,17 @@ final class WaterMoodUITests: HealthTrackerUITestCase {
         scrollTo(slider)
         assertExists(slider).adjust(toNormalizedSliderPosition: 0.5)
 
-        let text = assertExists(element(AccessibilityID.waterValueLabel)).label
-        let value = Double(text.replacingOccurrences(of: " L", with: "")) ?? -1
+        // Read through snapshots: right after the drag one label query can outlast a 5 s wait on a
+        // loaded simulator, and a failed query records the test as failed (#80)
+        let label = element(AccessibilityID.waterValueLabel)
+        var text = ""
         // Normalized slider position is approximate on SwiftUI sliders (observed 2.0-2.6
         // for the midpoint) — assert the drag moved the value into the middle band
-        XCTAssertTrue((1.0 ... 4.0).contains(value), "Expected a mid-range water value, got: \(text)")
+        let midRange = waitUntil {
+            text = (try? label.snapshot())?.label ?? ""
+            return (1.0 ... 4.0).contains(Double(text.replacingOccurrences(of: " L", with: "")) ?? -1)
+        }
+        XCTAssertTrue(midRange, "Expected a mid-range water value, got: \(text.isEmpty ? "<no label>" : text)")
     }
 
     func testSelectMood() {
