@@ -46,7 +46,7 @@ case "\$1 \$2" in
   "--sdk iphonesimulator") echo "\${SDK_VERSION:-27.0}" ;;
   "xccov view") cat "$TMP/coverage.json" ;;
   "llvm-cov export") echo "\$*" >>"$TMP/llvm-cov.calls" && cat "$TMP/regions.json" ;;
-  "xcresulttool get") cat "$TMP/tests.json" ;;
+  "xcresulttool get") if [ -n "\${NO_RESULT:-}" ]; then echo '{"testNodes":[]}'; elif [ -e "\${6:-}/runner-error" ]; then cat "$FIX/test-results-runner-error.json"; else cat "$TMP/tests.json"; fi ;;
   "simctl shutdown") echo "\$*" >>"$TMP/simctl.calls" ;;
   "simctl clone") echo "\$*" >>"$TMP/clone.calls" && echo CLONED-UDID ;;
   "simctl bootstatus") echo "\$*" >>"$TMP/boot.calls" ;;
@@ -55,11 +55,26 @@ case "\$1 \$2" in
 esac
 EOF
 # xcodebuild: prints $XCODEBUILD_ERROR when set; blocks while $TMP/hold exists (a run caught mid-build); the unit run writes the profile and the app binary ($APP_BINARY, unless $NO_PROFILE);
-# the UI run replaces the profile, so the region rows must read it in between.
+# the UI run replaces the profile, so the region rows must read it in between. Like the real one, it refuses an
+# existing -resultBundlePath. While \$TMP/runner-error.<bundle> holds N > 0, the next N runs of <bundle> never reach
+# the test runner, logged and reported as in #111: a "System Failures" case, and no error: line.
 cat >"$TMP/bin/xcodebuild" <<EOF
 #!/bin/sh
 echo "\$*" >>"$TMP/xcodebuild.calls"
 [ -z "\$XCODEBUILD_ERROR" ] || echo "\$XCODEBUILD_ERROR"
+result="\$(echo "\$*" | sed -n 's/.*-resultBundlePath \([^ ]*\).*/\1/p')"
+bundle="\$(echo "\$*" | sed -n 's/.*-only-testing:\([^ ]*\).*/\1/p')"
+if [ -n "\$result" ]; then
+  [ ! -e "\$result" ] || { echo "error: Existing file at -resultBundlePath \"\$result\""; exit 70; }
+  mkdir -p "\$result"
+  left="\$(cat "$TMP/runner-error.\$bundle" 2>/dev/null || echo 0)"
+  if [ "\$left" -gt 0 ]; then
+    echo \$((left - 1)) >"$TMP/runner-error.\$bundle"
+    touch "\$result/runner-error"
+    printf 'Testing failed:\n\t%s-Runner encountered an error (Failed to establish communication with the test runner.)\n' "\$bundle"
+    exit 65
+  fi
+fi
 while [ -e "$TMP/hold" ]; do sleep 0.1; done
 app=build/DerivedData/Build/Products/Debug-iphonesimulator/HealthTracker.app
 case "\$*" in
@@ -98,6 +113,7 @@ periphery_stub 0
 # in $TMP so a real gate running on this Mac never holds the test up.
 gate() {
   (cd "$1" && PATH="$TMP/bin:$PATH" SIMULATOR_ID=SHARED-UDID CI="${CI_ENV:-}" GITHUB_ACTIONS="${GHA:-}" \
+    QUALITY_RERUN_DEADLINE="${RERUN_DEADLINE:-}" \
     QUALITY_LOCK="${LOCK_PATH:-$TMP/quality.lock}" QUALITY_LOCK_POLL=0.1 "$1/scripts/quality" "${@:2}")
 }
 
@@ -245,6 +261,80 @@ grep -q -- '--output-path build/Test.xcresult build/Unit.xcresult build/UI.xcres
   fail "app coverage should merge the unit, UI and intents runs, got: $(cat "$TMP/merge.calls")"
 [[ "$out" == *"HealthTrackerIntentsUITests on simulator CLONED-UDID"* ]] ||
   fail "should log the simulator the intents run uses, got: $out"
+# A hung test fails alone instead of eating the CI step: the UI and intents runs bound each test case
+# (#109). The unit run, where no test has hung, keeps xcodebuild's defaults.
+for bundle in HealthTrackerUITests HealthTrackerIntentsUITests; do
+  grep -q -- "-only-testing:$bundle .*-test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 180" \
+    "$TMP/xcodebuild.calls" || fail "the $bundle run should bound each test to 180 s, got: $(cat "$TMP/xcodebuild.calls")"
+done
+! grep -q -- '-only-testing:HealthTrackerTests .*-test-timeouts-enabled' "$TMP/xcodebuild.calls" ||
+  fail "the unit run should keep xcodebuild's test timeouts, got: $(cat "$TMP/xcodebuild.calls")"
+
+# A UI bundle whose only failures are the test runner's own ("System Failures": it never connected, #111)
+# is run once more. A bundle with a failing test case, or with no result at all (a build failure), is not.
+for pair in "HealthTrackerUITests:UI tests" "HealthTrackerIntentsUITests:Intents UI tests"; do
+  bundle="${pair%%:*}"
+  name="${pair#*:}"
+  : >"$TMP/xcodebuild.calls"
+  echo 1 >"$TMP/runner-error.$bundle"
+  # A previous run's first attempt is cleared, never mixed into this run's evidence.
+  mkdir -p "$REPO/build/${name%% *}.attempt1.xcresult/stale"
+  run_quality '[]' --full
+  [ ! -e "$REPO/build/${name%% *}.attempt1.xcresult/stale" ] ||
+    fail "a previous run's $bundle first attempt should be cleared"
+  grep -qE "^$name +0  <= 0 +✓\$" <<<"$out" || fail "a $bundle run that connects on the rerun should pass its row, got: $out"
+  [ "$(grep -c -- "-only-testing:$bundle " "$TMP/xcodebuild.calls")" -eq 2 ] ||
+    fail "a $bundle run that never reached its runner should be rerun once, got: $(cat "$TMP/xcodebuild.calls")"
+  runner_error="$bundle-Runner encountered an error: Failed to establish communication with the test runner."
+  grep -qF "$name: reran once after: $runner_error" <<<"$out" ||
+    fail "the details should name the $bundle rerun and why, got: $out"
+  ! grep -qF "$name: $runner_error" <<<"$out" || fail "a runner error the rerun absorbed is not a test failure, got: $out"
+  [[ "$out" != *"::warning::"* ]] || fail "outside GitHub Actions the rerun should not print an annotation, got: $out"
+  [ -e "$REPO/build/${name%% *}.attempt1.xcresult/runner-error" ] ||
+    fail "the first $bundle attempt's result bundle should be kept"
+  # On GitHub Actions the rerun is also an annotation, so a flake the rerun absorbed still shows on the run.
+  echo 1 >"$TMP/runner-error.$bundle"
+  GHA=true run_quality '[]' --full
+  grep -qF "::warning::$name: reran once after: $runner_error" <<<"$out" ||
+    fail "on GitHub Actions the $bundle rerun should be a warning annotation, got: $out"
+  : >"$TMP/xcodebuild.calls"
+  echo 2 >"$TMP/runner-error.$bundle"
+  run_quality '[]' --full
+  [ "$(grep -c -- "-only-testing:$bundle " "$TMP/xcodebuild.calls")" -eq 2 ] ||
+    fail "a $bundle run that fails to connect twice should not be rerun again, got: $(cat "$TMP/xcodebuild.calls")"
+  grep -qE "^$name +1  <= 0 +✗\$" <<<"$out" || fail "a $bundle run that fails to connect twice should fail its row, got: $out"
+  grep -qF "$name: $runner_error" <<<"$out" || fail "the second runner error should be listed as a failure, got: $out"
+  rm -f "$TMP/runner-error.$bundle"
+done
+# Past the rerun deadline (counted from the first test run) a rerun could outlast the CI step and lose
+# the whole table, so the bundle keeps its failure and the details say why.
+: >"$TMP/xcodebuild.calls"
+echo 1 >"$TMP/runner-error.HealthTrackerUITests"
+RERUN_DEADLINE=0 run_quality '[]' --full
+[ "$(grep -c -- '-only-testing:HealthTrackerUITests ' "$TMP/xcodebuild.calls")" -eq 1 ] ||
+  fail "past the rerun deadline the UI run should not be rerun, got: $(cat "$TMP/xcodebuild.calls")"
+grep -qE '^UI tests: not rerun: [0-9]+ min into the tests, past the 0 min rerun deadline$' <<<"$out" ||
+  fail "the details should say why the UI run was not rerun, got: $out"
+rm -f "$TMP/runner-error.HealthTrackerUITests"
+# The unit run is never rerun.
+: >"$TMP/xcodebuild.calls"
+echo 1 >"$TMP/runner-error.HealthTrackerTests"
+run_quality '[]' --full
+[ "$(grep -c -- '-only-testing:HealthTrackerTests ' "$TMP/xcodebuild.calls")" -eq 1 ] ||
+  fail "a unit run that never reached its runner should not be rerun, got: $(cat "$TMP/xcodebuild.calls")"
+rm -f "$TMP/runner-error.HealthTrackerTests"
+# No result at all (a build failure) is not rerun: running it again would fail the same way.
+: >"$TMP/xcodebuild.calls"
+NO_RESULT=1 run_quality '[]' --full
+[ "$(grep -c -- '-only-testing:HealthTrackerUITests ' "$TMP/xcodebuild.calls")" -eq 1 ] ||
+  fail "a UI run with no result should not be rerun, got: $(cat "$TMP/xcodebuild.calls")"
+cp "$TMP/tests.json" "$TMP/tests.passing.json"
+cp "$FIX/test-results.json" "$TMP/tests.json"
+: >"$TMP/xcodebuild.calls"
+run_quality '[]' --full
+[ "$(grep -c -- '-only-testing:HealthTrackerUITests ' "$TMP/xcodebuild.calls")" -eq 1 ] ||
+  fail "a UI run with a failing test should not be rerun, got: $(cat "$TMP/xcodebuild.calls")"
+mv "$TMP/tests.passing.json" "$TMP/tests.json"
 # --fast never needs it.
 : >"$TMP/clone.calls"
 run_quality '[]' --fast

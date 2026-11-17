@@ -34,6 +34,19 @@ MainViewUITests/testParameterized(_:): MainViewUITests.swift:70: nested failure"
 out="$("$FAILURES" "$FIX" HealthTrackerTests --list 2>&1)"
 [ -z "$out" ] || fail "--list of a passing bundle should print nothing, got [$out]"
 
+# --system lists only the failed cases in a "System Failures" suite, the test runner's own errors
+# (#111: "Failed to establish communication with the test runner"), in --list's format.
+RUNNER="$ROOT/scripts/tests/fixtures/quality/test-results-runner-error.json"
+out="$("$FAILURES" "$RUNNER" HealthTrackerUITests --system 2>&1)"
+expected="HealthTrackerUITests-Runner encountered an error: Failed to establish communication with the test runner. (Underlying Error: Channel disconnected)"
+[ "$out" = "$expected" ] || fail "--system: expected [$expected], got [$out]"
+[ "$("$FAILURES" "$RUNNER" MixedTests)" = 2 ] || fail "a runner error should count as a failed case"
+out="$("$FAILURES" "$RUNNER" MixedTests --system 2>&1)"
+[ "$out" = "MixedTests-Runner encountered an error: Failed to establish communication with the test runner. (Underlying Error: Channel disconnected)" ] ||
+  fail "--system should leave out a test's own crash, got [$out]"
+out="$("$FAILURES" "$FIX" HealthTrackerUITests --system 2>&1)"
+[ -z "$out" ] || fail "--system of a bundle without runner errors should print nothing, got [$out]"
+
 out="$("$FAILURES" /nonexistent HealthTrackerTests 2>/dev/null)"
 [ -z "$out" ] || fail "missing report should print nothing, got [$out]"
 
