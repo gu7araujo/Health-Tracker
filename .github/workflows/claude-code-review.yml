@@ -65,12 +65,13 @@ jobs:
           # or https://code.claude.com/docs/en/cli-reference for available options
 
       # The action logs a run's counts but hides the model's closing text, so a run that stopped early
-      # looked like one that passed (#62). Prints the result message's turn and denial counts and the
-      # closing text only: tool results can hold secrets, and this repo's job logs are public.
+      # looked like one that passed (#62). Prints the result message's turn and denial counts, each
+      # denied tool once (for Bash, the first three plain words of the command, so the allowlist can name
+      # it) and the closing text only: tool results can hold secrets, and this repo's job logs are public.
       - name: Review outcome
         if: always() && steps.claude-review.outputs.execution_file != ''
         shell: bash
         env:
           EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
-        run: jq -r '.[] | select(.type == "result") | "turns=\(.num_turns) denials=\(.permission_denials // [] | length)\n\(.result // "")"' "$EXECUTION_FILE"
+        run: jq -r '.[] | select(.type == "result") | (.permission_denials // []) as $d | "turns=\(.num_turns) denials=\($d | length)", ($d | map(.tool_name + if .tool_name == "Bash" then "(\(.tool_input.command // "" | split(" ") | map(select(test("^[A-Za-z0-9_./:-]+$"))) | .[:3] | join(" ")))" else "" end) | unique | select(length > 0) | "denied=\(join(","))"), (.result // "")' "$EXECUTION_FILE"
 

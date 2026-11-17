@@ -218,15 +218,15 @@ grep -qxF -- "$REVIEW_PROMPT" <<<"$(sed 's/^ *//; s/ *$//' "$WORKFLOWS/claude-co
   fail "claude-code-review.yml: the review prompt must name the root AGENTS.md and the UI test rules' reach, and ask for every step on every open PR"
 # The action logs a run's counts but hides the model's closing text, so a run that stopped early
 # looked like one that passed (#62): right after the review, a step prints the result message's turn
-# count, denial count and closing text, and nothing else from the run (tool results can hold secrets
-# on this public repo).
+# count, denial count, denied tools and closing text, and nothing else from the run (tool results can
+# hold secrets on this public repo).
 OUTCOME_STEP="$(
   cat <<'EOF'
 if: always() && steps.claude-review.outputs.execution_file != ''
 shell: bash
 env:
 EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
-run: jq -r '.[] | select(.type == "result") | "turns=\(.num_turns) denials=\(.permission_denials // [] | length)\n\(.result // "")"' "$EXECUTION_FILE"
+run: jq -r '.[] | select(.type == "result") | (.permission_denials // []) as $d | "turns=\(.num_turns) denials=\($d | length)", ($d | map(.tool_name + if .tool_name == "Bash" then "(\(.tool_input.command // "" | split(" ") | map(select(test("^[A-Za-z0-9_./:-]+$"))) | .[:3] | join(" ")))" else "" end) | unique | select(length > 0) | "denied=\(join(","))"), (.result // "")' "$EXECUTION_FILE"
 EOF
 )"
 review="$(awk '/^ *- name: Run Claude Code Review *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$review_steps")"
@@ -235,14 +235,20 @@ outcome="$(awk '/^ *- name: Review outcome *$/ { found = 1; next } found && /^ *
 grep -qE '^ *id: claude-review *$' <<<"$review" &&
   [[ "$after_review" =~ ^\ *-\ name:\ Review\ outcome\ *$ ]] &&
   [ "$(sed 's/^ *//; s/ *$//' <<<"$outcome" | grep -vE '^(#|$)')" = "$OUTCOME_STEP" ] ||
-  fail "claude-code-review.yml: a 'Review outcome' step right after the review (id: claude-review) must print only the result's turns, denials and text"
+  fail "claude-code-review.yml: a 'Review outcome' step right after the review (id: claude-review) must print only the result's turns, denials, denied tools and text"
 # The step's command, run on an execution file shaped like the action's (raw SDK messages, whose
-# result carries a permission_denials array), prints the counts and the closing text.
+# result carries a permission_denials array), prints the counts, the denied tools and the closing
+# text. The count alone left #112's and #118's denials unexplained (#62): each denied tool prints
+# once, a Bash one with the first three words of its command that are plain names or paths (no env
+# assignment, no $variable).
 outcome_run="$(sed -nE 's/^ *run: //p' <<<"$outcome")"
 sample="$(mktemp)"
-printf '%s' '[{"type":"system"},{"type":"result","num_turns":3,"permission_denials":[{"tool_name":"Read"}],"result":"Stopped: closed."}]' >"$sample"
-[ -z "$outcome_run" ] || [ "$(EXECUTION_FILE="$sample" bash -c "$outcome_run" 2>&1)" = $'turns=3 denials=1\nStopped: closed.' ] ||
-  fail "claude-code-review.yml: the 'Review outcome' step must print 'turns=N denials=N' and the closing text from the raw result message"
+printf '%s' '[{"type":"system"},{"type":"result","num_turns":3,"permission_denials":[{"tool_name":"Read","tool_input":{"file_path":"/etc/hosts"}},{"tool_name":"Bash","tool_input":{"command":"TOKEN=x gh pr view 118"}},{"tool_name":"Read"}],"result":"Stopped: closed."}]' >"$sample"
+[ -z "$outcome_run" ] || [ "$(EXECUTION_FILE="$sample" bash -c "$outcome_run" 2>&1)" = $'turns=3 denials=3\ndenied=Bash(gh pr view),Read\nStopped: closed.' ] ||
+  fail "claude-code-review.yml: the 'Review outcome' step must print 'turns=N denials=N', each denied tool and the closing text from the raw result message"
+printf '%s' '[{"type":"result","num_turns":9,"permission_denials":[],"result":"No issues found."}]' >"$sample"
+[ -z "$outcome_run" ] || [ "$(EXECUTION_FILE="$sample" bash -c "$outcome_run" 2>&1)" = $'turns=9 denials=0\nNo issues found.' ] ||
+  fail "claude-code-review.yml: the 'Review outcome' step must print no denied= line when nothing was denied"
 rm -f "$sample"
 # The action reads only the session's first result, and the review ran its agents in the background:
 # the session ended at "I'll wait for their results" with nothing reviewed (#62, PR #107's run). The
@@ -358,9 +364,13 @@ if [ $# -eq 0 ]; then
   must "FAIL: claude-code-review.yml: the review prompt must name the root AGENTS.md"
   fixture review-outcome 1
   must "FAIL: claude-code-review.yml: a 'Review outcome' step right after the review"
-  fixture review-denials 2
+  fixture review-denials 3
   must "FAIL: claude-code-review.yml: a 'Review outcome' step right after the review"
   must "FAIL: claude-code-review.yml: the 'Review outcome' step must print 'turns=N denials=N'"
+  must "FAIL: claude-code-review.yml: the 'Review outcome' step must print no denied= line"
+  fixture review-denied-tools 2
+  must "FAIL: claude-code-review.yml: a 'Review outcome' step right after the review"
+  must "FAIL: claude-code-review.yml: the 'Review outcome' step must print 'turns=N denials=N', each denied tool"
   fixture review-background 1
   must "FAIL: claude-code-review.yml: the review step needs env CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'"
   fixture review-background-alias 0
