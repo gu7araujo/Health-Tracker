@@ -4,8 +4,8 @@
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
 # wiring, the test job's PR filter, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
 # test-step parity, the weekly failure issue, the simulator runtime step, step and job timeouts,
-# action pinning, valid YAML, the Claude review's one granted tool, its --setting-sources user (no
-# in-repo settings), its CLAUDE.md copies, prompt and outcome step.
+# action pinning, valid YAML, the Claude review's one granted tool, its claude_args'
+# --setting-sources user, its CLAUDE.md copies, prompt and outcome step.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
 # checks on scripts/tests/fixtures/ci-workflows to prove they still catch what they are for).
 set -uo pipefail
@@ -359,6 +359,7 @@ if [ $# -eq 0 ]; then
   must "FAIL: claude-code-review.yml: claude_args needs --setting-sources user"
   fixture review-settings-list 2
   must "FAIL: claude-code-review.yml: claude_args needs --setting-sources user"
+  must "FAIL: claude-code-review.yml: claude_args needs an --allowedTools list"
   fixture review-copy 1
   must "FAIL: claude-code-review.yml: a 'CLAUDE.md for the review' step must copy"
   fixture review-copy-command 1
