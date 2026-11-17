@@ -65,12 +65,15 @@ jobs:
           # or https://code.claude.com/docs/en/cli-reference for available options
 
       # The action logs a run's counts but hides the model's closing text, so a run that stopped early
-      # looked like one that passed (#62). Prints the result message's turn and denial counts and the
-      # closing text only: tool results can hold secrets, and this repo's job logs are public.
+      # looked like one that passed (#62), and a run that failed before its first API call showed only
+      # is_error:true (#32, PR #29). Prints the result message's subtype, is_error, turn and denial
+      # counts, then its closing text (an API error's message when is_error) and its errors list (the
+      # reason of an error_* subtype). Nothing else: tool results can hold secrets, and this repo's job
+      # logs are public.
       - name: Review outcome
         if: always() && steps.claude-review.outputs.execution_file != ''
         shell: bash
         env:
           EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
-        run: jq -r '.[] | select(.type == "result") | "turns=\(.num_turns) denials=\(.permission_denials // [] | length)\n\(.result // "")"' "$EXECUTION_FILE"
+        run: jq -r '.[] | select(.type == "result") | "subtype=\(.subtype) is_error=\(.is_error // false) turns=\(.num_turns) denials=\(.permission_denials // [] | length)", (.result // empty), (.errors // [])[]' "$EXECUTION_FILE"
 
