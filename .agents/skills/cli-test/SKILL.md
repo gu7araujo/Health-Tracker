@@ -42,7 +42,7 @@ xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<i
 
 # A single file or test
 xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerTests/DayDataTests | xcbeautify
-xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerUITests/CalendarUITests/testTodaySelectedOnLaunchAndEmptyStates | xcbeautify
+xcodebuild test -scheme HealthTracker -destination 'platform=iOS Simulator,id=<simulator-id>' -only-testing:HealthTrackerUITests/CalendarUITests/testLaunchStateAndDataIsolatedPerDay | xcbeautify
 ```
 
 **Done when:** the run reports `Test Succeeded` with zero failures. The bar for a task being done is `scripts/quality --full` exiting 0, or `--fast` for a change touching only docs or agent config (`paths-ignore` in `.github/workflows/ci.yml`; `quality-gate` skill).
