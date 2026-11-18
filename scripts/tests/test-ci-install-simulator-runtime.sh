@@ -31,6 +31,7 @@ EOF
 cat >"$TMP/bin/xcodebuild" <<EOF
 #!/bin/sh
 echo "xcodebuild \$*" >>"$TMP/calls"
+printf 'Downloading iOS 27.2 Simulator (%s) (arm64): 42.0%% (1.2 GB of 8.3 GB)\nDownloading iOS 27.2 Simulator (%s) (arm64): Done.\n' "\$4" "\$4"
 [ -z "\$DOWNLOAD_FAILS" ] || exit 70
 cp "\$AFTER_RUNTIMES" "$TMP/runtimes.json"
 EOF
@@ -68,24 +69,30 @@ runtimes "$TMP/ten.json" iOS-27-10:27.10:true
 install "$TMP/ten.json"
 [ "$code" -eq 0 ] && [ ! -s "$TMP/calls" ] || fail "an iOS 27.10 runtime should meet SDK 27.2, got $code: $(cat "$TMP/calls")"
 
-# Missing (only older, device-specific or unavailable ones): download, check again, exit 0.
+# Missing (only older, device-specific or unavailable ones): download only the pinned generic
+# runtime (IOS_RUNTIME_BUILD), check again, exit 0.
+DOWNLOAD="xcodebuild -downloadPlatform iOS -buildVersion $IOS_RUNTIME_BUILD"
 install "$TMP/before.json"
 [ "$code" -eq 0 ] || fail "a successful download should exit 0 (got $code): $out"
-[ "$(cat "$TMP/calls")" = "xcodebuild -downloadPlatform iOS" ] ||
-  fail "should run xcodebuild -downloadPlatform iOS and nothing else, got: $(cat "$TMP/calls")"
+[ "$(cat "$TMP/calls")" = "$DOWNLOAD" ] ||
+  fail "should run $DOWNLOAD and nothing else, got: $(cat "$TMP/calls")"
 [[ "$out" == *"27.2"* ]] || fail "should say which iOS version it downloads, got: $out"
+# xcodebuild's progress lines (hundreds per download) are dropped; the rest of its output stays.
+[[ "$out" != *"%"* ]] || fail "should drop the download's progress lines, got: $out"
+[[ "$out" == *"($IOS_RUNTIME_BUILD) (arm64): Done."* ]] || fail "should keep xcodebuild's other lines, got: $out"
 
 # The new runtime has no SIMULATOR_DEVICE (scripts/lib/simulator.sh clones from one): create it.
 install "$TMP/before.json" '{"devices":{"com.apple.CoreSimulator.SimRuntime.iOS-27-0":[{"name":"'"$SIMULATOR_DEVICE"'","udid":"OLD","state":"Shutdown"}]}}'
 [ "$code" -eq 0 ] || fail "creating the device should exit 0 (got $code): $out"
-[ "$(cat "$TMP/calls")" = "$(printf 'xcodebuild -downloadPlatform iOS\nsimctl create %s %s com.apple.CoreSimulator.SimRuntime.iOS-27-2' "$SIMULATOR_DEVICE" "$SIMULATOR_DEVICE")" ] ||
+[ "$(cat "$TMP/calls")" = "$(printf '%s\nsimctl create %s %s com.apple.CoreSimulator.SimRuntime.iOS-27-2' "$DOWNLOAD" "$SIMULATOR_DEVICE" "$SIMULATOR_DEVICE")" ] ||
   fail "should create a $SIMULATOR_DEVICE on iOS 27.2, got: $(cat "$TMP/calls")"
 
 # Still missing after the download (it fetched an older runtime): exit 1, naming the version.
 AFTER="$TMP/before.json" install "$TMP/before.json"
 [ "$code" -eq 1 ] || fail "still missing after the download should exit 1 (got $code)"
 [[ "$out" == *"error: "*"27.2"* ]] || fail "should name the missing iOS version, got: $out"
-[ "$(cat "$TMP/calls")" = "xcodebuild -downloadPlatform iOS" ] || fail "should not create a device, got: $(cat "$TMP/calls")"
+[[ "$out" == *"IOS_RUNTIME_BUILD"* ]] || fail "should point at the IOS_RUNTIME_BUILD pin, got: $out"
+[ "$(cat "$TMP/calls")" = "$DOWNLOAD" ] || fail "should not create a device, got: $(cat "$TMP/calls")"
 
 # The download itself fails: exit 1.
 DOWNLOAD_FAILS=1 install "$TMP/before.json"
