@@ -36,6 +36,7 @@ cat >"$TMP/simulators.json" <<'EOF'
  "com.apple.CoreSimulator.SimRuntime.iOS-27-1":[
   {"name":"iPhone Duo","udid":"DUO-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-Duo"}]}}
 EOF
+cp "$FIX/test-results-runner-error.json" "$TMP/runner-error.json"
 printf '{"testNodes":[{"name":"HealthTracker","nodeType":"Test Plan","result":"Passed","children":[{"name":"HealthTrackerTests","nodeType":"Unit test bundle","result":"Passed","children":[]},{"name":"HealthTrackerUITests","nodeType":"UI test bundle","result":"Passed","children":[]},{"name":"HealthTrackerIntentsUITests","nodeType":"UI test bundle","result":"Passed","children":[]}]}]}\n' >"$TMP/tests.json"
 
 mkdir -p "$TMP/bin"
@@ -46,7 +47,7 @@ case "\$1 \$2" in
   "--sdk iphonesimulator") echo "\${SDK_VERSION:-27.0}" ;;
   "xccov view") cat "$TMP/coverage.json" ;;
   "llvm-cov export") echo "\$*" >>"$TMP/llvm-cov.calls" && cat "$TMP/regions.json" ;;
-  "xcresulttool get") if [ -n "\${NO_RESULT:-}" ]; then echo '{"testNodes":[]}'; elif [ -e "\${6:-}/runner-error" ]; then cat "$FIX/test-results-runner-error.json"; else cat "$TMP/tests.json"; fi ;;
+  "xcresulttool get") if [ -n "\${NO_RESULT:-}" ]; then echo '{"testNodes":[]}'; elif [ -e "\${6:-}/runner-error" ]; then cat "$TMP/runner-error.json"; else cat "$TMP/tests.json"; fi ;;
   "simctl shutdown") echo "\$*" >>"$TMP/simctl.calls" ;;
   "simctl clone") echo "\$*" >>"$TMP/clone.calls" && echo CLONED-UDID ;;
   "simctl bootstatus") echo "\$*" >>"$TMP/boot.calls" ;;
@@ -293,7 +294,16 @@ grep -qxF "$retried_line" <<<"$out" || fail "the details should list the test th
   fail "quality.json should list the retried test, got: $(jq -c .retried "$REPO/build/quality.json")"
 GHA=true run_quality '[]' --full
 grep -qxF "::warning::$retried_line" <<<"$out" || fail "on GitHub Actions a retry should be a warning annotation, got: $out"
+# A retry in a first attempt that the runner error then sends to a bundle rerun stays listed.
+jq --slurpfile retried "$TMP/tests.json" '.testNodes[0].children |= map(if .name == "HealthTrackerUITests"
+    then .children += ($retried[0].testNodes[0].children[] | select(.name == "HealthTrackerUITests") | .children)
+    else . end)' "$FIX/test-results-runner-error.json" >"$TMP/runner-error.json"
 mv "$TMP/tests.passing.json" "$TMP/tests.json"
+echo 1 >"$TMP/runner-error.HealthTrackerUITests"
+run_quality '[]' --full
+grep -qxF "$retried_line" <<<"$out" || fail "a retry in a rerun bundle's first attempt should stay listed, got: $out"
+cp "$FIX/test-results-runner-error.json" "$TMP/runner-error.json"
+rm -f "$TMP/runner-error.HealthTrackerUITests"
 run_quality '[]' --full
 [ "$(jq -c .retried "$REPO/build/quality.json")" = "[]" ] ||
   fail "quality.json should list no retried test when none was, got: $(jq -c .retried "$REPO/build/quality.json")"
