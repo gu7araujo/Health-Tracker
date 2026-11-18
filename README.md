@@ -302,7 +302,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 
 **`ci-gate`** always runs last and fails when `changes`, `lint` or `test` failed or was cancelled; a skipped job (docs-only PRs, `test` on Dependabot's) is fine. It is the check the `main` ruleset requires: GitHub counts a skipped required job as passing, so requiring `lint` and `test` themselves would pass a PR whose `changes` job crashed.
 
-**Cost.** The repo is public, and GitHub Actions is free for public repositories on standard GitHub-hosted runners, macOS included (`xcode-27` is a standard-size image); only larger runners are billed. Measured run times: a PR's `--full` ~35 min, a push to `main` (`--fast`) ~10–14 min, the weekly `--full` ~35 min. To keep feedback fast:
+**Cost.** The repo is public, and GitHub Actions is free for public repositories on standard GitHub-hosted runners, macOS included (`xcode-27` is a standard-size image); only larger runners are billed. Measured run times: a PR's `--full` ~23–35 min, a push to `main` (`--fast`) ~10–14 min, the weekly `--full` ~23–35 min. To keep feedback fast:
 
 - the macOS job waits for the Linux `lint` job;
 - a new push to a PR cancels the run it replaces (runs on `main` are never cancelled);
