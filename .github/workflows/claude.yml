@@ -32,6 +32,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+          # Don't persist GITHUB_TOKEN's auth header: checkout keeps it in an includeIf'd
+          # credentials file that claude-code-action doesn't strip, and git sends it ahead of
+          # the Claude app token, so pushes would run as github-actions[bot] (contents: read)
+          # and fail with 403. The app token's pushes also trigger CI; GITHUB_TOKEN's don't.
+          persist-credentials: false
 
       - name: Run Claude Code
         id: claude
