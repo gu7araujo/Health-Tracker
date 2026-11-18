@@ -236,13 +236,18 @@ grep -qE '^ *id: claude-review *$' <<<"$review" &&
   [[ "$after_review" =~ ^\ *-\ name:\ Review\ outcome\ *$ ]] &&
   [ "$(sed 's/^ *//; s/ *$//' <<<"$outcome" | grep -vE '^(#|$)')" = "$OUTCOME_STEP" ] ||
   fail "claude-code-review.yml: a 'Review outcome' step right after the review (id: claude-review) must print only the result's turns, denials and text"
-# The step's command, run on an execution file shaped like the action's (raw SDK messages, whose
+# The step's command, run on execution files shaped like the action's (raw SDK messages, whose
 # result carries a permission_denials array), prints the counts and the closing text.
 outcome_run="$(sed -nE 's/^ *run: //p' <<<"$outcome")"
 sample="$(mktemp)"
 printf '%s' '[{"type":"system"},{"type":"result","num_turns":3,"permission_denials":[{"tool_name":"Read"}],"result":"Stopped: closed."}]' >"$sample"
 [ -z "$outcome_run" ] || [ "$(EXECUTION_FILE="$sample" bash -c "$outcome_run" 2>&1)" = $'turns=3 denials=1\nStopped: closed.' ] ||
   fail "claude-code-review.yml: the 'Review outcome' step must print 'turns=N denials=N' and the closing text from the raw result message"
+# A run that fails before its first API call (subtype success, is_error true, no usage, like PR #29's)
+# keeps the error in result, and the action logs only is_error: the step prints that text too (#32).
+printf '%s' '[{"type":"result","subtype":"success","is_error":true,"num_turns":1,"permission_denials":[],"result":"Invalid API key"}]' >"$sample"
+[ -z "$outcome_run" ] || [ "$(EXECUTION_FILE="$sample" bash -c "$outcome_run" 2>&1)" = $'turns=1 denials=0\nInvalid API key' ] ||
+  fail "claude-code-review.yml: the 'Review outcome' step must print a failed run's error text"
 rm -f "$sample"
 # The action reads only the session's first result, and the review ran its agents in the background:
 # the session ended at "I'll wait for their results" with nothing reviewed (#62, PR #107's run). The
@@ -371,9 +376,10 @@ if [ $# -eq 0 ]; then
   must "FAIL: claude-code-review.yml: the review prompt must name the root AGENTS.md"
   fixture review-outcome 1
   must "FAIL: claude-code-review.yml: a 'Review outcome' step right after the review"
-  fixture review-denials 2
+  fixture review-denials 3
   must "FAIL: claude-code-review.yml: a 'Review outcome' step right after the review"
   must "FAIL: claude-code-review.yml: the 'Review outcome' step must print 'turns=N denials=N'"
+  must "FAIL: claude-code-review.yml: the 'Review outcome' step must print a failed run's error text"
   fixture review-background 1
   must "FAIL: claude-code-review.yml: the review step needs env CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'"
   fixture review-background-alias 0
