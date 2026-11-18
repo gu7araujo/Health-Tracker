@@ -1,4 +1,4 @@
-# Must fail: no claude_args, so no --allowedTools list to check.
+# Must fail: no claude_args, so no --allowedTools list or --setting-sources to check.
 jobs:
   claude-review:
     if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository

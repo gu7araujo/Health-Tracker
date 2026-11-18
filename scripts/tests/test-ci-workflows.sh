@@ -4,8 +4,9 @@
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
 # wiring, the test job's PR filter, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
 # test-step parity, the weekly failure issue, the simulator runtime step, step and job timeouts,
-# action pinning, valid YAML, the Claude review's one granted tool, its CLAUDE.md copies, prompt and
-# outcome step, and the @claude job's owner check and checkout credentials.
+# action pinning, valid YAML, the Claude review's one granted tool, its claude_args'
+# --setting-sources user, its CLAUDE.md copies, prompt and outcome step, and the @claude job's owner
+# check and checkout credentials.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
 # checks on scripts/tests/fixtures/ci-workflows to prove they still catch what they are for).
 set -uo pipefail
@@ -176,7 +177,11 @@ grep -qxF "    if: github.event.pull_request.draft != true && github.event.pull_
 # The review's --allowedTools grants the inline-comment tool only (#62). Read, Grep and Glob already
 # run inside the checkout without a grant, and a bare one would let a prompt-injected PR comment read
 # outside it (the runner's environment, its token). The plugin grants its own gh commands.
-allowed="$(sed -nE "s/^ *claude_args: '--allowedTools \"([^\"]*)\"' *\$/\1/p" "$WORKFLOWS/claude-code-review.yml" | tr ',' '\n')"
+# --setting-sources user keeps the repo's .claude/settings.json allowlist out of the review (#90): the
+# action loads every source by default, and that allowlist runs PR-branch scripts with the tokens set.
+allowed="$(sed -nE "s/^ *claude_args: '(--setting-sources user )?--allowedTools \"([^\"]*)\"' *\$/\2/p" "$WORKFLOWS/claude-code-review.yml" | tr ',' '\n')"
+grep -qE "^ *claude_args: '--setting-sources user " "$WORKFLOWS/claude-code-review.yml" ||
+  fail "claude-code-review.yml: claude_args needs --setting-sources user, so the review loads no in-repo settings"
 if [ -z "$allowed" ]; then
   fail "claude-code-review.yml: claude_args needs an --allowedTools list"
 else
@@ -366,7 +371,13 @@ if [ $# -eq 0 ]; then
   fixture review-tools 2
   must "FAIL: claude-code-review.yml: --allowedTools grants Read beyond the inline-comment tool"
   must "FAIL: claude-code-review.yml: --allowedTools grants Edit beyond the inline-comment tool"
-  fixture review-args 1
+  fixture review-args 2
+  must "FAIL: claude-code-review.yml: claude_args needs an --allowedTools list"
+  must "FAIL: claude-code-review.yml: claude_args needs --setting-sources user"
+  fixture review-settings 1
+  must "FAIL: claude-code-review.yml: claude_args needs --setting-sources user"
+  fixture review-settings-list 2
+  must "FAIL: claude-code-review.yml: claude_args needs --setting-sources user"
   must "FAIL: claude-code-review.yml: claude_args needs an --allowedTools list"
   fixture review-copy 1
   must "FAIL: claude-code-review.yml: a 'CLAUDE.md for the review' step must copy"
