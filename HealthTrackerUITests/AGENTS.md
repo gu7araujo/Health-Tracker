@@ -25,7 +25,7 @@ Black-box and isolated — each test drives the shipping app through its accessi
 </rule_2>
 
 <rule_3>
-**WAIT, NEVER SLEEP** — selection, sheet dismissal, and swipe-action reveal all lag the action that triggers them. Gate the next step on `assertExists` / `assertNotExists` / `assertSelected`, which poll to a timeout. Never assert immediately after a tap and never insert a fixed delay. Enforced by SwiftLint rule `ui_tests_no_sleep`. XCTest's own waits (`waitForExistence`, `waitForNonExistence`, `XCTNSPredicateExpectation`, `XCTWaiter`, `wait(for:)`) give up on one slow accessibility query and fail with `Timed out while evaluating UI query`, and a bare `typeText` can run before the field holds focus; outside `Support/`, wait through the helpers above or `waitUntil`, and type through `enterText(_:into:)`. Enforced by SwiftLint rule `ui_tests_wait_through_support`.
+**WAIT, NEVER SLEEP** — selection, sheet dismissal, and swipe-action reveal all lag the action that triggers them. Gate the next step on `assertExists` / `assertNotExists` / `assertSelected`, which poll to a timeout. Never assert immediately after a tap and never insert a fixed delay. Enforced by SwiftLint rule `ui_tests_no_sleep`. XCTest's own waits (`waitForExistence`, `waitForNonExistence`, `XCTNSPredicateExpectation`, `XCTWaiter`, `wait(for:` on expectations or an element value) give up on one slow accessibility query and fail with `Timed out while evaluating UI query`, and a bare `typeText` can run before the field holds focus; outside `Support/`, wait through the helpers above or `waitUntil`, and type through `enterText(_:into:)`. Enforced by SwiftLint rule `ui_tests_wait_through_support`.
 </rule_3>
 
 <rule_4>

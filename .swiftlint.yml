@@ -97,7 +97,7 @@ custom_rules:
     name: "UI Tests Wait And Type Through Support"
     included: "/HealthTracker(Intents)?UITests/"
     excluded: "/HealthTrackerUITests/Support/"
-    regex: "\\b(waitForExistence|waitForNonExistence|XCTNSPredicateExpectation|XCTWaiter|typeText)\\b|\\bwait\\(for:"
+    regex: "\\b(waitForExistence|waitForNonExistence|XCTNSPredicateExpectation|XCTWaiter|typeText)\\b|\\bwait\\(for:(?!\\s*\\.[a-zA-Z])"
     match_kinds: [identifier, typeidentifier]
     message: "HealthTrackerUITests/AGENTS.md rule_3: wait with assertExists/assertNotExists/waitUntil and type with enterText(_:into:), which poll through snapshot()"
     severity: error

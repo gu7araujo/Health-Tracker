@@ -161,22 +161,24 @@ class HealthTrackerUITestCase: XCTestCase {
                    file: StaticString = #filePath, line: UInt = #line)
     {
         field.tap(withNumberOfTaps: taps, numberOfTouches: 1)
-        guard waitUntil({ hasKeyboardFocus(field) }) else {
-            XCTFail("Expected keyboard focus before typing: \(field)", file: file, line: line)
-            return
+        var attributeMissing = false
+        let focused = waitUntil {
+            guard let snapshot = (try? field.snapshot()) as? NSObject else { return false }
+            attributeMissing = !snapshot.responds(to: NSSelectorFromString(Self.keyboardFocusKey))
+            return attributeMissing || snapshot.value(forKey: Self.keyboardFocusKey) as? Bool == true
         }
-        field.typeText(text)
+        if attributeMissing {
+            XCTFail("Snapshots no longer expose \(Self.keyboardFocusKey); update enterText", file: file, line: line)
+        } else if focused {
+            field.typeText(text)
+        } else {
+            XCTFail("Expected keyboard focus before typing: \(field)", file: file, line: line)
+        }
     }
 
-    /// Reads the snapshot's `hasKeyboardFocus`, the attribute `typeText` checks: the public `hasFocus`
-    /// stays false on an iOS text field that holds the keyboard (seen on iOS 26.5 and 27.2). Should a
-    /// release drop that attribute, falls back to the keyboard being on screen.
-    private func hasKeyboardFocus(_ field: XCUIElement) -> Bool {
-        let key = "hasKeyboardFocus"
-        guard let snapshot = (try? field.snapshot()) as? NSObject else { return false }
-        guard snapshot.responds(to: NSSelectorFromString(key)) else { return isPresent(app.keyboards.firstMatch) }
-        return snapshot.value(forKey: key) as? Bool == true
-    }
+    /// The snapshot attribute `typeText` checks: the public `hasFocus` stays false on an iOS text field
+    /// that holds the keyboard (seen on iOS 26.5 and 27.2).
+    private static let keyboardFocusKey = "hasKeyboardFocus"
 
     // MARK: - Flow Helpers
 

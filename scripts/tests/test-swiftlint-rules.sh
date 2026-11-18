@@ -188,11 +188,13 @@ test_ui_tests_raw_waits_and_typing_fail() {
       '    app.textFields["x"].typeText("Rice")' \
       '    _ = XCTWaiter.wait(for: [], timeout: 1)' \
       '    wait(for: [], timeout: 1)' \
-      '    let pending: [XCTNSPredicateExpectation] = []' '}' '}'
+      '    let pending: [XCTNSPredicateExpectation] = []' \
+      '    wait(for: pending, timeout: 1)' \
+      '    _ = app.buttons["x"].wait(for: \.exists, toEqual: true, timeout: 1)' '}' '}'
     expect_violation ui_tests_wait_through_support "$file" || return 1
     # Lines flagged, not hits: the XCTWaiter line matches twice
     hits="$(lint "$file" | grep '(ui_tests_wait_through_support)' | cut -d: -f2 | sort -u | wc -l)"
-    [ "$hits" -eq 7 ] || { echo "expected 7 flagged lines in $file, got $hits"; return 1; }
+    [ "$hits" -eq 9 ] || { echo "expected 9 flagged lines in $file, got $hits"; return 1; }
     rm "$file"
   done
 }
@@ -203,8 +205,10 @@ test_ui_tests_raw_waits_in_support_and_comments_pass() {
     'func enterText(_ text: String, into field: XCUIElement) { field.typeText(text) }' \
     'func gone(_ element: XCUIElement) -> Bool { element.waitForNonExistence(timeout: 1) }'
   expect_clean HealthTrackerUITests/Support/Base.swift || return 1
+  # An app-state wait queries no element, so it stays allowed
   write HealthTrackerUITests/FlowTests.swift 'import XCTest' \
-    '// Type through enterText(_:into:), never typeText or waitForExistence.' 'let note = "waitForExistence"'
+    '// Type through enterText(_:into:), never typeText or waitForExistence.' 'let note = "waitForExistence"' \
+    'func foreground(app: XCUIApplication) -> Bool { app.wait(for: .runningForeground, timeout: 1) }'
   expect_clean HealthTrackerUITests/FlowTests.swift
 }
 

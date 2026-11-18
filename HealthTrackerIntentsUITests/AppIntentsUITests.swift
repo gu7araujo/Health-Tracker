@@ -216,7 +216,11 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
     {
         var text = ""
         if waitUntil({
-            text = (try? element.snapshot())?.label ?? ""
+            do {
+                text = try element.snapshot().label
+            } catch {
+                text = "<no snapshot: \(error.localizedDescription)>"
+            }
             return text.hasPrefix(prefix)
         }) { return }
         XCTFail("Expected a label starting with \(prefix), got: \(text)", file: file, line: line)
