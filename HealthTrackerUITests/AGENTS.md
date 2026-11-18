@@ -33,7 +33,7 @@ Black-box and isolated — each test drives the shipping app through its accessi
 </rule_4>
 
 <rule_5>
-**COMPOSE FLOWS FROM HELPERS** — build a scenario from the base-class flow helpers rather than re-scripting the modal tap-by-tap; a new flow that repeats across suites earns a helper on `HealthTrackerUITestCase`. UI tests are slow — each launches the app — so cover whole user journeys here and leave branch-level logic to `HealthTrackerTests`. Group related checks into one journey per launch, each phase in `XCTContext.runActivity(named:)` so a failure names its phase; keep a test separate when it can `XCTSkip`, which would skip every check merged into it. Adding a feature or fixing a bug ends green; see the root **Workflow** for the red → green loop and the UI-test commands.
+**COMPOSE FLOWS FROM HELPERS** — build a scenario from the base-class flow helpers rather than re-scripting the modal tap-by-tap; a new flow that repeats across suites earns a helper on `HealthTrackerUITestCase`. UI tests are slow — each launches the app — so cover whole user journeys here and leave branch-level logic to `HealthTrackerTests`. Group related checks into one journey per launch; in a journey of several phases, wrap each in `XCTContext.runActivity(named:)` so a failure names its phase; keep a test separate when it can `XCTSkip`, which would skip every check merged into it. Adding a feature or fixing a bug ends green; see the root **Workflow** for the red → green loop and the UI-test commands.
 </rule_5>
 
 <rule_6>

@@ -44,16 +44,7 @@ final class WorkoutFlowUITests: HealthTrackerUITestCase {
     }
 
     func testAddWorkoutWithWheelDurationAndIntensity() {
-        openAddModal(choosing: EnglishLabel.workoutOption)
-        let field = assertExists(app.textFields[AccessibilityID.workoutDescriptionField])
-        field.tap()
-        field.typeText("Bike")
-        // Intensity first: `scrollTo` swipes the sheet to reach its picker, and a swipe that lands on
-        // the duration wheel spins it, so wheels set before it would not keep their value
-        selectMenuOption(picker: AccessibilityID.intensityPicker, option: EnglishLabel.intensityHigh)
-        setDurationWheels(hours: 1, minutes: 15)
-        saveModal()
-
+        addWorkout(description: "Bike", hours: 1, minutes: 15, intensity: EnglishLabel.intensityHigh)
         let card = assertExists(element(AccessibilityID.workoutCard(0)))
         XCTAssertTrue(card.label.contains("Bike"))
         XCTAssertTrue(card.label.contains("Time: 1h15m"))
