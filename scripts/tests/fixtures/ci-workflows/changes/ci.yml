@@ -8,9 +8,12 @@ on:
     paths-ignore: ['**/*.md', '.agents/**', '.claude/skills/**', '.codex/**']
 jobs:
   changes:
+    outputs:
+      app: ${{ steps.detect.outputs.app }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/docs-only.sh
+      - run: git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/app-changes.sh
   lint:
     steps:
       # uses: foo/bar@v4 in a comment is not an action.
@@ -23,6 +26,8 @@ jobs:
         if: github.event_name == 'pull_request'
         run: scripts/fitness/persisted-shape-guard.sh HEAD^1
   test:
+    env:
+      MODE: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.app != 'false') && '--full' || '--fast' }}
     needs: lint
     if: >-
       (github.event_name != 'pull_request' || github.actor != 'dependabot[bot]')
