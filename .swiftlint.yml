@@ -86,6 +86,13 @@ custom_rules:
     match_kinds: [identifier]
     message: "HealthTrackerUITests/AGENTS.md rule_3: wait with assertExists/assertNotExists/assertSelected, never sleep"
     severity: error
+  intent_text_resolved_in_app:
+    name: "Intent Run-Time Text Is Resolved In The App"
+    included: "/HealthTracker/Presentation/Intents/.*\\.swift$"
+    regex: "(IntentDialog|needsValueError|requestValueDialog:)\\(?\\s*\""
+    excluded_match_kinds: [comment, doccomment]
+    message: "Presentation/Intents/AGENTS.md rule_5: build dialogs and prompts from a static that uses resolvedInApp, never a string literal"
+    severity: error
 
 excluded:
   - Pods

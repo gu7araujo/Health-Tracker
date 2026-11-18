@@ -162,6 +162,21 @@ test_ui_tests_sleep_in_comment_passes() {
   expect_clean HealthTrackerTests/HelperTests.swift
 }
 
+test_intent_text_literal_fails() {
+  local file=HealthTracker/Presentation/Intents/NewIntent.swift line
+  new_tree intent-text-fails
+  for line in 'let dialog = IntentDialog("intent_x")' 'func ask() throws { throw $a.needsValueError("x") }'; do
+    write "$file" "$line"
+    expect_violation intent_text_resolved_in_app "$file" || return 1
+  done
+}
+
+test_intent_text_from_static_passes() {
+  new_tree intent-text-passes
+  write HealthTracker/Presentation/Intents/NewIntent.swift 'let dialog = IntentDialog(Self.itemsPrompt)'
+  expect_clean HealthTracker/Presentation/Intents/NewIntent.swift
+}
+
 test_no_print_still_fails() {
   new_tree print
   write HealthTracker/Debug.swift 'func debug() { print("x") }'
@@ -171,7 +186,7 @@ test_no_print_still_fails() {
 test_rules_name_their_agents_rule() {
   local rule
   for rule in domain_no_ui_frameworks presentation_no_data_layer no_hardcoded_locale \
-    unit_tests_use_swift_testing ui_tests_no_testable_import ui_tests_no_sleep; do
+    unit_tests_use_swift_testing ui_tests_no_testable_import ui_tests_no_sleep intent_text_resolved_in_app; do
     grep -A8 "^  $rule:" "$ROOT/.swiftlint.yml" | grep -q 'AGENTS.md' ||
       { echo "$rule's message must name the AGENTS.md rule it enforces"; return 1; }
   done
