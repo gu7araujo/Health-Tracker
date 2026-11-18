@@ -56,7 +56,7 @@ scripts/quality --fast                  # 2. iterate: ~2 min
 git commit -m "..."                     # 3. pre-commit hook formats + lints staged Swift files, runs fitness checks and ShellCheck
 CI=true scripts/quality --full          # 4. ready check: ~8 min, the same bar CI uses
 git push -u origin feat/my-change       # 5. pre-push hook re-runs --fast; pushing to main is refused
-gh pr create --draft                    # 6. open as draft, mark ready when step 4 is green
+gh pr create                            # 6. open ready for review, once step 4 is green
 ```
 
 Every PR is reviewed and merged by hand. Auto-merge is off, and agents are not allowed to merge.
@@ -277,7 +277,7 @@ Enabled by `scripts/bootstrap`. They live in `.githooks/`.
 - runs `scripts/fitness/persisted-shape-guard.sh origin/main`, which only warns (also with `SKIP_QUALITY=1`);
 - runs `scripts/quality --fast`, and blocks the push if a gate is red.
 
-Escape hatch: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). Use it in an emergency, or in a cloud session, which has no Xcode to run the gate. CI still runs the gate on every push to an open PR, drafts included, unless the PR touches only docs or agent config. Use it rarely, and run `--full` before marking the PR ready.
+Escape hatch: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). Use it in an emergency, or in a cloud session, which has no Xcode to run the gate. CI still runs the gate on every push to an open PR, drafts included, unless the PR touches only docs or agent config. Use it rarely, and run `--full` before opening the PR.
 
 ## Xcode build phase
 
