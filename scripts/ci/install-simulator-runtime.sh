@@ -41,6 +41,7 @@ echo "No iOS $sdk+ simulator runtime installed; downloading it: ${download[*]}"
 id="$(runtime)"
 if [ -z "$id" ]; then
   echo "error: still no available iOS $sdk+ simulator runtime after ${download[*]}" >&2
+  echo "  IOS_RUNTIME_BUILD (scripts/tool-versions.env) must be a runtime build for Xcode $XCODE_VERSION's iOS $sdk" >&2
   exit 1
 fi
 if ! xcrun simctl list devices available -j |

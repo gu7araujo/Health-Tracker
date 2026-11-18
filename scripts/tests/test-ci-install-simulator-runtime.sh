@@ -91,6 +91,7 @@ install "$TMP/before.json" '{"devices":{"com.apple.CoreSimulator.SimRuntime.iOS-
 AFTER="$TMP/before.json" install "$TMP/before.json"
 [ "$code" -eq 1 ] || fail "still missing after the download should exit 1 (got $code)"
 [[ "$out" == *"error: "*"27.2"* ]] || fail "should name the missing iOS version, got: $out"
+[[ "$out" == *"IOS_RUNTIME_BUILD"* ]] || fail "should point at the IOS_RUNTIME_BUILD pin, got: $out"
 [ "$(cat "$TMP/calls")" = "$DOWNLOAD" ] || fail "should not create a device, got: $(cat "$TMP/calls")"
 
 # The download itself fails: exit 1.
