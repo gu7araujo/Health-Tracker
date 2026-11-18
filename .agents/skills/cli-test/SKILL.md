@@ -5,7 +5,7 @@ description: Run HealthTracker's unit and/or UI tests with xcodebuild, the fallb
 
 # Run HealthTracker tests from the CLI
 
-The fallback the runner table in root `AGENTS.md` (Building and Validating) allows. Pipe every command through `xcbeautify`.
+The fallback the runner table in root `AGENTS.md` (Building and Validating) allows: only after an Xcode MCP build or test call errors, quoting that error. A device or preview tool's error doesn't count. Pipe every command through `xcbeautify`.
 
 ## 1. Resolve a simulator id
 

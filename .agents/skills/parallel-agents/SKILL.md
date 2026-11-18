@@ -1,9 +1,20 @@
 ---
 name: parallel-agents
-description: Run several agents at once on HealthTracker, one per git worktree, without their Xcode builds, simulators and test runs colliding. Use when fanning work out to parallel agents or a Workflow, when working in a worktree, or when an Xcode MCP call fails with "Unknown workspace identifier" or "There is already a test running".
+description: Delegate HealthTracker work to subagents, and run several at once, one per git worktree, without their Xcode builds, simulators and test runs colliding. Use when handing a step to a subagent or Workflow, when fanning work out to parallel agents, when working in a worktree, or when an Xcode MCP call fails with "Unknown workspace identifier" or "There is already a test running".
 ---
 
 # Parallel agents
+
+## Delegating
+
+The orchestrating main session hands a subagent any step it needs back only as a conclusion: a broad search, a long log, a review pass, an independent slice. Work needing the user's judgement or the conversation's history stays in the main session.
+
+- Run independent slices, or a staged pipeline (implement → review → verify), as a Workflow.
+- Brief each subagent as a cold start: the goal, the files, the constraints, its done-criterion, and the shape of the report to return. Write each skill it needs as a call in its first step (`Skill("tdd")` for an implementer, plus the skill the hooks require for the files it edits).
+- In an implementer's report, `red_evidence` is the test name plus its failing assertion line, `green_evidence` the gate table, `scenario` the en and pt-BR check for user-facing behaviour, `previews` the snapshots when Views changed. The PR body's "How verified" lists the `skills_loaded`.
+- Create a worktree only when the task requires it or the user asks.
+
+## Running agents at once
 
 One agent per worktree (`.claude/worktrees/<branch-name>`), **at most two building or testing at once**; any further agents only read or edit until one of the two finishes. A third build exhausts the Mac's processes (`fork failed: resource temporarily unavailable`, after which every tool call fails). A single running Xcode serves every worktree's Xcode MCP calls concurrently, so parallel agents stay on the MCP. What they share is the hazard: Xcode's simulator-clone pool, the active run destination, and timestamp-named result files. Each step below keeps one of those from crossing between agents.
 
