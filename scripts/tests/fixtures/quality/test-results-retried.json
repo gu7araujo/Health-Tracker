@@ -1,0 +1,107 @@
+{
+  "testNodes": [
+    {
+      "name": "HealthTracker",
+      "nodeType": "Test Plan",
+      "result": "Passed",
+      "children": [
+        {
+          "name": "HealthTrackerUITests",
+          "nodeType": "UI test bundle",
+          "result": "Passed",
+          "children": [
+            {
+              "name": "MainViewUITests",
+              "nodeType": "Test Suite",
+              "result": "Passed",
+              "children": [
+                {
+                  "name": "testAddMeal()",
+                  "nodeIdentifier": "MainViewUITests/testAddMeal()",
+                  "nodeType": "Test Case",
+                  "result": "Passed",
+                  "details": "⚠️ Passed after 1 retry",
+                  "children": [
+                    {
+                      "name": "First Run",
+                      "nodeIdentifier": "1",
+                      "nodeType": "Repetition",
+                      "result": "Failed",
+                      "children": [
+                        {
+                          "name": "MainViewUITests.swift:42: Timed out while evaluating UI query",
+                          "nodeType": "Failure Message"
+                        }
+                      ]
+                    },
+                    { "name": "Retry 1", "nodeIdentifier": "2", "nodeType": "Repetition", "result": "Passed" }
+                  ]
+                },
+                {
+                  "name": "testAddWater()",
+                  "nodeIdentifier": "MainViewUITests/testAddWater()",
+                  "nodeType": "Test Case",
+                  "result": "Passed"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "MixedTests",
+          "nodeType": "UI test bundle",
+          "result": "Failed",
+          "children": [
+            {
+              "name": "MixedSuite",
+              "nodeType": "Test Suite",
+              "result": "Failed",
+              "children": [
+                {
+                  "name": "testFlaky()",
+                  "nodeIdentifier": "MixedSuite/testFlaky()",
+                  "nodeType": "Test Case",
+                  "result": "Passed",
+                  "details": "⚠️ Passed after 1 retry",
+                  "children": [
+                    {
+                      "name": "First Run",
+                      "nodeIdentifier": "1",
+                      "nodeType": "Repetition",
+                      "result": "Failed",
+                      "children": [{ "name": "MixedSuite.swift:10: flaked", "nodeType": "Failure Message" }]
+                    },
+                    { "name": "Retry 1", "nodeIdentifier": "2", "nodeType": "Repetition", "result": "Passed" }
+                  ]
+                },
+                {
+                  "name": "testBroken()",
+                  "nodeIdentifier": "MixedSuite/testBroken()",
+                  "nodeType": "Test Case",
+                  "result": "Failed",
+                  "details": "Failed after 2 retries",
+                  "children": [
+                    {
+                      "name": "First Run",
+                      "nodeIdentifier": "1",
+                      "nodeType": "Repetition",
+                      "result": "Failed",
+                      "children": [{ "name": "MixedSuite.swift:20: broken", "nodeType": "Failure Message" }]
+                    },
+                    {
+                      "name": "Retry 1",
+                      "nodeIdentifier": "2",
+                      "nodeType": "Repetition",
+                      "result": "Failed",
+                      "children": [{ "name": "MixedSuite.swift:20: broken", "nodeType": "Failure Message" }]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -19,5 +19,8 @@ jq -r '
   "",
   "| Gate | Value | Threshold | Result |",
   "|---|---|---|---|",
-  (.gates[] | "| \(.name) | \(if .value == null then "n/a" else "\(.value)\(unit)" end) | \(.comparator) \(.threshold)\(unit) | \(mark) |")
+  (.gates[] | "| \(.name) | \(if .value == null then "n/a" else "\(.value)\(unit)" end) | \(.comparator) \(.threshold)\(unit) | \(mark) |"),
+  (.retried // [] | select(length > 0) | "", "### ⚠️ Passed on retry", "",
+    "Each failed once before passing: record it on its `flaky-test` issue (file one if none) with this run id.",
+    "", (.[] | "- \(.)"))
 ' "$1"

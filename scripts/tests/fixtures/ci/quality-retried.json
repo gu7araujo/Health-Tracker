@@ -1,0 +1,3 @@
+{"mode":"full","passed":true,"gates":[
+  {"name":"UI tests","value":0,"threshold":0,"comparator":"<=","passed":true}],
+ "retried":["UI tests: passed on retry: MainViewUITests/testAddMeal(): MainViewUITests.swift:42: Timed out while evaluating UI query"]}
