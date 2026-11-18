@@ -22,4 +22,4 @@ jobs:
         shell: bash
         env:
           EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
-        run: jq -r '.[] | select(.type == "result") | "turns=\(.num_turns) denials=\(.permission_denials // [] | length)\n\(.result // "")"' "$EXECUTION_FILE"
+        run: jq -r '.[] | select(.type == "result") | (.permission_denials // []) as $d | "turns=\(.num_turns) denials=\($d | length)", ($d | map(.tool_name + if .tool_name == "Bash" then "(\((.tool_input.command? | strings) // "" | [splits("\\s+") | select(length > 0)] | until(length == 0 or (.[0] | test("=") | not); .[1:]) | .[:((map(test("^[a-z][a-z0-9-]*$")) | indices(false)[0]) // length)] | .[:3] | join(" ")))" else "" end) | unique | select(length > 0) | "denied=\(join(","))"), (.result // "")' "$EXECUTION_FILE"

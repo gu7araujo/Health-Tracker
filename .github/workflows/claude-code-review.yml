@@ -68,12 +68,13 @@ jobs:
 
       # The action logs a run's counts but hides the model's closing text, so a run that stopped early
       # looked like one that passed (#62), and a failed run showed only is_error:true (#32). Prints the
-      # result message's turn and denial counts and the closing text, which for an is_error run is the
-      # API error, and nothing else: tool results can hold secrets, and this repo's job logs are public.
+      # result message's turn and denial counts, each denied tool once (for Bash, up to three leading
+      # command and subcommand names, enough for an allowlist rule) and the closing text, which for an
+      # is_error run is the API error, and nothing else: tool results can hold secrets, and the logs are public.
       - name: Review outcome
         if: always() && steps.claude-review.outputs.execution_file != ''
         shell: bash
         env:
           EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
-        run: jq -r '.[] | select(.type == "result") | "turns=\(.num_turns) denials=\(.permission_denials // [] | length)\n\(.result // "")"' "$EXECUTION_FILE"
+        run: jq -r '.[] | select(.type == "result") | (.permission_denials // []) as $d | "turns=\(.num_turns) denials=\($d | length)", ($d | map(.tool_name + if .tool_name == "Bash" then "(\((.tool_input.command? | strings) // "" | [splits("\\s+") | select(length > 0)] | until(length == 0 or (.[0] | test("=") | not); .[1:]) | .[:((map(test("^[a-z][a-z0-9-]*$")) | indices(false)[0]) // length)] | .[:3] | join(" ")))" else "" end) | unique | select(length > 0) | "denied=\(join(","))"), (.result // "")' "$EXECUTION_FILE"
 
