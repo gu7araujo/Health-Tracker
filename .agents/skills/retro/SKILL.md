@@ -62,7 +62,7 @@ Report the table to the user, the proposals first, then stop:
 
 End with the class-4 rows listed again under "Your call", and ask which proposals to implement.
 
-Once the user answers, file each approved row and each "Your call" row as its own issue through the `issue-tracking` skill, labelled `retro`, its area labels, and `your-call` for a "Your call" row; each issue links the retro's evidence.
+Once the user answers, file each approved row and each "Your call" row as its own issue through the `issue-tracking` skill, labelled `retro`, its area labels, `your-call` for a "Your call" row, and `cloud` when it applies; each issue links the retro's evidence.
 
 **Done when:** the user has the table and has said which rows to implement (or none), and each approved and "Your call" row is an issue whose number is in the report.
 
