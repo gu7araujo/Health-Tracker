@@ -60,14 +60,17 @@ jobs:
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
           prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/. Run every step on every open PR, with the four agents of step 4 whatever the diff size: this workflow already excludes drafts and forks, and a PR written with Claude Code still needs the review. Stop early only when the PR is closed or Claude has already commented on it. If you stop before step 4 for any other reason, post a comment with gh pr comment that says why.'
-          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
+          # --setting-sources user: the action loads every settings source by default, and the repo's
+          # .claude/settings.json allows PR-branch scripts to run with the tokens set (#90).
+          claude_args: '--setting-sources user --allowedTools "mcp__github_inline_comment__create_inline_comment"'
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
       # The action logs a run's counts but hides the model's closing text, so a run that stopped early
-      # looked like one that passed (#62). Prints the result message's turn and denial counts, each
-      # denied tool once (for Bash, up to three leading command and subcommand names, enough for an
-      # allowlist rule) and the closing text only: tool results can hold secrets, and the logs are public.
+      # looked like one that passed (#62), and a failed run showed only is_error:true (#32). Prints the
+      # result message's turn and denial counts, each denied tool once (for Bash, up to three leading
+      # command and subcommand names, enough for an allowlist rule) and the closing text, which for an
+      # is_error run is the API error, and nothing else: tool results can hold secrets, and the logs are public.
       - name: Review outcome
         if: always() && steps.claude-review.outputs.execution_file != ''
         shell: bash

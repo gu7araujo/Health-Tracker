@@ -5,7 +5,7 @@ description: Build the HealthTracker app or compile the test target with xcodebu
 
 # Build HealthTracker from the CLI
 
-The fallback the runner table in root `AGENTS.md` (Building and Validating) allows. Pipe every command through `xcbeautify` for readable output.
+The fallback the runner table in root `AGENTS.md` (Building and Validating) allows: only after an Xcode MCP build or test call errors, quoting that error. A device or preview tool's error doesn't count. Pipe every command through `xcbeautify` for readable output.
 
 Build the app:
 ```bash
