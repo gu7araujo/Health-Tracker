@@ -20,7 +20,7 @@ Work that this session's PR finishes goes in that PR's body, not in an issue.
 
 ## Labels
 
-Each issue takes every area label it touches (`ci`, `intents`, `product`; GitHub's `documentation` for docs-only work), plus each of `retro`, `flaky-test` and `your-call` that applies. GitHub's defaults (`bug`, `enhancement`, `documentation`, `dependencies`, `github_actions`, `duplicate`, `wontfix`) keep their meanings.
+Each issue takes every area label it touches (`ci`, `intents`, `product`; GitHub's `documentation` for docs-only work), plus each of `retro`, `flaky-test`, `your-call` and `cloud` that applies. GitHub's defaults (`bug`, `enhancement`, `documentation`, `dependencies`, `github_actions`, `duplicate`, `wontfix`) keep their meanings.
 
 | Label | Means |
 |---|---|
@@ -30,6 +30,9 @@ Each issue takes every area label it touches (`ci`, `intents`, `product`; GitHub
 | `intents` | App Intents, App Shortcuts, `HealthTrackerIntentsUITests` |
 | `product` | User-visible app behaviour |
 | `your-call` | Blocked on the user's decision; the agent proposes, the user picks |
+| `cloud` | A Linux cloud session can finish it, with CI as its only Mac |
+
+`cloud` goes on an issue whose fix and whose definition of done (root `AGENTS.md`) need only Linux and a few CI runs (`quality-gate` skill, `CLOUD.md`): scripts, docs, workflows, and Domain or Data code or unit tests with no user-facing scenario to check. It stays off while a `your-call` decision is open, and when an item needs the user's Mac: `RenderPreview` for an edited View, `device-interaction`, another Xcode MCP tool, a new or changed UI test or `Support/` helper (its 20-run pass count, `HealthTrackerUITests/AGENTS.md`), or a diagnosis that iterates on a simulator, such as a flaky UI test or a timing tweak, where each slow CI round trip is one iteration. Unsure means off.
 
 A label missing from the repo: `gh label create <name> --description "<the meaning above>"`.
 
@@ -46,7 +49,7 @@ Search two or three keyword sets (the file, the test, the symptom). An open matc
 ## 2. File
 
 ```bash
-gh issue create --title "<imperative, under 70 chars>" --label <area>[,retro][,your-call] --body-file <file>
+gh issue create --title "<imperative, under 70 chars>" --label <area>[,retro][,your-call|,cloud] --body-file <file>
 ```
 
 The body, in this order:
@@ -62,7 +65,7 @@ A `your-call` issue replaces Proposed action with **Options**: each option with 
 
 ## 3. Pick up
 
-A `your-call` issue waits for the user's choice in a comment. For any other issue: branch (`git switch -c <type>/<name>`), then follow the root `AGENTS.md` Workflow and Quality Gates through the PR. The PR body's first line is `Closes #<n>`, so the merge closes the issue; a PR that does part of it says `Part of #<n>` instead.
+A `your-call` issue waits for the user's choice in a comment; once the user picks, remove `your-call`, and add `cloud` if it now applies. For any other issue: branch (`git switch -c <type>/<name>`), then follow the root `AGENTS.md` Workflow and Quality Gates through the PR. The PR body's first line is `Closes #<n>`, so the merge closes the issue; a PR that does part of it says `Part of #<n>` instead. A cloud session picks its issue from `gh issue list --label cloud --state open` (without `gh`, the GitHub MCP's issue listing with the same filter).
 
 ## 4. Close
 
