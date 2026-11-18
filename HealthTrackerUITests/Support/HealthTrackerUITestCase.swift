@@ -83,20 +83,38 @@ class HealthTrackerUITestCase: XCTestCase {
     func assertExists(_ element: XCUIElement, timeout: TimeInterval = 5,
                       file: StaticString = #filePath, line: UInt = #line) -> XCUIElement
     {
-        if !waitUntil(timeout: timeout, { (try? element.snapshot()) != nil }) {
+        if !waitUntil(timeout: timeout, { isPresent(element) }) {
             XCTFail("Expected element to exist: \(element)", file: file, line: line)
         }
         return element
     }
 
+    /// Waits until the element is gone, through `waitUntil` and `snapshot()` like `assertExists`. Only
+    /// `snapshot()`'s "no matches" error counts as gone: a query that timed out throws too (#129).
     func assertNotExists(_ element: XCUIElement, timeout: TimeInterval = 5,
                          file: StaticString = #filePath, line: UInt = #line)
     {
-        XCTAssertTrue(
-            element.waitForNonExistence(timeout: timeout),
-            "Expected element to disappear: \(element)",
-            file: file, line: line
-        )
+        if !waitUntil(timeout: timeout, { isMissing(element) }) {
+            XCTFail("Expected element to disappear: \(element)", file: file, line: line)
+        }
+    }
+
+    /// The error `snapshot()` throws when its query matches nothing: "No matches found for first query
+    /// match sequence".
+    private static let noMatchesError = (domain: "com.apple.dt.xctest.ui-testing.error", code: 10008)
+
+    private func isPresent(_ element: XCUIElement) -> Bool {
+        (try? element.snapshot()) != nil
+    }
+
+    private func isMissing(_ element: XCUIElement) -> Bool {
+        do {
+            _ = try element.snapshot()
+            return false
+        } catch {
+            let error = error as NSError
+            return (error.domain, error.code) == Self.noMatchesError
+        }
     }
 
     /// Polls `condition` until it holds, returning whether it did. Polls directly: a predicate
@@ -133,9 +151,34 @@ class HealthTrackerUITestCase: XCTestCase {
 
     /// Selects all text in the field and replaces it with the given text.
     func clearAndType(_ field: XCUIElement, with text: String) {
-        field.tap(withNumberOfTaps: 3, numberOfTouches: 1)
-        field.typeText(text)
+        enterText(text, into: field, taps: 3)
     }
+
+    /// Taps the field, waits until it holds keyboard focus, then types. Typing straight after the tap
+    /// can land while a sheet still animates: "Neither element nor any descendant has keyboard focus" (#116).
+    /// Not named `type`, which would hide Swift's `type(of:)` in every suite.
+    func enterText(_ text: String, into field: XCUIElement, taps: Int = 1,
+                   file: StaticString = #filePath, line: UInt = #line)
+    {
+        field.tap(withNumberOfTaps: taps, numberOfTouches: 1)
+        var attributeMissing = false
+        let focused = waitUntil {
+            guard let snapshot = (try? field.snapshot()) as? NSObject else { return false }
+            attributeMissing = !snapshot.responds(to: NSSelectorFromString(Self.keyboardFocusKey))
+            return attributeMissing || snapshot.value(forKey: Self.keyboardFocusKey) as? Bool == true
+        }
+        if attributeMissing {
+            XCTFail("Snapshots no longer expose \(Self.keyboardFocusKey); update enterText", file: file, line: line)
+        } else if focused {
+            field.typeText(text)
+        } else {
+            XCTFail("Expected keyboard focus before typing: \(field)", file: file, line: line)
+        }
+    }
+
+    /// The snapshot attribute `typeText` checks: the public `hasFocus` stays false on an iOS text field
+    /// that holds the keyboard (seen on iOS 26.5 and 27.2).
+    private static let keyboardFocusKey = "hasKeyboardFocus"
 
     // MARK: - Flow Helpers
 
@@ -167,9 +210,7 @@ class HealthTrackerUITestCase: XCTestCase {
             if index > 0 {
                 assertExists(app.buttons[AccessibilityID.addMealItemButton]).tap()
             }
-            let field = assertExists(app.textFields[AccessibilityID.mealItemField(index)])
-            field.tap()
-            field.typeText(item)
+            enterText(item, into: assertExists(app.textFields[AccessibilityID.mealItemField(index)]))
         }
         if let quantity {
             selectMenuOption(picker: AccessibilityID.quantityPicker, option: quantity)
@@ -183,9 +224,7 @@ class HealthTrackerUITestCase: XCTestCase {
     /// Adds a workout through the UI, optionally adjusting the duration wheels and intensity.
     func addWorkout(description: String, hours: Int? = nil, minutes: Int? = nil, intensity: String? = nil) {
         openAddModal(choosing: EnglishLabel.workoutOption)
-        let field = assertExists(app.textFields[AccessibilityID.workoutDescriptionField])
-        field.tap()
-        field.typeText(description)
+        enterText(description, into: assertExists(app.textFields[AccessibilityID.workoutDescriptionField]))
         // Intensity before the wheels: reaching its picker swipes the sheet, and a swipe that
         // lands on the duration wheel spins it
         if let intensity {
@@ -223,7 +262,7 @@ class HealthTrackerUITestCase: XCTestCase {
     func tapSwipeAction(on rowElement: XCUIElement, identifier: String, fallbackLabel: String) {
         assertExists(rowElement).swipeLeft()
         let byIdentifier = app.buttons[identifier]
-        if byIdentifier.waitForExistence(timeout: 2) {
+        if waitUntil(timeout: 2, { isPresent(byIdentifier) }) {
             byIdentifier.tap()
         } else {
             assertExists(app.buttons[fallbackLabel], timeout: 2).tap()

@@ -47,9 +47,7 @@ final class MealFlowUITests: HealthTrackerUITestCase {
         let addItemButton = app.buttons[AccessibilityID.addMealItemButton]
 
         XCTContext.runActivity(named: "Remove a field") { _ in
-            let firstField = assertExists(app.textFields[AccessibilityID.mealItemField(0)])
-            firstField.tap()
-            firstField.typeText("Rice")
+            enterText("Rice", into: assertExists(app.textFields[AccessibilityID.mealItemField(0)]))
 
             assertExists(addItemButton).tap()
             assertExists(app.textFields[AccessibilityID.mealItemField(1)])
@@ -60,9 +58,7 @@ final class MealFlowUITests: HealthTrackerUITestCase {
         XCTContext.runActivity(named: "Save several items with Large") { _ in
             for (index, item) in ["Beans", "Salad"].enumerated() {
                 assertExists(addItemButton).tap()
-                let field = assertExists(app.textFields[AccessibilityID.mealItemField(index + 1)])
-                field.tap()
-                field.typeText(item)
+                enterText(item, into: assertExists(app.textFields[AccessibilityID.mealItemField(index + 1)]))
             }
             selectMenuOption(picker: AccessibilityID.quantityPicker, option: EnglishLabel.quantityLarge)
             saveModal()
@@ -79,9 +75,7 @@ final class MealFlowUITests: HealthTrackerUITestCase {
         openAddModal(choosing: EnglishLabel.mealOption)
 
         XCTContext.runActivity(named: "Grow to five fields") { _ in
-            let field = assertExists(app.textFields[AccessibilityID.mealItemField(0)])
-            field.tap()
-            field.typeText("Discarded")
+            enterText("Discarded", into: assertExists(app.textFields[AccessibilityID.mealItemField(0)]))
 
             let addButton = app.buttons[AccessibilityID.addMealItemButton]
             let modalList = element(AccessibilityID.modalList)

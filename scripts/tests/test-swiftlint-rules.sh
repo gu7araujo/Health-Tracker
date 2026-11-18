@@ -15,7 +15,7 @@ trap 'rm -rf "$WORK"' EXIT
 new_tree() {
   local dir="$WORK/$1"
   mkdir -p "$dir/HealthTracker/Domain/Entities" "$dir/HealthTracker/Presentation/ViewModels" \
-    "$dir/HealthTrackerTests" "$dir/HealthTrackerUITests"
+    "$dir/HealthTrackerTests" "$dir/HealthTrackerUITests" "$dir/HealthTrackerIntentsUITests"
   cd "$dir" || exit 1
   cp "$ROOT/.swiftlint.yml" "$ROOT/.swiftlint-baseline.json" . || exit 1
   cp "$ROOT/HealthTrackerTests/.swiftlint.yml" HealthTrackerTests/ || exit 1
@@ -177,6 +177,41 @@ test_intent_text_from_static_passes() {
   expect_clean HealthTracker/Presentation/Intents/NewIntent.swift
 }
 
+test_ui_tests_raw_waits_and_typing_fail() {
+  local file hits
+  new_tree raw-waits-fail
+  for file in HealthTrackerUITests/FlowTests.swift HealthTrackerIntentsUITests/IntentTests.swift; do
+    write "$file" 'import XCTest' 'final class FlowTests: XCTestCase {' 'func step(app: XCUIApplication) {' \
+      '    _ = app.buttons["x"].waitForExistence(timeout: 2)' \
+      '    _ = app.buttons["x"].waitForNonExistence(timeout: 2)' \
+      '    _ = XCTNSPredicateExpectation(predicate: NSPredicate(value: true), object: nil)' \
+      '    app.textFields["x"].typeText("Rice")' \
+      '    _ = XCTWaiter.wait(for: [], timeout: 1)' \
+      '    wait(for: [], timeout: 1)' \
+      '    let pending: [XCTNSPredicateExpectation] = []' \
+      '    wait(for: pending, timeout: 1)' \
+      '    _ = app.buttons["x"].wait(for: \.exists, toEqual: true, timeout: 1)' '}' '}'
+    expect_violation ui_tests_wait_through_support "$file" || return 1
+    # Lines flagged, not hits: the XCTWaiter line matches twice
+    hits="$(lint "$file" | grep '(ui_tests_wait_through_support)' | cut -d: -f2 | sort -u | wc -l)"
+    [ "$hits" -eq 9 ] || { echo "expected 9 flagged lines in $file, got $hits"; return 1; }
+    rm "$file"
+  done
+}
+
+test_ui_tests_raw_waits_in_support_and_comments_pass() {
+  new_tree raw-waits-pass
+  write HealthTrackerUITests/Support/Base.swift 'import XCTest' \
+    'func enterText(_ text: String, into field: XCUIElement) { field.typeText(text) }' \
+    'func gone(_ element: XCUIElement) -> Bool { element.waitForNonExistence(timeout: 1) }'
+  expect_clean HealthTrackerUITests/Support/Base.swift || return 1
+  # An app-state wait queries no element, so it stays allowed
+  write HealthTrackerUITests/FlowTests.swift 'import XCTest' \
+    '// Type through enterText(_:into:), never typeText or waitForExistence.' 'let note = "waitForExistence"' \
+    'func foreground(app: XCUIApplication) -> Bool { app.wait(for: .runningForeground, timeout: 1) }'
+  expect_clean HealthTrackerUITests/FlowTests.swift
+}
+
 test_no_print_still_fails() {
   new_tree print
   write HealthTracker/Debug.swift 'func debug() { print("x") }'
@@ -186,7 +221,8 @@ test_no_print_still_fails() {
 test_rules_name_their_agents_rule() {
   local rule
   for rule in domain_no_ui_frameworks presentation_no_data_layer no_hardcoded_locale \
-    unit_tests_use_swift_testing ui_tests_no_testable_import ui_tests_no_sleep intent_text_resolved_in_app; do
+    unit_tests_use_swift_testing ui_tests_no_testable_import ui_tests_no_sleep intent_text_resolved_in_app \
+    ui_tests_wait_through_support; do
     grep -A8 "^  $rule:" "$ROOT/.swiftlint.yml" | grep -q 'AGENTS.md' ||
       { echo "$rule's message must name the AGENTS.md rule it enforces"; return 1; }
   done
