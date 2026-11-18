@@ -186,10 +186,12 @@ class HealthTrackerUITestCase: XCTestCase {
         let field = assertExists(app.textFields[AccessibilityID.workoutDescriptionField])
         field.tap()
         field.typeText(description)
-        setDurationWheels(hours: hours, minutes: minutes)
+        // Intensity before the wheels: reaching its picker swipes the sheet, and a swipe that
+        // lands on the duration wheel spins it
         if let intensity {
             selectMenuOption(picker: AccessibilityID.intensityPicker, option: intensity)
         }
+        setDurationWheels(hours: hours, minutes: minutes)
         saveModal()
     }
 

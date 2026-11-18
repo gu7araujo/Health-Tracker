@@ -6,31 +6,39 @@
 import XCTest
 
 final class CalendarUITests: HealthTrackerUITestCase {
-    /// Smoke test: validates the launch hook, temp-dir isolation, and identifier plumbing.
-    func testTodaySelectedOnLaunchAndEmptyStates() {
-        let today = assertExists(calendarDayCell(offset: 0))
-        assertOnVisiblePage(today)
-        XCTAssertTrue(today.isSelected)
-        assertExists(app.buttons[AccessibilityID.addRecordButton])
-        assertExists(element(AccessibilityID.mealsEmptyState))
-        assertExists(element(AccessibilityID.workoutsEmptyState))
-    }
+    /// Smoke test for the launch hook, temp-dir isolation and identifier plumbing, then the per-day store.
+    func testLaunchStateAndDataIsolatedPerDay() {
+        XCTContext.runActivity(named: "Launch state") { _ in
+            // On the visible page right after launch, with no swipe: the lazy strip also renders the
+            // neighbouring weeks, so "today's cell exists" passes on the wrong week (#85)
+            let today = assertExists(calendarDayCell(offset: 0))
+            assertOnVisiblePage(today)
+            XCTAssertTrue(today.isSelected)
+            assertExists(app.buttons[AccessibilityID.addRecordButton])
+            assertExists(element(AccessibilityID.mealsEmptyState))
+            assertExists(element(AccessibilityID.workoutsEmptyState))
+        }
 
-    func testDataIsolatedPerDay() {
-        addMeal(items: ["Today lunch"])
-        let todayCard = assertExists(element(AccessibilityID.mealCard(0)))
-        XCTAssertTrue(todayCard.label.contains("Today lunch"))
+        XCTContext.runActivity(named: "Add today's meal") { _ in
+            addMeal(items: ["Today lunch"])
+            let todayCard = assertExists(element(AccessibilityID.mealCard(0)))
+            XCTAssertTrue(todayCard.label.contains("Today lunch"))
+        }
 
-        selectDay(offset: -1)
-        assertExists(element(AccessibilityID.mealsEmptyState))
+        XCTContext.runActivity(named: "Add yesterday's meal") { _ in
+            selectDay(offset: -1)
+            assertExists(element(AccessibilityID.mealsEmptyState))
 
-        addMeal(items: ["Yesterday dinner"])
-        XCTAssertTrue(assertExists(element(AccessibilityID.mealCard(0))).label.contains("Yesterday dinner"))
+            addMeal(items: ["Yesterday dinner"])
+            XCTAssertTrue(assertExists(element(AccessibilityID.mealCard(0))).label.contains("Yesterday dinner"))
+        }
 
-        selectDay(offset: 0)
-        let card = assertExists(element(AccessibilityID.mealCard(0)))
-        XCTAssertTrue(card.label.contains("Today lunch"))
-        XCTAssertFalse(card.label.contains("Yesterday dinner"))
+        XCTContext.runActivity(named: "Back to today") { _ in
+            selectDay(offset: 0)
+            let card = assertExists(element(AccessibilityID.mealCard(0)))
+            XCTAssertTrue(card.label.contains("Today lunch"))
+            XCTAssertFalse(card.label.contains("Yesterday dinner"))
+        }
     }
 
     func testFutureDayNotSelectable() throws {
