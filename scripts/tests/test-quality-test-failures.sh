@@ -47,6 +47,23 @@ out="$("$FAILURES" "$RUNNER" MixedTests --system 2>&1)"
 out="$("$FAILURES" "$FIX" HealthTrackerUITests --system 2>&1)"
 [ -z "$out" ] || fail "--system of a bundle without runner errors should print nothing, got [$out]"
 
+# Under -retry-tests-on-failure (#136) a case that failed, then passed on its retry, is a passed case
+# with a failed "Repetition" child: not a failure, but listed by --retried with its first run's message.
+RETRIED="$ROOT/scripts/tests/fixtures/quality/test-results-retried.json"
+[ "$("$FAILURES" "$RETRIED" HealthTrackerUITests)" = 0 ] || fail "a case that passed on retry should count as passed"
+out="$("$FAILURES" "$RETRIED" HealthTrackerUITests --retried 2>&1)"
+expected="MainViewUITests/testAddMeal(): MainViewUITests.swift:42: Timed out while evaluating UI query"
+[ "$out" = "$expected" ] || fail "--retried: expected [$expected], got [$out]"
+[ "$("$FAILURES" "$RETRIED" MixedTests)" = 1 ] || fail "a case that failed its retry too should count as failed"
+out="$("$FAILURES" "$RETRIED" MixedTests --retried 2>&1)"
+[ "$out" = "MixedSuite/testFlaky(): MixedSuite.swift:10: flaked" ] ||
+  fail "--retried should leave out a case that failed its retry too, got [$out]"
+out="$("$FAILURES" "$RETRIED" MixedTests --list 2>&1)"
+[ "$out" = "MixedSuite/testBroken(): MixedSuite.swift:20: broken" ] ||
+  fail "--list should leave out a case that passed on retry, got [$out]"
+out="$("$FAILURES" "$FIX" HealthTrackerUITests --retried 2>&1)"
+[ -z "$out" ] || fail "--retried of a bundle without retries should print nothing, got [$out]"
+
 out="$("$FAILURES" /nonexistent HealthTrackerTests 2>/dev/null)"
 [ -z "$out" ] || fail "missing report should print nothing, got [$out]"
 

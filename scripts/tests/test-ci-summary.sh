@@ -30,6 +30,16 @@ expect "$out" "| Lint | 3 | <= 0 | ❌ |"
 expect "$out" "| Unit tests | n/a | <= 0 | ❌ |"
 expect "$out" "| Domain unit line coverage | n/a | >= 95% | ❌ |"
 
+# A test that passed on its retry (#136) gets its own section under the table; without one, no section.
+out="$("$SCRIPT" "$FIX/quality-retried.json")" || fail "a report with a retried test should exit 0"
+expect "$out" "| UI tests | 0 | <= 0 | ✅ |"
+expect "$out" "### ⚠️ Passed on retry"
+expect "$out" "- \`UI tests: passed on retry: MainViewUITests/testAddMeal(): MainViewUITests.swift:42: Timed out while evaluating UI query\`"
+out="$(GITHUB_RUN_ID=123 "$SCRIPT" "$FIX/quality-retried.json")"
+[[ "$out" == *"with run id 123."* ]] || fail "the retry section should name the run id, got: $out"
+out="$("$SCRIPT" "$FIX/quality-pass.json")"
+[[ "$out" != *"Passed on retry"* ]] || fail "a report without retried tests should have no retry section, got: $out"
+
 # scripts/quality can stop before writing the report (e.g. doctor fails); say so instead of erroring.
 out="$("$SCRIPT" "$FIX/missing.json")" || fail "a missing report should exit 0"
 [[ "$out" == "## ❌ Quality gate: no report"* ]] || fail "a missing report should be called out, got: $out"

@@ -4,16 +4,21 @@
 # when the bundle never ran, or failed without a failing test case (e.g. a crash).
 # With --list, prints each failed case instead, one per line: its identifier, then its first
 # failure message (at any depth) when the report has one. --system lists, the same way, only the
-# failed cases in a "System Failures" suite: the test runner's own errors, not a test's.
+# failed cases in a "System Failures" suite: the test runner's own errors, not a test's. --retried
+# lists the cases that failed, then passed on a retry (-retry-tests-on-failure), with the failed
+# run's message; they count as passed.
 #
-# Usage: test-failures.sh <tests.json> <bundle> [--list|--system]
+# Usage: test-failures.sh <tests.json> <bundle> [--list|--system|--retried]
 set -uo pipefail
 
-if [ "${3:-}" = "--list" ] || [ "${3:-}" = "--system" ]; then
+if [ "${3:-}" = "--list" ] || [ "${3:-}" = "--system" ] || [ "${3:-}" = "--retried" ]; then
   jq -r --arg bundle "$2" --arg mode "$3" '.testNodes[].children[]? | select(.name == $bundle)
     | .. | objects | select(.nodeType? == "Test Suite")
-    | select($mode == "--list" or .name == "System Failures") | .name as $suite
-    | .children[]? | select(.nodeType? == "Test Case" and .result == "Failed")
+    | select($mode != "--system" or .name == "System Failures") | .name as $suite
+    | .children[]? | select(.nodeType? == "Test Case")
+    | select(if $mode == "--retried"
+        then .result == "Passed" and any(.children[]?; .nodeType? == "Repetition" and .result == "Failed")
+        else .result == "Failed" end)
     | (.nodeIdentifier // "\($suite)/\(.name)")
       + ([.children[]? | .. | objects | select(.nodeType? == "Failure Message") | ": \(.name | gsub("\n"; " "))"][0] // "")' "$1" 2>/dev/null
   exit 0

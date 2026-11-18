@@ -36,6 +36,7 @@ cat >"$TMP/simulators.json" <<'EOF'
  "com.apple.CoreSimulator.SimRuntime.iOS-27-1":[
   {"name":"iPhone Duo","udid":"DUO-UDID","state":"Shutdown","deviceTypeIdentifier":"com.apple.CoreSimulator.SimDeviceType.iPhone-Duo"}]}}
 EOF
+cp "$FIX/test-results-runner-error.json" "$TMP/runner-error.json"
 printf '{"testNodes":[{"name":"HealthTracker","nodeType":"Test Plan","result":"Passed","children":[{"name":"HealthTrackerTests","nodeType":"Unit test bundle","result":"Passed","children":[]},{"name":"HealthTrackerUITests","nodeType":"UI test bundle","result":"Passed","children":[]},{"name":"HealthTrackerIntentsUITests","nodeType":"UI test bundle","result":"Passed","children":[]}]}]}\n' >"$TMP/tests.json"
 
 mkdir -p "$TMP/bin"
@@ -46,7 +47,7 @@ case "\$1 \$2" in
   "--sdk iphonesimulator") echo "\${SDK_VERSION:-27.0}" ;;
   "xccov view") cat "$TMP/coverage.json" ;;
   "llvm-cov export") echo "\$*" >>"$TMP/llvm-cov.calls" && cat "$TMP/regions.json" ;;
-  "xcresulttool get") if [ -n "\${NO_RESULT:-}" ]; then echo '{"testNodes":[]}'; elif [ -e "\${6:-}/runner-error" ]; then cat "$FIX/test-results-runner-error.json"; else cat "$TMP/tests.json"; fi ;;
+  "xcresulttool get") if [ -n "\${NO_RESULT:-}" ]; then echo '{"testNodes":[]}'; elif [ -e "\${6:-}/runner-error" ]; then cat "$TMP/runner-error.json"; else cat "$TMP/tests.json"; fi ;;
   "simctl shutdown") echo "\$*" >>"$TMP/simctl.calls" ;;
   "simctl clone") echo "\$*" >>"$TMP/clone.calls" && echo CLONED-UDID ;;
   "simctl bootstatus") echo "\$*" >>"$TMP/boot.calls" ;;
@@ -269,6 +270,53 @@ for bundle in HealthTrackerUITests HealthTrackerIntentsUITests; do
 done
 ! grep -q -- '-only-testing:HealthTrackerTests .*-test-timeouts-enabled' "$TMP/xcodebuild.calls" ||
   fail "the unit run should keep xcodebuild's test timeouts, got: $(cat "$TMP/xcodebuild.calls")"
+# A failed UI or intents test case is run once more (#136); a unit test never is.
+for bundle in HealthTrackerUITests HealthTrackerIntentsUITests; do
+  grep -q -- "-only-testing:$bundle .*-retry-tests-on-failure -test-iterations 2" "$TMP/xcodebuild.calls" ||
+    fail "the $bundle run should retry a failed test once, got: $(cat "$TMP/xcodebuild.calls")"
+done
+! grep -q -- '-only-testing:HealthTrackerTests .*-retry-tests-on-failure' "$TMP/xcodebuild.calls" ||
+  fail "the unit run should not retry a failed test, got: $(cat "$TMP/xcodebuild.calls")"
+
+# A test that passed on its retry passes its row, but stays visible: listed under the table, as a
+# warning annotation on GitHub Actions, and in quality.json for the step summary.
+cp "$TMP/tests.json" "$TMP/tests.passing.json"
+jq --slurpfile retried "$FIX/test-results-retried.json" \
+  '.testNodes[0].children |= map(if .name == "HealthTrackerUITests"
+    then ($retried[0].testNodes[0].children[] | select(.name == "HealthTrackerUITests")) else . end)' \
+  "$TMP/tests.passing.json" >"$TMP/tests.json"
+retried_line="UI tests: passed on retry: MainViewUITests/testAddMeal(): MainViewUITests.swift:42: Timed out while evaluating UI query"
+run_quality '[]' --full
+grep -qE '^UI tests +0  <= 0 +✓$' <<<"$out" || fail "a test that passed on retry should pass its row, got: $out"
+grep -qxF "$retried_line" <<<"$out" || fail "the details should list the test that passed on retry, got: $out"
+[[ "$out" != *"::warning::"* ]] || fail "outside GitHub Actions a retry should not print an annotation, got: $out"
+[ "$(jq -c .retried "$REPO/build/quality.json")" = "$(jq -nc --arg l "$retried_line" '[$l]')" ] ||
+  fail "quality.json should list the retried test, got: $(jq -c .retried "$REPO/build/quality.json")"
+GHA=true run_quality '[]' --full
+grep -qxF "::warning::$retried_line" <<<"$out" || fail "on GitHub Actions a retry should be a warning annotation, got: $out"
+# GitHub reads a % in an annotation as an escape, so the gate writes it as %25.
+cp "$TMP/tests.json" "$TMP/tests.retried.json"
+sed 's/UI query/UI query at 50%/' "$TMP/tests.retried.json" >"$TMP/tests.json"
+GHA=true run_quality '[]' --full
+grep -qxF "::warning::${retried_line}%25" <<<"${out// at 50/}" ||
+  fail "a % in a retried test's annotation should be escaped as %25, got: $out"
+mv "$TMP/tests.retried.json" "$TMP/tests.json"
+# A retry in a first attempt that the runner error then sends to a bundle rerun stays listed.
+jq --slurpfile retried "$TMP/tests.json" '.testNodes[0].children |= map(if .name == "HealthTrackerUITests"
+    then .children += ($retried[0].testNodes[0].children[] | select(.name == "HealthTrackerUITests") | .children)
+    else . end)' "$FIX/test-results-runner-error.json" >"$TMP/runner-error.json"
+mv "$TMP/tests.passing.json" "$TMP/tests.json"
+echo 1 >"$TMP/runner-error.HealthTrackerUITests"
+: >"$TMP/xcodebuild.calls"
+run_quality '[]' --full
+grep -qxF "$retried_line" <<<"$out" || fail "a retry in a rerun bundle's first attempt should stay listed, got: $out"
+[ "$(grep -c -- '-only-testing:HealthTrackerUITests ' "$TMP/xcodebuild.calls")" -eq 2 ] ||
+  fail "the runner error should have rerun the UI bundle, got: $(cat "$TMP/xcodebuild.calls")"
+cp "$FIX/test-results-runner-error.json" "$TMP/runner-error.json"
+rm -f "$TMP/runner-error.HealthTrackerUITests"
+run_quality '[]' --full
+[ "$(jq -c .retried "$REPO/build/quality.json")" = "[]" ] ||
+  fail "quality.json should list no retried test when none was, got: $(jq -c .retried "$REPO/build/quality.json")"
 
 # A UI bundle whose only failures are the test runner's own ("System Failures": it never connected, #111)
 # is run once more. A bundle with a failing test case, or with no result at all (a build failure), is not.

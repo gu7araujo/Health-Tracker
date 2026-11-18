@@ -13,9 +13,11 @@ Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-b
                      Intents UI tests need a runtime at least the iphonesimulator SDK's version
                      (iOS 27.2 with Xcode 27.2): on an older simulator they run on a second clone,
                      "HT-<branch>-ios27". Install a missing runtime: xcodebuild -downloadPlatform iOS.
-                     Each UI test case gets 180 s. A UI bundle whose only failures are its test
-                     runner's own ("System Failures") is run once more, the first attempt kept as
-                     build/<UI|Intents>.attempt1.xcresult, unless the tests have run 15 min.
+                     Each UI test case gets 180 s, and a failed one (not one stopped at 180 s) is
+                     retried once: passing then, it counts as passed and is listed as "passed on retry". A UI bundle whose only
+                     failures are its test runner's own ("System Failures") is run once more, the
+                     first attempt kept as build/<UI|Intents>.attempt1.xcresult, unless the tests
+                     have run 15 min.
   --json             Accepted for compatibility: every run writes build/quality.json.
   --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
                      (an exported SIMULATOR_ID is ignored so worktrees never share a device).
@@ -164,6 +166,8 @@ fi
 rows=""
 # Lines printed under the table: each failed test, and why an n/a test row could not be measured.
 details=""
+# The UI and intents tests that failed, then passed on their retry, also kept in quality.json.
+retried=""
 
 # row <name> <value> <comparator> <threshold> <passed>
 row() {
@@ -278,6 +282,7 @@ build_settings=(-enableCodeCoverage YES)
 # Seconds one UI or intents test case may run before xcodebuild fails it and moves on, so a hang costs
 # one test, not the CI step (#109). xcodebuild rounds it up to whole minutes; the slowest healthy case
 # on a slow CI runner took 91 s. It is also the maximum, so a test's own executionTimeAllowance cannot raise it.
+# A test it stops is not retried (#136): xcodebuild restarts the runner past it, so a hang still costs 180 s.
 UI_TEST_ALLOWANCE=180
 # Seconds after the first test run starts past which an unmeasured UI bundle is not rerun: on a runner slow
 # enough to be that late, a rerun could outlast the 45-min CI step and lose the whole table.
@@ -320,10 +325,13 @@ for bundle in "${bundles[@]}"; do
   if [ "$bundle" != "HealthTrackerTests" ]; then
     test_args+=(-test-timeouts-enabled YES -default-test-execution-time-allowance "$UI_TEST_ALLOWANCE"
       -maximum-test-execution-time-allowance "$UI_TEST_ALLOWANCE")
+    # A failed test case is run once more (#136): one that passes then counts as passed, and is listed.
+    test_args+=(-retry-tests-on-failure -test-iterations 2)
     # A UI run whose only failures are the test runner's own (it never connected, #111) gets one more
     # try; a run with a failing test case, or no result at all (a build failure), is never rerun.
     runs=2
   fi
+  passed_on_retry=""
   for ((run = 1; run <= runs; run++)); do
     log_start=$(($(wc -l <build/xcodebuild.log) + 1))
     [ "$run" -eq 1 ] || xcrun simctl bootstatus "$destination" -b >/dev/null
@@ -337,6 +345,9 @@ for bundle in "${bundles[@]}"; do
       -resultBundlePath "$bundle_result" 2>&1 | tee -a build/xcodebuild.log | "${beautify[@]}"
     xcrun xcresulttool get test-results tests --path "$bundle_result" >build/test-results.json 2>/dev/null
     failed="$("$LIB/test-failures.sh" build/test-results.json "$bundle")"
+    # Read per attempt: a runner error's rerun moves this attempt's result aside.
+    retries="$("$LIB/test-failures.sh" build/test-results.json "$bundle" --retried | sed "s/^/$name: passed on retry: /")"
+    [ -z "$retries" ] || passed_on_retry+="$retries"$'\n'
     [ "$run" -lt "$runs" ] || break
     runner_errors="$("$LIB/test-failures.sh" build/test-results.json "$bundle" --system)"
     [ -n "$runner_errors" ] && [ "$failed" -eq "$(grep -c . <<<"$runner_errors")" ] || break
@@ -359,6 +370,13 @@ for bundle in "${bundles[@]}"; do
     details+="$name n/a: ${reason:-no error: line in build/xcodebuild.log}"$'\n'
   elif [ "$failed" -gt 0 ]; then
     details+="$("$LIB/test-failures.sh" build/test-results.json "$bundle" --list | sed "s/^/$name: /")"$'\n'
+  fi
+  if [ -n "$passed_on_retry" ]; then
+    details+="$passed_on_retry"
+    retried+="$passed_on_retry"
+    # Still a flake to own (HealthTrackerUITests/AGENTS.md rule 6), so it shows on the CI run; GitHub
+    # reads a % in an annotation as an escape.
+    [ "${GITHUB_ACTIONS:-}" = "true" ] && sed 's/%/%25/g; s/^/::warning::/' <<<"${passed_on_retry%$'\n'}"
   fi
   # Region coverage is unit-only like the line ratchets: read the profile before the UI run replaces it.
   if [ "$bundle" = "HealthTrackerTests" ]; then
@@ -423,5 +441,7 @@ fi
 
 "$LIB/report.sh" "$MODE" build/quality.json <<<"${rows%$'\n'}"
 status=$?
+jq --arg retried "$retried" '.retried = ($retried | split("\n") | map(select(. != "")))' build/quality.json \
+  >build/quality.json.tmp && mv build/quality.json.tmp build/quality.json
 [ -z "$details" ] || printf '\n%s' "$details"
 exit "$status"
