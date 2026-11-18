@@ -5,6 +5,9 @@ name: CI
 # superseded runs are cancelled, and docs/agent-config-only changes (push's paths-ignore) skip
 # lint and test. .claude/hooks and .claude/settings*.json still run them (scripts/tests covers
 # them). Every PR runs, so the ci-gate job, the CI check the ruleset requires, always reports.
+# The test job runs --full (UI and intents UI suites) on pushes to main, manual runs and PRs that
+# touch the app, its tests, the project, the gate or --full's settings (scripts/ci/app-changes.sh);
+# other PRs that run test, such as ones changing only other scripts or CI config, run --fast.
 # Draft PRs run test too, so marking a PR ready (no ready_for_review trigger) needs no run of its own.
 on:
   pull_request:
@@ -24,11 +27,13 @@ permissions:
 
 jobs:
   # code=false when a PR changes only docs or agent config: lint and test skip, ci-gate passes.
+  # app=false when a PR changes nothing --full checks (scripts/ci/app-changes.sh): test runs --fast.
   changes:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       code: ${{ steps.detect.outputs.code }}
+      app: ${{ steps.detect.outputs.app }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: github.event_name == 'pull_request' # other events run everything without a diff
@@ -39,12 +44,13 @@ jobs:
       - name: Detect code changes
         id: detect
         run: |
-          if [ "$GITHUB_EVENT_NAME" = pull_request ] &&
-            git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/docs-only.sh; then
-            echo "code=false" >>"$GITHUB_OUTPUT"
-          else
-            echo "code=true" >>"$GITHUB_OUTPUT"
+          code=true app=true
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            if git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/docs-only.sh; then code=false; fi
+            if ! git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/app-changes.sh; then app=false; fi
           fi
+          echo "code=$code" >>"$GITHUB_OUTPUT"
+          echo "app=$app" >>"$GITHUB_OUTPUT"
 
   lint:
     needs: changes
@@ -86,7 +92,7 @@ jobs:
   test:
     needs: [changes, lint]
     # Dependabot PRs only bump pinned actions, so they skip the macOS job: actionlint validates
-    # the bump, and the --fast run on main after merge exercises actions/checkout. Accepted risk:
+    # the bump, and the --full run on main after merge exercises actions/checkout. Accepted risk:
     # upload-artifact runs only if: failure(), so a broken bump of it shows up only when a later
     # test fails.
     if: >-
@@ -97,7 +103,7 @@ jobs:
     timeout-minutes: 75
     env:
       CI: "true"
-      MODE: ${{ github.event_name == 'push' && '--fast' || '--full' }}
+      MODE: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.app != 'false') && '--full' || '--fast' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -111,7 +117,7 @@ jobs:
       - name: Simulator runtime
         # --full runs HealthTrackerIntentsUITests, which needs a simulator runtime at the SDK's iOS
         # version; the image can ship only an older one, and downloading it takes several minutes.
-        if: env.MODE == '--full' # pushes to main run --fast: no intents run
+        if: env.MODE == '--full' # --fast has no intents run
         timeout-minutes: 20
         run: scripts/ci/install-simulator-runtime.sh
       - name: Quality gate

@@ -2,7 +2,7 @@
 # Fitness test for .github/workflows: every Summary step runs under if: always() and calls
 # scripts/ci/summary.sh unconditionally, so a run that stops before build/quality.json is
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
-# wiring, the test job's PR filter, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
+# wiring, the test job's PR filter and MODE, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
 # test-step parity, the weekly failure issue, the simulator runtime step, step and job timeouts,
 # action pinning, valid YAML, the Claude review's one granted tool, its claude_args'
 # --setting-sources user, its CLAUDE.md copies, prompt and outcome step, and the @claude job's owner
@@ -102,6 +102,15 @@ grep -qE '^    paths-ignore: ' <<<"$(trigger push)" ||
 changes="$(awk '/^  changes:/ { found = 1; next } found && /^  [a-z]/ { exit } found { print }' "$CI")"
 grep -qF 'git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/docs-only.sh' <<<"$changes" ||
   fail "ci.yml changes job: must pipe 'git diff --no-renames --name-only -z HEAD^1 HEAD' to scripts/ci/docs-only.sh"
+# The UI and intents UI suites run on PRs that can change what --full checks (app-changes.sh), and
+# on pushes to main and manual runs (every event but pull_request), so a flake there shows on
+# main; other PRs run --fast. != 'false', so a missing or mistyped app output runs --full.
+grep -qF 'git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/app-changes.sh' <<<"$changes" ||
+  fail "ci.yml changes job: must pipe 'git diff --no-renames --name-only -z HEAD^1 HEAD' to scripts/ci/app-changes.sh"
+grep -qE '^      app: \$\{\{ steps\.detect\.outputs\.app \}\} *$' <<<"$changes" ||
+  fail "ci.yml changes job: needs the output app: \${{ steps.detect.outputs.app }}"
+grep -qxF "      MODE: \${{ (github.event_name != 'pull_request' || needs.changes.outputs.app != 'false') && '--full' || '--fast' }}" <<<"$test_job" ||
+  fail "ci.yml test job: MODE must be --full unless a pull_request's needs.changes.outputs.app is 'false'"
 grep -qE '^    needs: changes *$' <<<"$lint" || fail "ci.yml lint job: needs: changes"
 # != 'false': only an explicit docs-only answer skips them, never a missing or mistyped output.
 grep -qxF "    if: needs.changes.outputs.code != 'false'" <<<"$lint" ||
@@ -165,7 +174,7 @@ for workflow in "$CI" "$WEEKLY"; do
     [ $((runtime_timeout + gate_timeout)) -lt "$job_timeout" ] ||
     fail "$(basename "$workflow"): the Simulator runtime and Quality gate step timeouts (${runtime_timeout:-none} + ${gate_timeout:-none}) must sum below the test job's ($job_timeout)"
 done
-# Pushes to main run --fast, which has no intents run: they skip the download.
+# --fast has no intents run: it skips the download.
 runtime="$(awk '/^ *- name: Simulator runtime *$/ { found = 1; next } found && /^ *- / { exit } found { print }' "$CI")"
 grep -qE "^ *if: env.MODE == '--full'( +#.*)? *\$" <<<"$runtime" ||
   fail "ci.yml: the Simulator runtime step must run only when MODE is --full (if: env.MODE == '--full')"
@@ -357,6 +366,10 @@ if [ $# -eq 0 ]; then
   must "FAIL: ci.yml: the push trigger needs paths-ignore"
   fixture renames 1
   must "FAIL: ci.yml changes job: must pipe 'git diff --no-renames"
+  fixture mode 3
+  must "FAIL: ci.yml changes job: must pipe 'git diff --no-renames --name-only -z HEAD^1 HEAD' to scripts/ci/app-changes.sh"
+  must "FAIL: ci.yml changes job: needs the output app:"
+  must "FAIL: ci.yml test job: MODE must be --full unless"
   fixture changes 4
   must "FAIL: ci.yml lint job: needs: changes"
   must "FAIL: ci.yml lint job: must run unless needs.changes.outputs.code == 'false'"

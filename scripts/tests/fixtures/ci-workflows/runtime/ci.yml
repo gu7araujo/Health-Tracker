@@ -1,5 +1,5 @@
 # Must fail the runtime checks on ci.yml, and only those: the Simulator runtime step also runs on
-# --fast pushes, and its timeout plus the gate's (30 + 45) leaves nothing of the job's 75.
+# --fast runs, and its timeout plus the gate's (30 + 45) leaves nothing of the job's 75.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -8,9 +8,12 @@ on:
     paths-ignore: ['**/*.md', '.agents/**', '.claude/skills/**', '.codex/**']
 jobs:
   changes:
+    outputs:
+      app: ${{ steps.detect.outputs.app }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/docs-only.sh
+      - run: git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/app-changes.sh
   lint:
     needs: changes
     if: needs.changes.outputs.code != 'false'
@@ -24,6 +27,8 @@ jobs:
         if: github.event_name == 'pull_request'
         run: scripts/fitness/persisted-shape-guard.sh HEAD^1
   test:
+    env:
+      MODE: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.app != 'false') && '--full' || '--fast' }}
     needs: [changes, lint]
     if: >-
       needs.changes.outputs.code != 'false' &&

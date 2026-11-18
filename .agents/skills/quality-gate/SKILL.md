@@ -129,12 +129,12 @@ CI (`.github/workflows/ci.yml`, GitHub Actions) runs the same gate:
 
 | Job | Runs on | What |
 |---|---|---|
-| `changes` | every PR | `scripts/ci/docs-only.sh` decides whether the PR touches more than docs or agent config |
+| `changes` | every PR | `scripts/ci/docs-only.sh` decides whether the PR touches more than docs or agent config; `scripts/ci/app-changes.sh` whether it touches the app, its tests, the project or `--full`'s own scripts and settings |
 | `lint` (Linux) | every PR and push that does | format, lint, fitness, ShellCheck, actionlint |
-| `test` (macOS, `runs-on: xcode-27`) | those PRs, drafts included; not Dependabot's | `scripts/quality --full` (~23–35 min) |
+| `test` (macOS, `runs-on: xcode-27`) | those PRs, drafts included; not Dependabot's | `scripts/quality --full` (~23–35 min) when `app-changes.sh` matches, `--fast` (~10–14 min) otherwise |
 | `ci-gate` | always | the check the ruleset requires; fails when `changes`, `lint` or `test` failed or was cancelled |
 
-Pushes to `main` run `--fast` (~10–14 min), and the weekly schedule runs `--full` (~23–35 min).
+Pushes to `main` and the weekly schedule run `--full` (~23–35 min), so a UI flake shows up on `main`: file it as a `flaky-test` issue (rule 6).
 
 CI installs the pinned tools with `scripts/ci/install-tools.sh`, selects the pinned Xcode with `scripts/ci/select-xcode.sh` and, before a `--full` gate, installs the SDK's iOS simulator runtime with `scripts/ci/install-simulator-runtime.sh` (a red "Simulator runtime" step means the download failed or fetched an older runtime). A local pass only counts when `scripts/doctor` reports the same versions as `scripts/tool-versions.env`.
 
@@ -153,9 +153,9 @@ gh run download <run-id> -n xcresult-<run-id> -D build/ci
 
 Run the section 4 `xccov` commands on `build/ci/Test.xcresult`.
 
-A red run on `main` (push or weekly): reproduce on `main` with `scripts/quality --fast` (push) or `--full` (weekly), then fix it on a branch through a PR, or report it to the user.
+A red run on `main` (push or weekly): reproduce on `main` with `scripts/quality --full`, then fix it on a branch through a PR, or report it to the user.
 
-A red `test` on a PR (every push runs it, drafts included; `--full` takes ~23–35 min). Read each red run before the next push:
+A red `test` on a PR (every push runs it, drafts included; `--full` takes ~23–35 min, `--fast` ~10–14 min). Read each red run before the next push:
 
 1. Reproduce locally with `CI=true scripts/quality --full`.
 2. Reproduced: fix the gate as in section 3 until `--full` is green, push, and watch the new run (section 6).

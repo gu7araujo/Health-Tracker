@@ -289,26 +289,26 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 
 | Trigger | `lint` (Linux) | `test` (macOS) |
 |---|---|---|
-| PR, draft or ready (opened, pushed, or reopened) | ✅ | `scripts/quality --full` |
-| Push to `main` (a merge) | ✅ | `scripts/quality --fast` |
+| PR, draft or ready (opened, pushed, or reopened) | ✅ | `scripts/quality --full` if it touches the app, its tests, the project or `--full`'s own scripts and settings (`scripts/ci/app-changes.sh` lists them); `--fast` otherwise |
+| Push to `main` (a merge) | ✅ | `scripts/quality --full` |
 | Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full`; a red run opens an issue "Weekly quality gate failed" (or comments on the open one) |
 | Manual (**Run workflow** in the Actions tab) | ✅ (`ci.yml`) | `scripts/quality --full` |
 
-**`changes`** runs first, on `ubuntu-24.04` (seconds). On a PR it feeds the changed files to `scripts/ci/docs-only.sh`; when every one is docs or agent config, `lint` and `test` are skipped. Other events always run them.
+**`changes`** runs first, on `ubuntu-24.04` (seconds). On a PR it feeds the changed files to `scripts/ci/docs-only.sh`; when every one is docs or agent config, `lint` and `test` are skipped. It also feeds them to `scripts/ci/app-changes.sh`; when none can change what the UI suites test, `test` runs `--fast`. Other events always run `lint` and `test`, with `--full`.
 
 **`lint`** runs on `ubuntu-24.04` (~1 min). It installs the pinned SwiftLint, SwiftFormat and ShellCheck (`scripts/ci/install-tools.sh`), checks formatting, lints, and runs the [fitness checks](#fitness-functions) (on PRs also the persisted-shape guard, which only warns). SwiftLint violations show inline on the PR diff; SwiftFormat failures show in the step log. Linux SwiftLint skips the rules that need SourceKit (`custom_rules`, `statement_position`), so this job is a fast pre-filter: the full lint runs again in `test`. It also runs ShellCheck on the scripts and hooks and actionlint on the workflows.
 
-**`test`** runs only after `lint` passes, on `runs-on: xcode-27` (macOS 27). It selects the pinned Xcode (`scripts/ci/select-xcode.sh`) and installs the pinned tools. Then it runs the scripts' own tests (`scripts/tests/run`), on `--full` runs makes sure a simulator runtime at the SDK's iOS version is installed (`scripts/ci/install-simulator-runtime.sh`: the `xcode-27` image ships iOS 27.2, so it finds it in seconds; on an image without it, it downloads the runtime build pinned as `IOS_RUNTIME_BUILD` in `scripts/tool-versions.env` with `xcodebuild -downloadPlatform iOS -buildVersion`, a ~3-minute download, 20-minute step limit; pushes to `main` run `--fast` and skip it), and runs `scripts/quality` with `CI=true`, so `scripts/doctor` fails on any version drift and compiler warnings fail the build (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `GCC_TREAT_WARNINGS_AS_ERRORS`; locally they stay warnings). The gate table appears in the run's summary. Compile errors and test failures are rendered as GitHub annotations (`xcbeautify --renderer github-actions`).
+**`test`** runs only after `lint` passes, on `runs-on: xcode-27` (macOS 27). It selects the pinned Xcode (`scripts/ci/select-xcode.sh`) and installs the pinned tools. Then it runs the scripts' own tests (`scripts/tests/run`), on `--full` runs makes sure a simulator runtime at the SDK's iOS version is installed (`scripts/ci/install-simulator-runtime.sh`: the `xcode-27` image ships iOS 27.2, so it finds it in seconds; on an image without it, it downloads the runtime build pinned as `IOS_RUNTIME_BUILD` in `scripts/tool-versions.env` with `xcodebuild -downloadPlatform iOS -buildVersion`, a ~3-minute download, 20-minute step limit; `--fast` runs skip it), and runs `scripts/quality` with `CI=true`, so `scripts/doctor` fails on any version drift and compiler warnings fail the build (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `GCC_TREAT_WARNINGS_AS_ERRORS`; locally they stay warnings). The gate table appears in the run's summary. Compile errors and test failures are rendered as GitHub annotations (`xcbeautify --renderer github-actions`).
 
 **`ci-gate`** always runs last and fails when `changes`, `lint` or `test` failed or was cancelled; a skipped job (docs-only PRs, `test` on Dependabot's) is fine. It is the check the `main` ruleset requires: GitHub counts a skipped required job as passing, so requiring `lint` and `test` themselves would pass a PR whose `changes` job crashed.
 
-**Cost.** The repo is public, and GitHub Actions is free for public repositories on standard GitHub-hosted runners, macOS included (`xcode-27` is a standard-size image); only larger runners are billed. Measured run times: a PR's `--full` ~23–35 min, a push to `main` (`--fast`) ~10–14 min, the weekly `--full` ~23–35 min. To keep feedback fast:
+**Cost.** The repo is public, and GitHub Actions is free for public repositories on standard GitHub-hosted runners, macOS included (`xcode-27` is a standard-size image); only larger runners are billed. Measured run times: `--full` (app PRs, pushes to `main`, the weekly run) ~23–35 min, `--fast` (other PRs) ~10–14 min. To keep feedback fast:
 
 - the macOS job waits for the Linux `lint` job;
 - a new push to a PR cancels the run it replaces (runs on `main` are never cancelled);
 - changes that touch only docs or agent config (the `paths-ignore` list in `ci.yml`) skip `lint` and `test`: a PR runs only `changes` and `ci-gate`, a push to `main` runs nothing;
 - marking a PR ready starts no run: the draft's run already checked that commit;
-- pushes to `main` run `--fast`, since the PR already ran `--full`;
+- PRs that touch only other scripts, CI or hooks run `--fast`, since they cannot change what `--full` adds; pushes to `main` still run `--full`;
 - Dependabot PRs run only `lint`.
 
 **Reading a failure:**
