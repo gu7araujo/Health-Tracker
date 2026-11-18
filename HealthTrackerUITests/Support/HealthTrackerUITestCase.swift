@@ -76,15 +76,16 @@ class HealthTrackerUITestCase: XCTestCase {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
     }
 
+    /// Waits until the element exists, through `waitUntil` and `snapshot()`: when one query outlasts
+    /// `waitForExistence`'s timeout, XCTest re-checks with a query that can retry for minutes and then
+    /// records "Timed out while evaluating UI query" (#111).
     @discardableResult
     func assertExists(_ element: XCUIElement, timeout: TimeInterval = 5,
                       file: StaticString = #filePath, line: UInt = #line) -> XCUIElement
     {
-        XCTAssertTrue(
-            element.waitForExistence(timeout: timeout),
-            "Expected element to exist: \(element)",
-            file: file, line: line
-        )
+        if !waitUntil(timeout: timeout, { (try? element.snapshot()) != nil }) {
+            XCTFail("Expected element to exist: \(element)", file: file, line: line)
+        }
         return element
     }
 
