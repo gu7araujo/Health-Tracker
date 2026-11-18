@@ -1,0 +1,14 @@
+# Must fail: the @claude job's second checkout keeps GITHUB_TOKEN's auth header, so its pushes 403.
+jobs:
+  claude:
+    if: |
+      github.actor == 'gu7araujo' && (
+        contains(github.event.comment.body, '@claude')
+      )
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
