@@ -30,7 +30,7 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
         try await run("LogWaterIntent", ["amount": 500])
 
         let label = element(AccessibilityID.waterValueLabel)
-        XCTAssertTrue(waitForLabel(of: label, toStartWith: "0.5"), "got \(label.label)")
+        assertLabel(of: label, startsWith: "0.5")
     }
 
     @MainActor
@@ -122,14 +122,14 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
         app.activate()
 
         let water = element(AccessibilityID.waterValueLabel)
-        XCTAssertTrue(waitForLabel(of: water, toStartWith: "0.5"), "got \(water.label)")
+        assertLabel(of: water, startsWith: "0.5")
 
         addMeal(items: ["Apple"])
 
         // Reloading from the store on the next activation shows what the meal save actually wrote
         XCUIDevice.shared.press(.home)
         app.activate()
-        XCTAssertTrue(waitForLabel(of: water, toStartWith: "0.5"), "got \(water.label)")
+        assertLabel(of: water, startsWith: "0.5")
         XCTAssertTrue(assertExists(element(AccessibilityID.mealCard(0))).label.contains("Apple"))
     }
 
@@ -209,9 +209,16 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
     }
 
     /// Polls until the element's label starts with the prefix; intents update the UI via a notification.
-    private func waitForLabel(of element: XCUIElement, toStartWith prefix: String) -> Bool {
-        let predicate = NSPredicate(format: "label BEGINSWITH %@", prefix)
-        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
-        return XCTWaiter().wait(for: [expectation], timeout: 5) == .completed
+    /// Reads through `waitUntil` and `snapshot()`, since a predicate expectation gives up on one slow
+    /// query and reported a label that already matched (#117).
+    private func assertLabel(of element: XCUIElement, startsWith prefix: String,
+                             file: StaticString = #filePath, line: UInt = #line)
+    {
+        var text = ""
+        if waitUntil({
+            text = (try? element.snapshot())?.label ?? ""
+            return text.hasPrefix(prefix)
+        }) { return }
+        XCTFail("Expected a label starting with \(prefix), got: \(text)", file: file, line: line)
     }
 }

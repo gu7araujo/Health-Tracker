@@ -93,6 +93,14 @@ custom_rules:
     excluded_match_kinds: [comment, doccomment]
     message: "Presentation/Intents/AGENTS.md rule_5: build dialogs and prompts from a static that uses resolvedInApp, never a string literal"
     severity: error
+  ui_tests_wait_through_support:
+    name: "UI Tests Wait And Type Through Support"
+    included: "/HealthTracker(Intents)?UITests/"
+    excluded: "/HealthTrackerUITests/Support/"
+    regex: "\\b(waitForExistence|waitForNonExistence|XCTNSPredicateExpectation|XCTWaiter|typeText)\\b|\\bwait\\(for:"
+    match_kinds: [identifier, typeidentifier]
+    message: "HealthTrackerUITests/AGENTS.md rule_3: wait with assertExists/assertNotExists/waitUntil and type with enterText(_:into:), which poll through snapshot()"
+    severity: error
 
 excluded:
   - Pods

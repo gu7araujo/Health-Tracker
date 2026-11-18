@@ -213,6 +213,7 @@ Also opted in: `force_unwrapping`, `implicitly_unwrapped_optional`, `fatal_error
 | `unit_tests_use_swift_testing` | `HealthTrackerTests/` | `import XCTest` | `HealthTrackerTests/AGENTS.md` rule_1 |
 | `ui_tests_no_testable_import` | `HealthTrackerUITests/` | `@testable import` | `HealthTrackerUITests/AGENTS.md` rule_1 |
 | `ui_tests_no_sleep` | `HealthTrackerUITests/` | `sleep(`, `usleep(`, `Thread.sleep(` | `HealthTrackerUITests/AGENTS.md` rule_3 |
+| `ui_tests_wait_through_support` | both UI test targets, outside `HealthTrackerUITests/Support/` | `waitForExistence`, `waitForNonExistence`, `XCTNSPredicateExpectation`, `XCTWaiter`, `wait(for:`, `typeText` | `HealthTrackerUITests/AGENTS.md` rule_3 |
 | `no_print` | everywhere | `print(` (warning) | use the logger |
 
 Custom rules need SourceKit, which Linux SwiftLint lacks, so the Linux `lint` CI job skips them. The macOS `test` job enforces them through `scripts/quality`, as do the pre-commit hook, the Claude Code hook and the Xcode build phase.
