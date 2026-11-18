@@ -277,7 +277,7 @@ Enabled by `scripts/bootstrap`. They live in `.githooks/`.
 - runs `scripts/fitness/persisted-shape-guard.sh origin/main`, which only warns (also with `SKIP_QUALITY=1`);
 - runs `scripts/quality --fast`, and blocks the push if a gate is red.
 
-Emergency escape hatch, for humans only: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). CI still runs the gate on every push to an open PR, drafts included, unless the PR touches only docs or agent config. Use it rarely, and run `--full` before marking the PR ready.
+Escape hatch: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). Use it in an emergency, or in a cloud session, which has no Xcode to run the gate. CI still runs the gate on every push to an open PR, drafts included, unless the PR touches only docs or agent config. Use it rarely, and run `--full` before marking the PR ready.
 
 ## Xcode build phase
 
@@ -330,12 +330,13 @@ The `main` ruleset requires a PR and the `claude-review` and `ci-gate` checks; `
 Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-gate` skill, so they run the same commands you do:
 
 - "Done" means `scripts/quality --full` exits 0; for a change touching only docs or agent config (the `paths-ignore` list in `ci.yml`), `scripts/quality --fast`. Agents paste the gate table into their report and PR.
-- `.claude/settings.json` stops Claude Code from bypassing the gate. It denies:
+- `.claude/settings.json` stops Claude Code from skipping git hooks or touching `main`. It denies:
   - `--no-verify` / `-n` and `git -c core.hooksPath`;
-  - `SKIP_QUALITY=`;
   - pushes to `main` and force-pushes;
   - `git reset --hard`;
   - `gh pr merge`.
+
+  It allows `SKIP_QUALITY=1 git push`, because a cloud session has no Xcode and can't pass the pre-push gate. CI runs the gate on every push to an open PR.
 - A Claude Code hook (`.claude/hooks/format-swift.sh`) formats and lints every Swift file an agent edits, so it sees violations immediately. If SwiftFormat or SwiftLint can't run, the hook reports that as an error instead of passing. Another (`swift-bash-edits.sh`) refuses a Bash command that writes a `.swift` file in the checkout, so agents' Swift edits go through the first.
 - Agents open PRs **ready for review**, so every push runs CI and the `claude-review` bot. They run `CI=true scripts/quality --full` locally, push, open the PR and wait for the checks. If `test` goes red, the agent reproduces it locally, fixes it and pushes again; a failure it can't reproduce locally, or a red run after a fix that was green locally, comes to you as a report instead. You review and merge.
 

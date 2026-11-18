@@ -5,7 +5,7 @@
 # wiring, the test job's PR filter, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
 # test-step parity, the weekly failure issue, the simulator runtime step, step and job timeouts,
 # action pinning, valid YAML, the Claude review's one granted tool, its CLAUDE.md copies, prompt and
-# outcome step.
+# outcome step, and the @claude job's owner check and checkout credentials.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
 # checks on scripts/tests/fixtures/ci-workflows to prove they still catch what they are for).
 set -uo pipefail
@@ -257,6 +257,15 @@ ruby -ryaml -e '
 # The public repo's @claude job spends the owner's token: it answers only the owner.
 grep -qxF "      github.actor == 'gu7araujo' && (" "$WORKFLOWS/claude.yml" ||
   fail "claude.yml: the job must run only when github.actor is the owner"
+# The @claude job pushes with the Claude app token it sets in the remote URL. A checkout that persists
+# GITHUB_TOKEN's auth header has git send that header first, so pushes run as github-actions[bot]
+# (contents: read) and fail with 403; GITHUB_TOKEN's pushes would not trigger CI anyway.
+ruby -ryaml -e '
+  steps = YAML.safe_load(File.read(ARGV[0]), aliases: true).dig("jobs", "claude", "steps") || []
+  checkouts = steps.select { |s| s["uses"].to_s.start_with?("actions/checkout@") }
+  exit(!checkouts.empty? && checkouts.all? { |s| (s["with"] || {})["persist-credentials"].to_s == "false" })
+' "$WORKFLOWS/claude.yml" ||
+  fail "claude.yml: the claude job needs a checkout, each with persist-credentials: false, or pushes run as github-actions[bot]"
 
 # The real workflows pass every check, which a check gone blind would too: the fixtures prove each
 # check still catches what it is for, and pass/ that together they accept a clean set. Only on the
@@ -345,6 +354,10 @@ if [ $# -eq 0 ]; then
   fixture claude 2
   must "FAIL: claude-code-review.yml: the job must"
   must "FAIL: claude.yml: the job must"
+  fixture claude-credentials 1
+  must "FAIL: claude.yml: the claude job needs a checkout, each with persist-credentials: false"
+  fixture claude-no-checkout 1
+  must "FAIL: claude.yml: the claude job needs a checkout, each with persist-credentials: false"
   fixture review-tools 2
   must "FAIL: claude-code-review.yml: --allowedTools grants Read beyond the inline-comment tool"
   must "FAIL: claude-code-review.yml: --allowedTools grants Edit beyond the inline-comment tool"
