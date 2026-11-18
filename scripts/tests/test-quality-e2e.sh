@@ -294,14 +294,24 @@ grep -qxF "$retried_line" <<<"$out" || fail "the details should list the test th
   fail "quality.json should list the retried test, got: $(jq -c .retried "$REPO/build/quality.json")"
 GHA=true run_quality '[]' --full
 grep -qxF "::warning::$retried_line" <<<"$out" || fail "on GitHub Actions a retry should be a warning annotation, got: $out"
+# GitHub reads a % in an annotation as an escape, so the gate writes it as %25.
+cp "$TMP/tests.json" "$TMP/tests.retried.json"
+sed 's/UI query/UI query at 50%/' "$TMP/tests.retried.json" >"$TMP/tests.json"
+GHA=true run_quality '[]' --full
+grep -qxF "::warning::${retried_line}%25" <<<"${out// at 50/}" ||
+  fail "a % in a retried test's annotation should be escaped as %25, got: $out"
+mv "$TMP/tests.retried.json" "$TMP/tests.json"
 # A retry in a first attempt that the runner error then sends to a bundle rerun stays listed.
 jq --slurpfile retried "$TMP/tests.json" '.testNodes[0].children |= map(if .name == "HealthTrackerUITests"
     then .children += ($retried[0].testNodes[0].children[] | select(.name == "HealthTrackerUITests") | .children)
     else . end)' "$FIX/test-results-runner-error.json" >"$TMP/runner-error.json"
 mv "$TMP/tests.passing.json" "$TMP/tests.json"
 echo 1 >"$TMP/runner-error.HealthTrackerUITests"
+: >"$TMP/xcodebuild.calls"
 run_quality '[]' --full
 grep -qxF "$retried_line" <<<"$out" || fail "a retry in a rerun bundle's first attempt should stay listed, got: $out"
+[ "$(grep -c -- '-only-testing:HealthTrackerUITests ' "$TMP/xcodebuild.calls")" -eq 2 ] ||
+  fail "the runner error should have rerun the UI bundle, got: $(cat "$TMP/xcodebuild.calls")"
 cp "$FIX/test-results-runner-error.json" "$TMP/runner-error.json"
 rm -f "$TMP/runner-error.HealthTrackerUITests"
 run_quality '[]' --full
