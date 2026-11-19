@@ -4,7 +4,7 @@
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
 # wiring, the test job's PR filter and MODE, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
 # test-step parity, the weekly failure issue, the simulator runtime step, step and job timeouts,
-# action pinning, valid YAML, the Claude review's one granted tool, its claude_args'
+# action pinning, valid YAML, the Claude review's two granted tools, its claude_args'
 # --setting-sources user, its CLAUDE.md copies, prompt and outcome step, and the @claude job's owner
 # check and checkout credentials.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
@@ -183,9 +183,11 @@ grep -qE "^ *if: env.MODE == '--full'( +#.*)? *\$" <<<"$runtime" ||
 grep -qxF "    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository" \
   "$WORKFLOWS/claude-code-review.yml" ||
   fail "claude-code-review.yml: the job must skip draft and fork PRs"
-# The review's --allowedTools grants the inline-comment tool only (#62). Read, Grep and Glob already
-# run inside the checkout without a grant, and a bare one would let a prompt-injected PR comment read
-# outside it (the runner's environment, its token). The plugin grants its own gh commands.
+# The review's --allowedTools grants the inline-comment tool and gh pr diff only (#62). Read, Grep and
+# Glob already run inside the checkout without a grant, and a bare one would let a prompt-injected PR
+# comment read outside it (the runner's environment, its token). The plugin's allowed-tools grant its
+# gh commands to the session that runs it, not to the subagents it launches, so those were denied
+# gh pr diff, the one way they see the diff (fetch-depth 1): the read-only grant reaches them.
 # --setting-sources user keeps the repo's .claude/settings.json allowlist out of the review (#90): the
 # action loads every source by default, and that allowlist runs PR-branch scripts with the tokens set.
 allowed="$(sed -nE "s/^ *claude_args: '(--setting-sources user )?--allowedTools \"([^\"]*)\"' *\$/\2/p" "$WORKFLOWS/claude-code-review.yml" | tr ',' '\n')"
@@ -195,9 +197,11 @@ if [ -z "$allowed" ]; then
   fail "claude-code-review.yml: claude_args needs an --allowedTools list"
 else
   while IFS= read -r tool; do
-    [ "$tool" = mcp__github_inline_comment__create_inline_comment ] ||
-      fail "claude-code-review.yml: --allowedTools grants $tool beyond the inline-comment tool"
+    [ "$tool" = mcp__github_inline_comment__create_inline_comment ] || [ "$tool" = 'Bash(gh pr diff:*)' ] ||
+      fail "claude-code-review.yml: --allowedTools grants $tool beyond the inline-comment tool and gh pr diff"
   done <<<"$allowed"
+  grep -qxF 'Bash(gh pr diff:*)' <<<"$allowed" ||
+    fail "claude-code-review.yml: --allowedTools needs Bash(gh pr diff:*), so the review's subagents can read the diff"
 fi
 # The plugin checks CLAUDE.md files only, and only those on a changed file's path; the repo keeps its
 # rules in AGENTS.md: right before the review, a step copies each nested AGENTS.md to a CLAUDE.md
@@ -391,6 +395,8 @@ if [ $# -eq 0 ]; then
   fixture review-tools 2
   must "FAIL: claude-code-review.yml: --allowedTools grants Read beyond the inline-comment tool"
   must "FAIL: claude-code-review.yml: --allowedTools grants Edit beyond the inline-comment tool"
+  fixture review-diff 1
+  must "FAIL: claude-code-review.yml: --allowedTools needs Bash(gh pr diff:*)"
   fixture review-args 2
   must "FAIL: claude-code-review.yml: claude_args needs an --allowedTools list"
   must "FAIL: claude-code-review.yml: claude_args needs --setting-sources user"
