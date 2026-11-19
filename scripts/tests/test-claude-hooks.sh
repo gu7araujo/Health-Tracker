@@ -97,7 +97,7 @@ for command in "git reset --hard origin/x" "git reset -q --hard origin/x" "git r
   denied "$command" || fail "settings.json should deny: $command"
 done
 # A flag or remote before --force, --no-verify or -f, or a +refspec, once slipped past too.
-for command in "git push origin --force" "git push -u origin --force-with-lease" "git push origin +feat/x" \
+for command in "git push --force" "git push --no-verify" "git push origin --force" "git push -u origin --force-with-lease" "git push origin +feat/x" \
   "git push origin --no-verify" "git push -f origin x" "git push origin -f"; do
   denied "$command" || fail "settings.json should deny: $command"
 done
@@ -302,6 +302,9 @@ context layer-docs.sh "$(edit_input "$ROOT/HealthTracker/Domain/Entities/DayData
 [[ "$out" == *'Skill("tdd")'* ]] || fail "the first edit after a Bash read should still get the edit reminder: $out"
 context layer-docs.sh "$(read_input "cat Entities/DayData.swift" r5 "$ROOT/HealthTracker/Data")"
 [[ "$out" == *"HealthTracker/Data/AGENTS.md"* ]] || fail "a relative path should resolve against the cwd: $out"
+context layer-docs.sh "$(read_input "cat ../Presentation/MainView.swift" r6 "$ROOT/HealthTracker/Domain")"
+[[ "$out" == *"HealthTracker/Presentation/AGENTS.md"* && "$out" != *Domain* ]] ||
+  fail "a ../ path should resolve to the layer it names: $out"
 context layer-docs.sh "$(read_input "sed -n 1,20p $ROOT/HealthTracker/Presentation/MainView.swift | head -5" r1)"
 [[ "$out" == *"HealthTracker/Presentation/AGENTS.md"* ]] || fail "an absolute path should map to its layer: $out"
 context layer-docs.sh "$(read_input "grep -rn 'water' HealthTrackerTests" r1)"

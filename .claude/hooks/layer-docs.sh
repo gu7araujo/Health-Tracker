@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Claude Code PreToolUse hook on file writes and Bash: the first edit in a layer, or the first Bash
-# read of its code (cat, sed, grep...), per session and agent, names that layer's AGENTS.md and the
-# skill to call. Claude Code loads a nested AGENTS.md only when the Read tool opens a file under it,
-# so an agent that reads code through Bash never sees it.
+# Claude Code PreToolUse hook on file writes and Bash: the first edit in a layer, per session and
+# agent, names that layer's AGENTS.md and the skill to call; the first Bash read of its code (cat,
+# sed, grep...) names the AGENTS.md only, under a marker of its own. Claude Code loads a nested
+# AGENTS.md only when the Read tool opens a file under it, so an agent that reads code through Bash
+# never sees it.
 set -uo pipefail
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
@@ -54,6 +55,7 @@ message=""
 while IFS= read -r rel; do
   if [ -n "$checkout" ]; then
     [[ "$rel" == /* ]] || rel="$cwd/$rel"
+    while [[ "$rel" =~ ^(.*/)?[^/]+/\.\./(.*)$ ]]; do rel="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"; done
     rel="${rel#"$checkout"/}"
   fi
   layer_doc "${rel#./}" || continue
