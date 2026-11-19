@@ -148,6 +148,15 @@ test_push_to_main_is_refused() {
   [ -z "$(git ls-remote origin refs/heads/main)" ] || { echo "main reached the remote"; return 1; }
 }
 
+test_deleting_main_is_refused() {
+  new_repo delete-main
+  git push -q --no-verify origin main || { echo "setup push failed"; return 1; }
+  local out
+  if out="$(QUALITY_CMD=true git push origin --delete main 2>&1)"; then echo "delete of main succeeded"; return 1; fi
+  [[ "$out" == *"refusing to push to main"* ]] || { echo "missing message: $out"; return 1; }
+  [ -n "$(git ls-remote origin refs/heads/main)" ] || { echo "main was deleted on the remote"; return 1; }
+}
+
 test_push_to_feature_runs_the_quality_command() {
   new_repo push-ok
   git switch -q -c feat/ok
