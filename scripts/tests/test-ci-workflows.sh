@@ -200,6 +200,8 @@ else
     [ "$tool" = mcp__github_inline_comment__create_inline_comment ] || [ "$tool" = 'Bash(gh pr diff:*)' ] ||
       fail "claude-code-review.yml: --allowedTools grants $tool beyond the inline-comment tool and gh pr diff"
   done <<<"$allowed"
+  grep -qxF mcp__github_inline_comment__create_inline_comment <<<"$allowed" ||
+    fail "claude-code-review.yml: --allowedTools needs mcp__github_inline_comment__create_inline_comment, or the review posts no inline comments"
   grep -qxF 'Bash(gh pr diff:*)' <<<"$allowed" ||
     fail "claude-code-review.yml: --allowedTools needs Bash(gh pr diff:*), so the review's subagents can read the diff"
 fi
@@ -397,6 +399,8 @@ if [ $# -eq 0 ]; then
   must "FAIL: claude-code-review.yml: --allowedTools grants Edit beyond the inline-comment tool"
   fixture review-diff 1
   must "FAIL: claude-code-review.yml: --allowedTools needs Bash(gh pr diff:*)"
+  fixture review-inline 1
+  must "FAIL: claude-code-review.yml: --allowedTools needs mcp__github_inline_comment__create_inline_comment"
   fixture review-args 2
   must "FAIL: claude-code-review.yml: claude_args needs an --allowedTools list"
   must "FAIL: claude-code-review.yml: claude_args needs --setting-sources user"
