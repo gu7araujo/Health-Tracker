@@ -4,9 +4,9 @@
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
 # wiring, the test job's PR filter and MODE, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
 # test-step parity, the weekly failure issue, the simulator runtime step, step and job timeouts,
-# action pinning, valid YAML, the Claude review's granted tools, its claude_args'
-# --setting-sources user, its CLAUDE.md copies, prompt and outcome step, and the @claude job's owner
-# check and checkout credentials.
+# action pinning, valid YAML, the Claude review's one granted tool, the gh commands it denies, its
+# claude_args' --setting-sources user, its PR files step, CLAUDE.md copies, prompt and outcome step,
+# and the @claude job's owner check and checkout credentials.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
 # checks on scripts/tests/fixtures/ci-workflows to prove they still catch what they are for).
 set -uo pipefail
@@ -183,29 +183,28 @@ grep -qE "^ *if: env.MODE == '--full'( +#.*)? *\$" <<<"$runtime" ||
 grep -qxF "    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository" \
   "$WORKFLOWS/claude-code-review.yml" ||
   fail "claude-code-review.yml: the job must skip draft and fork PRs"
-# The review's --allowedTools grants the inline-comment tool and the read-only gh pr diff and gh pr view
-# (#62). The plugin's allowed-tools grant those gh commands to its own session only, so the agents it
-# launches were denied gh pr diff (denied=Bash(gh pr diff) on 4 of the 5 runs from #136 to #145). Read, Grep
-# and Glob already run inside the checkout without a grant, and a bare one would let a prompt-injected
-# PR comment read outside it (the runner's environment, its token).
+# The review's --allowedTools grants the inline-comment tool only (#62). Read, Grep and Glob already
+# run inside the checkout without a grant, and a bare one would let a prompt-injected PR comment read
+# outside it (the runner's environment, its token). The plugin grants its own gh commands, and each of
+# those that takes --jq reads the environment ($ENV), and --repo reaches any host: --disallowedTools
+# denies them, and a step writes the PR's diff, title, body and comments into the checkout (#62).
 # --setting-sources user keeps the repo's .claude/settings.json allowlist out of the review (#90): the
 # action loads every source by default, and that allowlist runs PR-branch scripts with the tokens set.
-allowed="$(sed -nE "s/^ *claude_args: '(--setting-sources user )?--allowedTools \"([^\"]*)\"' *\$/\2/p" "$WORKFLOWS/claude-code-review.yml" | tr ',' '\n')"
+allowed="$(sed -nE "s/^ *claude_args: '(--setting-sources user )?--allowedTools \"([^\"]*)\"( --disallowedTools \"[^\"]*\")?' *\$/\2/p" "$WORKFLOWS/claude-code-review.yml" | tr ',' '\n')"
+denied="$(sed -nE "s/^ *claude_args: '.* --disallowedTools \"([^\"]*)\"' *\$/\1/p" "$WORKFLOWS/claude-code-review.yml" | tr ',' '\n')"
 grep -qE "^ *claude_args: '--setting-sources user " "$WORKFLOWS/claude-code-review.yml" ||
   fail "claude-code-review.yml: claude_args needs --setting-sources user, so the review loads no in-repo settings"
 if [ -z "$allowed" ]; then
   fail "claude-code-review.yml: claude_args needs an --allowedTools list"
 else
-  for tool in mcp__github_inline_comment__create_inline_comment 'Bash(gh pr diff:*)' 'Bash(gh pr view:*)'; do
-    grep -qxF -- "$tool" <<<"$allowed" ||
-      fail "claude-code-review.yml: --allowedTools lacks $tool, which the review and its agents need"
-  done
   while IFS= read -r tool; do
-    case "$tool" in
-      mcp__github_inline_comment__create_inline_comment | 'Bash(gh pr diff:*)' | 'Bash(gh pr view:*)') ;;
-      *) fail "claude-code-review.yml: --allowedTools grants $tool beyond the inline-comment tool, gh pr diff and gh pr view" ;;
-    esac
+    [ "$tool" = mcp__github_inline_comment__create_inline_comment ] ||
+      fail "claude-code-review.yml: --allowedTools grants $tool beyond the inline-comment tool"
   done <<<"$allowed"
+  for tool in 'Bash(gh pr view:*)' 'Bash(gh pr diff:*)' 'Bash(gh pr list:*)' 'Bash(gh issue view:*)' 'Bash(gh issue list:*)' 'Bash(gh search:*)'; do
+    grep -qxF -- "$tool" <<<"$denied" ||
+      fail "claude-code-review.yml: --disallowedTools must deny $tool: --jq reads the runner's environment, --repo reaches any host"
+  done
 fi
 # The plugin checks CLAUDE.md files only, and only those on a changed file's path; the repo keeps its
 # rules in AGENTS.md: right before the review, a step copies each nested AGENTS.md to a CLAUDE.md
@@ -230,16 +229,33 @@ copy="$(awk '/^ *- name: CLAUDE.md for the review *$/ { found = 1; next } found 
 [[ "$before_review" =~ ^\ *-\ name:\ CLAUDE.md\ for\ the\ review\ *$ ]] &&
   [ "$(sed 's/^ *//; s/ *$//' <<<"$copy" | grep -vE '^(#|$)')" = "$COPY_STEP" ] ||
   fail "claude-code-review.yml: a 'CLAUDE.md for the review' step must copy each nested AGENTS.md to CLAUDE.md right before the review"
+# The agents read the PR from files, since the gh commands that print it are denied: a step before
+# the review writes them with the job's token. Exactly these step lines, as for the copy step.
+PR_STEP="$(
+  cat <<'EOF'
+shell: bash
+env:
+GH_TOKEN: ${{ github.token }}
+PR: ${{ github.event.pull_request.number }}
+run: |
+mkdir .review
+gh pr diff "$PR" --repo "$GITHUB_REPOSITORY" >.review/pr.diff
+gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json title,body,state,comments >.review/pr.json
+EOF
+)"
+pr_files="$(awk '/^ *- name: PR files for the review *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$review_steps")"
+pr_step_before_review="$(awk '/^ *- name: PR files for the review *$/ { found = 1 } /^ *- name: Run Claude Code Review *$/ { print found + 0; exit }' <<<"$review_steps")"
+[ "$pr_step_before_review" = 1 ] &&
+  [ "$(sed 's/^ *//; s/ *$//' <<<"$pr_files" | grep -vE '^(#|$)')" = "$PR_STEP" ] ||
+  fail "claude-code-review.yml: a 'PR files for the review' step before the review must write .review/pr.diff and .review/pr.json"
 # The plugin's step 1 stops on a PR it judges trivial or automated, every PR here is written with
 # Claude Code, and on a small diff the model skips step 4's agents: the prompt asks for every step,
-# and an early stop it still makes posts its reason (#62). A command starting with cd was denied on 4
-# of the 5 runs from #136 to #145, and a gh grant does not cover a compound command around gh: the
-# prompt asks for gh on its own.
+# and an early stop it still makes posts its reason (#62).
 read -r REVIEW_PROMPT <<'EOF'
-prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/. Run every step on every open PR, with the four agents of step 4 whatever the diff size: this workflow already excludes drafts and forks, and a PR written with Claude Code still needs the review. Stop early only when the PR is closed or Claude has already commented on it. If you stop before step 4 for any other reason, post a comment with gh pr comment that says why. Tell each agent to run gh pr diff and gh pr view as commands of their own, with no cd, pipe or other command around them.'
+prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/. Run every step on every open PR, with the four agents of step 4 whatever the diff size: this workflow already excludes drafts and forks, and a PR written with Claude Code still needs the review. Stop early only when the PR is closed or Claude has already commented on it. If you stop before step 4 for any other reason, post a comment with gh pr comment that says why. The diff is in .review/pr.diff and its title, body, state and comments are in .review/pr.json: tell each agent to read those files, since gh pr diff and gh pr view are denied.'
 EOF
 grep -qxF -- "$REVIEW_PROMPT" <<<"$(sed 's/^ *//; s/ *$//' "$WORKFLOWS/claude-code-review.yml")" ||
-  fail "claude-code-review.yml: the review prompt must name the root AGENTS.md and the UI test rules' reach, ask for every step on every open PR, and gh on its own"
+  fail "claude-code-review.yml: the review prompt must name the root AGENTS.md and the UI test rules' reach, ask for every step on every open PR, and point at the .review files"
 # The action logs a run's counts but hides the model's closing text, so a run that stopped early
 # looked like one that passed (#62): right after the review, a step prints the result message's turn
 # count, denial count, denied tools and closing text, and nothing else from the run (tool results can
@@ -401,10 +417,11 @@ if [ $# -eq 0 ]; then
   fixture review-tools 2
   must "FAIL: claude-code-review.yml: --allowedTools grants Read beyond the inline-comment tool"
   must "FAIL: claude-code-review.yml: --allowedTools grants Edit beyond the inline-comment tool"
-  fixture review-gh-tools 3
-  must "FAIL: claude-code-review.yml: --allowedTools lacks Bash(gh pr diff:*)"
-  must "FAIL: claude-code-review.yml: --allowedTools lacks Bash(gh pr view:*)"
-  must "FAIL: claude-code-review.yml: --allowedTools grants Bash(gh:*) beyond the inline-comment tool"
+  fixture review-gh-jq 2
+  must "FAIL: claude-code-review.yml: --disallowedTools must deny Bash(gh pr view:*)"
+  must "FAIL: claude-code-review.yml: --disallowedTools must deny Bash(gh search:*)"
+  fixture review-pr-files 1
+  must "FAIL: claude-code-review.yml: a 'PR files for the review' step before the review"
   fixture review-args 2
   must "FAIL: claude-code-review.yml: claude_args needs an --allowedTools list"
   must "FAIL: claude-code-review.yml: claude_args needs --setting-sources user"
