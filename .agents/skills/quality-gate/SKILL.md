@@ -119,7 +119,7 @@ Open every PR **ready for review** (`gh pr create`, no `--draft`); write its tit
 - **A docs-only PR** (only `paths-ignore` files) runs just `changes`, `ci-gate` and `claude-review`. Open it once `--fast` is green, and stop with the link.
 - **Any other PR** is opened only after a green local `CI=true scripts/quality --full` (section 1; in a cloud session, `CLOUD.md`'s Done when):
   1. Push and open the PR, then wait until `gh run list --commit "$(git rev-parse HEAD)"` shows the push's run; until then `gh pr checks` has nothing to watch.
-  2. `gh pr checks <n> --watch`.
+  2. Watch the checks with the harness's PR watch (`parallel-agents`, harness routing); without one, `gh pr checks <n> --watch`.
   3. Green: stop there with the link. The user approves and merges every PR.
   4. Red: section 7.
 

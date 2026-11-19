@@ -7,7 +7,7 @@
 # rename's old path too, so code moved to a .md still counts)
 set -uo pipefail
 
-PATTERNS=('**/*.md' '.agents/**' '.claude/skills/**' '.codex/**')
+PATTERNS=('**/*.md' '.agents/**' '.claude/skills/**' '.codex/**' 't3.json')
 
 # is_doc <file>: a leading **/ also matches the repo root; in [[ ]], * already crosses /.
 is_doc() {

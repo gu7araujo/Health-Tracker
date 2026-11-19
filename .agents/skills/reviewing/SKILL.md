@@ -17,7 +17,7 @@ The tier is set by the riskiest path the diff touches. A diff of only files matc
 | Standard | app or test code | Specialist, `code-review` at `high`, then Codex |
 | High | persisted types (`Domain/Entities/`, `Data/`), the frozen intent contract (`Presentation/Intents/`), `HealthTracker.entitlements`, `Info.plist`, and the guardrails (`.github/`, `.githooks/`, `scripts/`, `.claude/settings.json`, `.claude/hooks/`, `.swiftlint.yml`, `.periphery.yml`) | Standard with `code-review` at `xhigh`, plus `security-review` |
 
-**Done when:** every path in `git diff --name-only main...` (plus uncommitted files) is placed in a tier, and the highest one is named.
+**Done when:** every path in `git diff --name-only origin/main...` (plus uncommitted files) is placed in a tier, and the highest one is named.
 
 ## 2. Run round 1
 
@@ -25,10 +25,10 @@ Run every pass of the tier.
 
 - **Claude passes** (`code-review`, `security-review`): each in a subagent with fresh context (the Agent tool), briefed as a cold start with the diff's scope, the tier and the [pass contract](#the-pass-contract) below.
 - **Specialist pass** (Standard and High), before `code-review`: one fresh subagent per specialist skill the diff's paths call for, which loads that skill and reviews the diff against it, citing the skill reference behind each finding. Paths to skills: `Presentation/` Views → `swiftui-specialist` (+ `swiftui-whats-new-27` for iOS 27 APIs); `Presentation/Intents/` → `app-intents-specialist` (+ `app-intents-whats-new-27`); `HealthTrackerTests/` → `swift-testing-expert:swift-testing-expert`; actors, `Sendable` or `Task` code → `swift-concurrency:swift-concurrency`.
-- **Codex** runs when `codex` is on the `PATH` (cloud sessions lack it: say so in the report):
+- **Codex**: under T3 Code, a `delegate_task` to a Codex model, briefed like a Claude pass (`parallel-agents`, harness routing). Elsewhere it runs when `codex` is on the `PATH` (cloud sessions lack it: say so in the report):
 
   ```bash
-  codex review -c model_reasoning_effort="xhigh" --uncommitted   # or --base main once committed
+  codex review -c model_reasoning_effort="xhigh" --uncommitted   # or --base origin/main once committed
   ```
 
   It accepts no custom prompt alongside `--uncommitted`, and runs for minutes: give it a 600000 ms timeout.
@@ -51,6 +51,7 @@ Later rounds re-review only the fixes: `code-review` at the tier's level, in a f
 
 What every pass, Claude or Codex, is held to. Put it in each brief; follow it when you are the pass.
 
+- **Scope:** review the diff; skip the root `AGENTS.md`'s main-session steps (`unslop`, the Workflow).
 - **Criteria:** the conventions in the root `AGENTS.md`, plus the `<rule_N>` blocks and conventions in the `AGENTS.md` of each directory the diff touches. Read those first: they don't load on their own. A broken rule is a finding.
 - **Report bugs and rule breaks.** Format, lint, unused code and the fitness checks belong to `scripts/quality`, which enforces them; leave those, `build/` and `.swiftlint-baseline.json` to it.
 - **Mark pre-existing problems** (in lines the diff doesn't touch) as such.

@@ -23,6 +23,14 @@ first_time() {
 # skill_marker <skill>: the state name skill-loaded.sh sets and skill-required.sh checks for <skill>.
 skill_marker() { printf 'skill-%s' "${1//[:\/]/_}"; }
 
+# own_checkout <dir>: the root of the checkout holding <dir>; fails unless it is one of this
+# project's checkouts (the main one or a worktree), which share the hook's git directory.
+own_checkout() {
+  [ "$(git -C "$1" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = \
+    "$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ] || return 1
+  git -C "$1" rev-parse --show-toplevel 2>/dev/null
+}
+
 # edited_path: the write tool's target, relative to its checkout; prints nothing and fails when the
 # target is outside this project's checkouts (main or worktree). Edit/Write pass an absolute
 # `file_path`; the Xcode MCP write tools pass `filePath`, `<project name>/<path inside the checkout>`.
@@ -38,10 +46,7 @@ edited_path() {
   # The file, or even its directory, may not exist yet: resolve the nearest existing ancestor.
   dir="$(dirname "$path")"
   while [ ! -d "$dir" ]; do dir="$(dirname "$dir")"; done
-  checkout="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)" || return 1
-  # Only this project's checkouts (the main one or a worktree) share the hook's git directory.
-  [ "$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = \
-    "$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ] || return 1
+  checkout="$(own_checkout "$dir")" || return 1
   full="$(cd "$dir" && pwd -P)${path#"$dir"}"
   rel="${full#"$checkout"/}"
   [ "$rel" != "$full" ] || return 1

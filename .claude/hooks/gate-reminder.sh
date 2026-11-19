@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code Stop hook: when a .swift file changed on this branch (committed since main, or not
+# Claude Code Stop hook: when a .swift file changed on this branch (committed since origin/main, or not
 # yet committed) is newer than the last green gate run's build/quality.json, or there is none,
 # sends the main session back: the definition of done (AGENTS.md Workflow) needs a fresh gate table.
 # It blocks the stop with a reason Claude reads, once per session and gate run, so Claude runs the
@@ -18,7 +18,9 @@ for pid_file in build/quality.pids/*; do
   [[ "$(ps -o command= -p "${pid_file##*/}" 2>/dev/null)" != *scripts/quality* ]] || exit 0
 done
 export GIT_OPTIONAL_LOCKS=0
-base="$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || echo HEAD)"
+# origin/main first: a worktree made from it (T3 Code's) would otherwise count Swift that reached
+# origin/main after the local main was last updated as this branch's change.
+base="$(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null || echo HEAD)"
 changed=()
 # NUL-separated, so git never quotes a name; ./ keeps a leading - from reading as a find option.
 while IFS= read -r -d '' path; do

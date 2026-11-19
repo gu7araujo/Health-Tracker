@@ -15,4 +15,6 @@ Do not duplicate content already captured in other artifacts (specs, plans, ADRs
 
 Redact any sensitive information, such as API keys, passwords, or personally identifiable information, since the summary becomes the agent's prompt.
 
+In T3 Code, `claude --bg` runs outside T3 Code's thread list: tell the user so, and that forking this thread carries its context over in T3 Code.
+
 If the user passed arguments, treat them as a description of what the next session will focus on and tailor the summary accordingly.

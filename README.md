@@ -359,6 +359,7 @@ Agents follow [`AGENTS.md`](AGENTS.md) (Quality Gates section) and the `quality-
 | `.githooks/` | pre-commit and pre-push hooks |
 | `.claude/hooks/format-swift.sh` | Claude Code hook that formats and lints each edited Swift file |
 | `.claude/hooks/` (others) | Claude Code hooks that route agents: `layer-docs.sh`, `skill-loaded.sh`, `skill-required.sh`, `concurrency-skill.sh`, `xcodebuild-runner.sh`, `bootstrap-check.sh`, `swift-bash-edits.sh`, `gate-reminder.sh` (each header is its spec; tests in `scripts/tests/test-claude-hooks.sh`) |
+| `t3.json` | T3 Code project actions: runs `scripts/bootstrap` in each new T3 Code worktree once imported in Settings → Projects → Actions |
 
 If you change a script, run its tests:
 

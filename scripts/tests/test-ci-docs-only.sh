@@ -23,7 +23,7 @@ expect() {
 
 expect 0 README.md
 expect 0 scripts/AGENTS.md "HealthTracker/Domain/AGENTS.md"
-expect 0 "docs/a b.md" .agents/skills/tdd/SKILL.md .claude/skills/x/run.sh .codex/config.toml
+expect 0 "docs/a b.md" .agents/skills/tdd/SKILL.md .claude/skills/x/run.sh .codex/config.toml t3.json
 expect 1 HealthTracker/App.swift
 expect 1 README.md "HealthTracker/My View.swift"
 expect 1 "a b.md.swift"
@@ -43,11 +43,11 @@ patterns="$(sed -nE 's/^PATTERNS=\((.*)\) *$/\1/p' "$SCRIPT")"
 [ -n "$ignore" ] && [ "$ignore" = "$patterns" ] ||
   fail "docs-only.sh PATTERNS ($patterns) must equal ci.yml push paths-ignore ($ignore)"
 
-# docs-only.sh matches with bash [[ ]], where * crosses / (GitHub's does not): only the two shapes
-# whose meaning both agree on, **/*.<ext> and <dir>/** (a plain path), are allowed.
+# docs-only.sh matches with bash [[ ]], where * crosses / (GitHub's does not): only the shapes
+# whose meaning both agree on, **/*.<ext>, <dir>/** and a file's path (plain paths), are allowed.
 for pattern in $patterns; do
-  [[ "$pattern" =~ ^\'(\*\*/\*\.[A-Za-z0-9]+|[A-Za-z0-9._/-]+/\*\*)\'$ ]] ||
-    fail "docs-only.sh pattern $pattern: use **/*.<ext> or <dir>/** (bash and GitHub globs differ elsewhere)"
+  [[ "$pattern" =~ ^\'(\*\*/\*\.[A-Za-z0-9]+|[A-Za-z0-9._/-]+/\*\*|[A-Za-z0-9._/-]+)\'$ ]] ||
+    fail "docs-only.sh pattern $pattern: use **/*.<ext>, <dir>/** or a file's path (bash and GitHub globs differ elsewhere)"
 done
 
 [ "$failures" -eq 0 ]
