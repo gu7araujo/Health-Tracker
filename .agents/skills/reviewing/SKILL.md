@@ -28,7 +28,7 @@ Run every pass of the tier.
 - **Codex**: under T3 Code, a `delegate_task` to a Codex model, briefed like a Claude pass (`parallel-agents`, harness routing). Elsewhere it runs when `codex` is on the `PATH` (cloud sessions lack it: say so in the report):
 
   ```bash
-  codex review -c model_reasoning_effort="xhigh" --uncommitted   # or --base main once committed
+  codex review -c model_reasoning_effort="xhigh" --uncommitted   # or --base origin/main once committed
   ```
 
   It accepts no custom prompt alongside `--uncommitted`, and runs for minutes: give it a 600000 ms timeout.

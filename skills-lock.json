@@ -79,7 +79,9 @@
       "pr-post-audit": "rewritten for a solo repo whose PRs the user merges: contributor-trust, changelog and deploy phases removed, the interaction sweep fitted to HealthTracker",
       "unslop": "model-invoked, scoped to prose people read, including every reply the user reads in a main session; examples swapped for this repo's",
       "device-interaction": "tool name fixed (#73); triggers in the description, start recipe and HealthTracker examples (#69)",
-      "swiftui-specialist": "description starts with \"Use whenever writing, editing or reviewing SwiftUI views.\" (#70)"
+      "swiftui-specialist": "description starts with \"Use whenever writing, editing or reviewing SwiftUI views.\" (#70)",
+      "handoff": "T3 Code line: forking a thread carries its context",
+      "claude-handoff": "T3 Code line: claude --bg runs outside T3 Code's thread list; forking carries the context"
     }
   }
 }

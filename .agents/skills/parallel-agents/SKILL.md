@@ -9,7 +9,7 @@ description: Delegate HealthTracker work to subagents, and run several at once, 
 
 The orchestrating main session hands a subagent any step it needs back only as a conclusion: a broad search, a long log, a review pass, an independent slice. Work needing the user's judgement or the conversation's history stays in the main session.
 
-- Run a subagent in the foreground by default. Run independent slices, or a staged pipeline (implement → review → verify), as a Workflow only when the user asks for one.
+- Run a subagent in the foreground when your next step needs its result, and in the background (the [harness routing](#harness-routing) table) otherwise. Run independent slices, or a staged pipeline (implement → review → verify), as a Workflow only when the user asks for one; without one, the orchestrator is the verify stage and checks each report field itself.
 - Brief each subagent as a cold start: the goal, the files, the constraints, its done-criterion, and the shape of the report to return. Write each skill it needs as a call in its first step (`Skill("tdd")` for an implementer, plus the skill the hooks require for the files it edits).
 - In an implementer's report, `red_evidence` is the test name plus its failing assertion line, `green_evidence` the gate table, `scenario` the en and pt-BR check for user-facing behaviour, `previews` the snapshots when Views changed. The PR body's "How verified" lists the `skills_loaded`.
 - Create a worktree only when the task requires it or the user asks.
@@ -27,7 +27,7 @@ The skills say what must happen; this table says how, per harness. Under T3 Code
 | A background agent | `Agent` with `run_in_background` | `delegate_task` |
 | A child in its own checkout | `.claude/worktrees/<branch>` | `delegate_task` with `isolation: "worktree"` |
 | The Codex review pass | `codex review` (`reviewing` section 2) | `delegate_task` to a Codex model, briefed with the pass contract |
-| Hand the work to a fresh session | `claude-handoff` | a new or forked thread, which carries the context |
+| Hand the work to a fresh session | `claude-handoff` | a forked thread, which carries the context |
 | Reconnect the Xcode MCP | the user runs `/mcp` | the user picks Restart agent |
 
 ## Running agents at once

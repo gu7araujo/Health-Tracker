@@ -4,7 +4,7 @@ HealthTracker is an iOS 26.0 health tracking app built with SwiftUI and Swift 6:
 
 ## Repo Map
 
-Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it when Read opens a file there, and a hook names it on a Bash read or edit; read it yourself when you plan a change there or review from a diff.
+Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it on the first Read of a file there, and a hook names it on a first edit or Bash read there; read it yourself when you plan a change there or review from a diff.
 
 | Working in | Read |
 |---|---|
@@ -49,17 +49,18 @@ Keep every change **tight**:
 
 ### Delegating
 
-On a task spanning several files, layers or PRs, the main session is the **orchestrator**: it keeps the plan, the decisions and the thread with the user. Briefing a subagent, and running several at once (at most two build or test): `parallel-agents` skill. An implementer's report carries the definition of done as fields (`red_evidence`, `green_evidence`, `scenario`, `previews`, `skills_loaded`); the verify stage fails one left empty where it applies.
+On a task spanning several files, layers or PRs, the main session is the **orchestrator**: it keeps the plan, the decisions and the thread with the user. Briefing a subagent, and running several at once (at most two build or test): `parallel-agents` skill. An implementer's report carries the definition of done as fields; the verify stage fails one left empty where it applies.
 
 ## Building and Validating
 
 | Where | Build and test with |
 |---|---|
-| Main session | Xcode MCP `BuildProject`, `RunSomeTests`; in a worktree, `XcodeOpenWorkspace` first (`parallel-agents` step 2). `xcodebuild` only as the `cli-build`, `cli-test` fallback. MCP disconnected: ask the user to reconnect it (`/mcp` in the CLI, Restart agent in T3 Code) |
+| Main session | Xcode MCP `BuildProject`, `RunSomeTests`; in a worktree, `XcodeOpenWorkspace` first. `xcodebuild` only as the `cli-build`, `cli-test` fallback. MCP disconnected: ask the user to reconnect it (`parallel-agents` routing) |
 | Subagent | `scripts/quality`, or the MCP per `parallel-agents` |
 | Cloud session (Linux, no Xcode) | CI: push, dispatch and read it yourself (`quality-gate` skill, `CLOUD.md`); hand the user only what CI can't run |
 
-- Source files sync through `PBXFileSystemSynchronizedRootGroup`: adding or deleting one needs no `project.pbxproj` edit, except a `membershipExceptions` entry for a file under `HealthTracker/` kept out of the app bundle (an `AGENTS.md`).
+- The project uses `PBXFileSystemSynchronizedRootGroup`: adding or deleting a source file needs no `project.pbxproj` edit. A file under `HealthTracker/` that must stay out of the app bundle (an `AGENTS.md`) needs a `membershipExceptions` entry there.
+- Edit files with Edit or Write: the hooks run on those.
 
 ### Skill and tool routing
 
@@ -92,6 +93,6 @@ A change to the persisted JSON shape (`DayData`, `Meal`, `Workout`, `Mood`, `Day
 
 - Run `scripts/bootstrap` once per clone and per new worktree: it installs the git hooks and the pinned tools.
 - Branch first (`git switch -c <type>/<name>`): the git hooks refuse commits and pushes to `main`, and run `scripts/quality --fast` before every push. Let them run.
-- Open PRs **ready for review**; the user approves and merges every PR. Writing one: `file-pr` skill. Pushing and watching CI: `quality-gate` skill.
+- Use the `gh` CLI for GitHub work. Open PRs **ready for review**; the user approves and merges every PR. Writing one: `file-pr` skill. Pushing and watching CI: `quality-gate` skill.
 - A task that outlives the session becomes a GitHub issue, closed by the PR that does it: `issue-tracking` skill.
 - Once a feature or batch of related PRs is merged, run the `retro` skill over the batch and report its table alongside the requested work; implementing its proposals needs the user's go-ahead.

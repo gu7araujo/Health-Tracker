@@ -96,7 +96,13 @@ for command in "git reset --hard origin/x" "git reset -q --hard origin/x" "git r
   "git -C /p reset --hard" "git -C /p reset -q --hard HEAD"; do
   denied "$command" || fail "settings.json should deny: $command"
 done
-for command in "git reset --soft HEAD~1" "git reset HEAD x.swift"; do
+# A flag or remote before --force, --no-verify or -f, or a +refspec, once slipped past too.
+for command in "git push origin --force" "git push -u origin --force-with-lease" "git push origin +feat/x" \
+  "git push origin --no-verify" "git push -f origin x" "git push origin -f"; do
+  denied "$command" || fail "settings.json should deny: $command"
+done
+for command in "git reset --soft HEAD~1" "git reset HEAD x.swift" "git push -u origin feat/x" \
+  "git push --follow-tags origin feat/x"; do
   denied "$command" && fail "settings.json should allow: $command"
 done
 
@@ -289,8 +295,13 @@ read_input() { # read_input <command> <session> [cwd]
 context layer-docs.sh "$(read_input "cat HealthTracker/Domain/UseCases/LoadDayDataUseCase.swift" r1)"
 [ "$code" -eq 0 ] || fail "layer-docs should exit 0 on Bash (got $code): $out"
 [[ "$out" == *"HealthTracker/Domain/AGENTS.md"* ]] || fail "a Bash read in Domain should name its AGENTS.md: $out"
+[[ "$out" != *Skill* ]] || fail "a read reminder should not ask a read-only agent to load an edit skill: $out"
+context layer-docs.sh "$(read_input "cat HealthTracker/Domain/Entities/DayData.swift" r1)"
+[ -z "$out" ] || fail "a second Bash read in the layer should be silent: $out"
 context layer-docs.sh "$(edit_input "$ROOT/HealthTracker/Domain/Entities/DayData.swift" r1)"
-[ -z "$out" ] || fail "an edit after a Bash read in the same layer should be silent: $out"
+[[ "$out" == *'Skill("tdd")'* ]] || fail "the first edit after a Bash read should still get the edit reminder: $out"
+context layer-docs.sh "$(read_input "cat Entities/DayData.swift" r5 "$ROOT/HealthTracker/Data")"
+[[ "$out" == *"HealthTracker/Data/AGENTS.md"* ]] || fail "a relative path should resolve against the cwd: $out"
 context layer-docs.sh "$(read_input "sed -n 1,20p $ROOT/HealthTracker/Presentation/MainView.swift | head -5" r1)"
 [[ "$out" == *"HealthTracker/Presentation/AGENTS.md"* ]] || fail "an absolute path should map to its layer: $out"
 context layer-docs.sh "$(read_input "grep -rn 'water' HealthTrackerTests" r1)"
@@ -632,6 +643,10 @@ gitc switch -q -c t3/fresh
 rm -f "$GATE/build/quality.json"
 stop_message "$GATE"
 [ -z "$out" ] || fail "a clean branch off origin/main should be silent while main lags: $out"
+printf 'struct T {}\n' >"$GATE/HealthTracker/T.swift"
+stop_message "$GATE"
+[[ "$out" == *scripts/quality* ]] || fail "a Swift change on a branch off origin/main should be reminded: $out"
+rm "$GATE/HealthTracker/T.swift"
 hook_wired Stop gate-reminder.sh Stop
 # Subagents (Explore, review passes) are left alone: the orchestrator's own Stop covers the branch.
 jq -e '.hooks | has("SubagentStop")' "$SETTINGS" >/dev/null && fail "gate-reminder should not run on SubagentStop"

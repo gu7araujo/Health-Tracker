@@ -34,26 +34,36 @@ layer_doc() {
   esac
 }
 
-# The paths the tool touches, one per line, relative to the checkout.
+# The paths the tool touches, one per line: relative to the checkout for an edit; for a Bash read,
+# the arguments of each reading command, a directory with a trailing / so it maps to its layer.
 if [ "$(field .tool_name)" = Bash ]; then
-  verb=Reading
-  checkout="$(own_checkout "$(field .cwd)")" || exit 0
-  # The arguments of each reading command; a directory gets a trailing / so it maps to its layer.
   paths="$(simple_commands |
     awk '$1 ~ /^([^ \t]*\/)?(cat|head|tail|sed|nl|less|grep|rg|awk)$/ {
       for (i = 2; i <= NF; i++) if ($i !~ /^-/) print $i "/"
     }')"
+  [ -n "$paths" ] || exit 0
+  cwd="$(field .cwd)"
+  checkout="$(own_checkout "$cwd")" || exit 0
+  cwd="$(cd "$cwd" && pwd -P)" || exit 0
 else
-  verb=Editing
   checkout=""
   paths="$(edited_path)" || exit 0
 fi
 
 message=""
 while IFS= read -r rel; do
-  [ -z "$checkout" ] || rel="${rel#"$checkout"/}"
+  if [ -n "$checkout" ]; then
+    [[ "$rel" == /* ]] || rel="$cwd/$rel"
+    rel="${rel#"$checkout"/}"
+  fi
   layer_doc "${rel#./}" || continue
-  first_time "${doc//\//_}" || continue
-  message="$message${message:+ }$verb ${doc%/AGENTS.md}: read $doc first ($call)."
+  # A read keeps its own marker, so the first edit in the layer still gets the skill to call.
+  if [ -n "$checkout" ]; then
+    first_time "read-${doc//\//_}" || continue
+    message="$message${message:+ }Reading ${doc%/AGENTS.md}: its rules are in $doc; read it before working there."
+  else
+    first_time "${doc//\//_}" || continue
+    message="$message${message:+ }Editing ${doc%/AGENTS.md}: read $doc first ($call)."
+  fi
 done <<<"$paths"
 [ -z "$message" ] || context PreToolUse "$message"

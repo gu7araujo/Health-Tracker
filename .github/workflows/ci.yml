@@ -14,7 +14,7 @@ on:
     types: [opened, synchronize, reopened]
   push:
     branches: [main]
-    paths-ignore: ['**/*.md', '.agents/**', '.claude/skills/**', '.codex/**']
+    paths-ignore: ['**/*.md', '.agents/**', '.claude/skills/**', '.codex/**', 't3.json']
   workflow_dispatch:
 
 # Superseded PR runs are cancelled; runs on main are never cancelled, so every merge gets a result.
