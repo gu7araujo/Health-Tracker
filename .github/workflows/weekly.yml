@@ -4,8 +4,8 @@ name: Weekly
 # The steps duplicate ci.yml's test job on purpose: a reusable workflow would rename the
 # test job's check to "test / test" and add indirection for a handful of steps.
 # scripts/tests/test-ci-workflows.sh keeps them in step. A red scheduled run opens an issue
-# (or comments on the open one), so it reaches the repo's watchers; so does a green one with a test
-# that passed on its retry, on its own issue labelled flaky-test.
+# (or comments on the open one), so it reaches the repo's watchers; so does a green one with a retry,
+# on a "passed on retry" issue, labelled flaky-test when a test (not only a runner error) passed on it.
 # --full runs HealthTrackerIntentsUITests too (here, on pushes to main and on app PRs), on the
 # simulator runtime the Simulator runtime step installs (scripts/ci/install-simulator-runtime.sh).
 on:
