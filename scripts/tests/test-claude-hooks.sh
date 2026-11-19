@@ -82,6 +82,24 @@ done < <(jq -r '.permissions.allow[] | select(startswith("mcp__"))' "$SETTINGS")
 jq -e '.permissions.allow | any(startswith("Bash(xcodebuild"))' "$SETTINGS" >/dev/null &&
   fail "xcodebuild should not be allowlisted"
 
+# denied <command>: a deny rule's Bash(...) pattern, read as a glob, matches the command.
+denied() {
+  local rule
+  while IFS= read -r rule; do
+    # shellcheck disable=SC2053 # the rule is a glob on purpose
+    [[ "$1" == $rule ]] && return 0
+  done < <(jq -r '.permissions.deny[] | select(startswith("Bash(")) | .[5:-1]' "$SETTINGS")
+  return 1
+}
+# A flag before --hard (git reset -q --hard) once slipped past the deny list.
+for command in "git reset --hard origin/x" "git reset -q --hard origin/x" "git reset --hard" \
+  "git -C /p reset --hard" "git -C /p reset -q --hard HEAD"; do
+  denied "$command" || fail "settings.json should deny: $command"
+done
+for command in "git reset --soft HEAD~1" "git reset HEAD x.swift"; do
+  denied "$command" && fail "settings.json should allow: $command"
+done
+
 # The hook must never pass silently when its tools can't run.
 # bin/ holds jq plus the tool stubs; PATH keeps only system dirs besides it. Runs a copy of the hook
 # in a temp repo, so this checkout's own build/tools/bin stays out of the lookup.
@@ -259,9 +277,34 @@ context layer-docs.sh "$(edit_input "$ROOT/scripts/quality" s4)"
 context layer-docs.sh "$(jq -n '{hook_event_name: "PreToolUse", tool_name: "mcp__xcode__XcodeUpdate", session_id: "s3",
   tool_input: {filePath: "HealthTracker/HealthTracker/Domain/Entities/DayData.swift"}}')"
 [[ "$out" == *"HealthTracker/Domain/AGENTS.md"* ]] || fail "an Xcode MCP write should be mapped to its layer: $out"
-for tool in Edit Write MultiEdit mcp__xcode__XcodeWrite mcp__xcode__XcodeUpdate; do
+for tool in Edit Write MultiEdit mcp__xcode__XcodeWrite mcp__xcode__XcodeUpdate Bash; do
   hook_wired PreToolUse layer-docs.sh "$tool"
 done
+# Reading a layer's code through Bash (cat, sed -n, grep...) names its AGENTS.md too: Claude Code
+# loads a nested AGENTS.md only on the Read tool.
+read_input() { # read_input <command> <session> [cwd]
+  jq -n --arg command "$1" --arg session "$2" --arg cwd "${3:-$ROOT}" \
+    '{hook_event_name: "PreToolUse", tool_name: "Bash", session_id: $session, cwd: $cwd, tool_input: {command: $command}}'
+}
+context layer-docs.sh "$(read_input "cat HealthTracker/Domain/UseCases/LoadDayDataUseCase.swift" r1)"
+[ "$code" -eq 0 ] || fail "layer-docs should exit 0 on Bash (got $code): $out"
+[[ "$out" == *"HealthTracker/Domain/AGENTS.md"* ]] || fail "a Bash read in Domain should name its AGENTS.md: $out"
+context layer-docs.sh "$(edit_input "$ROOT/HealthTracker/Domain/Entities/DayData.swift" r1)"
+[ -z "$out" ] || fail "an edit after a Bash read in the same layer should be silent: $out"
+context layer-docs.sh "$(read_input "sed -n 1,20p $ROOT/HealthTracker/Presentation/MainView.swift | head -5" r1)"
+[[ "$out" == *"HealthTracker/Presentation/AGENTS.md"* ]] || fail "an absolute path should map to its layer: $out"
+context layer-docs.sh "$(read_input "grep -rn 'water' HealthTrackerTests" r1)"
+[[ "$out" == *"HealthTrackerTests/AGENTS.md"* ]] || fail "a layer directory should map to its layer: $out"
+context layer-docs.sh "$(read_input "head HealthTracker/Data/A.swift HealthTrackerUITests/B.swift" r2)"
+[[ "$out" == *"HealthTracker/Data/AGENTS.md"* && "$out" == *"HealthTrackerUITests/AGENTS.md"* ]] ||
+  fail "a read naming two layers should name both docs: $out"
+for command in "scripts/quality --fast" "git add HealthTracker/Domain/x.swift" "grep -rn water ." \
+  "cat README.md" "cat $WORK/other-repo/scripts/build.sh"; do
+  context layer-docs.sh "$(read_input "$command" r3)"
+  [ -z "$out" ] || fail "a command that reads no layer's code should be silent: $command ($out)"
+done
+context layer-docs.sh "$(read_input "cat scripts/build.sh" r3 "$WORK/other-repo")"
+[ -z "$out" ] || fail "a read in another repository should be silent: $out"
 
 # skill-loaded.sh and skill-required.sh: an edit to a View or a unit-test file is refused until its
 # skill has been loaded in that session and agent.
@@ -433,6 +476,8 @@ for command in "xcodebuild -scheme HealthTracker build" "set -o pipefail && xcod
   context xcodebuild-runner.sh "$(bash_input "$command")"
   [[ "$out" == *mcp__xcode__BuildProject* ]] || fail "a main-session xcodebuild should get the reminder: $command ($out)"
 done
+# /mcp exists only in the Claude Code CLI; T3 Code reconnects MCP servers with Restart agent.
+[[ "$out" == *"Restart agent"* ]] || fail "the reminder should name T3 Code's MCP reconnect: $out"
 context xcodebuild-runner.sh "$(bash_input "xcodebuild test" agent-b)"
 [ -z "$out" ] || fail "a subagent's xcodebuild should be silent: $out"
 for command in "grep -rn xcodebuild scripts" "scripts/quality --fast" "git log --grep xcodebuild" \
@@ -576,6 +621,17 @@ stop_message "$GATE" "$WORK/no-xcrun-bin:/bin"
 [ -z "$out" ] || fail "a session without xcrun should be silent: $out"
 stop_message "$WORK/no-repo"
 [ "$code" -eq 0 ] && [ -z "$out" ] || fail "a cwd outside a checkout should be silent (got $code): $out"
+# A worktree branched from origin/main while the local main lags behind it (T3 Code's worktrees):
+# Swift that came from upstream is not this branch's change.
+gitc switch -q main
+gitc switch -q -c upstream
+printf 'struct U {}\n' >"$GATE/HealthTracker/U.swift"
+gitc add -A && gitc commit -q -m upstream
+gitc update-ref refs/remotes/origin/main HEAD
+gitc switch -q -c t3/fresh
+rm -f "$GATE/build/quality.json"
+stop_message "$GATE"
+[ -z "$out" ] || fail "a clean branch off origin/main should be silent while main lags: $out"
 hook_wired Stop gate-reminder.sh Stop
 # Subagents (Explore, review passes) are left alone: the orchestrator's own Stop covers the branch.
 jq -e '.hooks | has("SubagentStop")' "$SETTINGS" >/dev/null && fail "gate-reminder should not run on SubagentStop"

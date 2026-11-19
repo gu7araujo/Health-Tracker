@@ -26,8 +26,8 @@
       "Bash(git push * *:main)",
       "Bash(git push --force*)",
       "Bash(git push -f*)",
-      "Bash(git reset --hard*)",
-      "Bash(git -C * reset --hard*)",
+      "Bash(git reset *--hard*)",
+      "Bash(git -C * reset *--hard*)",
       "Bash(sudo *)",
       "Bash(gh pr merge*)"
     ]
@@ -71,6 +71,10 @@
       {
         "matcher": "Bash",
         "hooks": [
+          {
+            "type": "command",
+            "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/layer-docs.sh; [ ! -x \"$hook\" ] || \"$hook\""
+          },
           {
             "type": "command",
             "command": "hook=\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/xcodebuild-runner.sh; [ ! -x \"$hook\" ] || \"$hook\""

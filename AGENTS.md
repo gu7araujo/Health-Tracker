@@ -4,7 +4,7 @@ HealthTracker is an iOS 26.0 health tracking app built with SwiftUI and Swift 6:
 
 ## Repo Map
 
-Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it when Read first opens a file there, never through Bash; read it yourself when you plan a change there or review from a diff.
+Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it when Read opens a file there, and a hook names it on a Bash read or edit; read it yourself when you plan a change there or review from a diff.
 
 | Working in | Read |
 |---|---|
@@ -49,18 +49,17 @@ Keep every change **tight**:
 
 ### Delegating
 
-On a task spanning several files, layers or PRs, the main session is the **orchestrator**: it keeps the plan, the decisions and the thread with the user. Briefing a subagent or Workflow, and running several at once (at most two build or test): `parallel-agents` skill. An implementer's report carries the definition of done as fields (`red_evidence`, `green_evidence`, `scenario`, `previews`, `skills_loaded`); the verify stage fails one left empty where it applies.
+On a task spanning several files, layers or PRs, the main session is the **orchestrator**: it keeps the plan, the decisions and the thread with the user. Briefing a subagent, and running several at once (at most two build or test): `parallel-agents` skill. An implementer's report carries the definition of done as fields (`red_evidence`, `green_evidence`, `scenario`, `previews`, `skills_loaded`); the verify stage fails one left empty where it applies.
 
 ## Building and Validating
 
 | Where | Build and test with |
 |---|---|
-| Main session | Xcode MCP `BuildProject`, `RunSomeTests`. `xcodebuild` only as the `cli-build`, `cli-test` fallback. MCP disconnected: ask the user to run `/mcp` |
-| Workflow subagent | `scripts/quality`, or the MCP per `parallel-agents` |
+| Main session | Xcode MCP `BuildProject`, `RunSomeTests`; in a worktree, `XcodeOpenWorkspace` first (`parallel-agents` step 2). `xcodebuild` only as the `cli-build`, `cli-test` fallback. MCP disconnected: ask the user to reconnect it (`/mcp` in the CLI, Restart agent in T3 Code) |
+| Subagent | `scripts/quality`, or the MCP per `parallel-agents` |
 | Cloud session (Linux, no Xcode) | CI: push, dispatch and read it yourself (`quality-gate` skill, `CLOUD.md`); hand the user only what CI can't run |
 
-- The project uses `PBXFileSystemSynchronizedRootGroup`: adding or deleting a source file needs no `project.pbxproj` edit. A file under `HealthTracker/` that must stay out of the app bundle (an `AGENTS.md`) needs a `membershipExceptions` entry there.
-- Edit files with Edit or Write: the layer-doc and format hooks run on those.
+- Source files sync through `PBXFileSystemSynchronizedRootGroup`: adding or deleting one needs no `project.pbxproj` edit, except a `membershipExceptions` entry for a file under `HealthTracker/` kept out of the app bundle (an `AGENTS.md`).
 
 ### Skill and tool routing
 
@@ -68,7 +67,7 @@ A skill loads only when called: make each call below. Each layer's `AGENTS.md` n
 
 | When | Call |
 |---|---|
-| Main session, before the first reply to the user | `Skill("unslop")`, then apply it to every reply the user reads |
+| Main session, before the first reply to the user | `Skill("unslop")`, then apply it to every reply the user reads. Subagents skip it |
 | An actor-isolation or `Sendable` diagnostic | `Skill("swift-concurrency:swift-concurrency")` before fixing, then fix every call site sharing the cause |
 | Checking behaviour on a device | `device-interaction`; seed data with `mock-sim-data` |
 | An Apple API question | `DocumentationSearch` before training memory |
@@ -83,7 +82,7 @@ A skill loads only when called: make each call below. Each layer's `AGENTS.md` n
 - **Iterate** with `scripts/quality --fast`.
 - **Done** is `scripts/quality --full` exiting 0. A change touching only docs or agent config (the `paths-ignore` paths in `.github/workflows/ci.yml`) is done when `--fast` exits 0. Paste that run's gate table in your final report and PR.
 - **Fix a red gate in code or tests.** Lowering a threshold, editing `scripts/coverage-exceptions.txt` or `scripts/fitness/test-mirror-exceptions.txt`, adding a `swiftlint:disable` or `// periphery:ignore`, or regenerating `.swiftlint-baseline.json` to absorb a new violation is the user's call: propose it, and call each one out in the report and PR.
-- Hooks in `.claude/hooks/` format and lint each `.swift` file you Edit or Write, refuse Bash writes to one, refuse an edit to a View until `Skill("swiftui-specialist")`, or to a unit-test file until `Skill("swift-testing-expert:swift-testing-expert")`, has been called in that session or subagent, and name the doc, skill or runner a step needs; act on what they report.
+- Hooks in `.claude/hooks/` format and lint each `.swift` file you Edit or Write, refuse Bash writes to one, refuse a View or unit-test edit until its skill is loaded, and name the doc, skill or runner a step needs; act on what they report.
 
 ## Data Migrations
 
@@ -93,6 +92,6 @@ A change to the persisted JSON shape (`DayData`, `Meal`, `Workout`, `Mood`, `Day
 
 - Run `scripts/bootstrap` once per clone and per new worktree: it installs the git hooks and the pinned tools.
 - Branch first (`git switch -c <type>/<name>`): the git hooks refuse commits and pushes to `main`, and run `scripts/quality --fast` before every push. Let them run.
-- Use the `gh` CLI for GitHub work. Open PRs **ready for review**; the user approves and merges every PR. Writing one: `file-pr` skill. Pushing and watching CI: `quality-gate` skill.
+- Open PRs **ready for review**; the user approves and merges every PR. Writing one: `file-pr` skill. Pushing and watching CI: `quality-gate` skill.
 - A task that outlives the session becomes a GitHub issue, closed by the PR that does it: `issue-tracking` skill.
 - Once a feature or batch of related PRs is merged, run the `retro` skill over the batch and report its table alongside the requested work; implementing its proposals needs the user's go-ahead.

@@ -9,7 +9,7 @@ Every PR here gets the `claude-review` bot (`.github/workflows/claude-code-revie
 
 ## 1. Watch
 
-If the harness watches PRs for you (the Claude Code desktop app's `ccd_pr` tools with Auto-fix), bind the PR and act when its events arrive. Otherwise poll about every 10 minutes (the macOS `test` job takes ~23):
+If the harness watches PRs for you (`parallel-agents`, [harness routing](../parallel-agents/SKILL.md#harness-routing)), bind the PR to it and act when its events arrive; read each event with the commands below. Otherwise poll about every 10 minutes (the macOS `test` job takes ~23):
 
 ```bash
 gh pr view <n> --json headRefOid,mergeable,commits --jq '{head: .headRefOid, mergeable, pushed: .commits[-1].committedDate}'
@@ -54,7 +54,7 @@ For a UI fix, a screenshot from the `device-interaction` skill in the PR body sh
 git fetch origin main && git log --oneline HEAD..origin/main
 ```
 
-When `main` moved under this PR (a conflict, or commits touching the same files), `git rebase origin/main`, rerun the gate, and `git push --force-with-lease` with a 600000 ms timeout (the pre-push hook runs `scripts/quality --fast`).
+When `main` moved under this PR (a conflict, or commits touching the same files), `git merge origin/main`, rerun the gate, and `git push` with a 600000 ms timeout (the pre-push hook runs `scripts/quality --fast`). Merge rather than rebase: `.claude/settings.json` denies force pushes.
 
 If a merged or open PR that overlaps this one makes it obsolete, stop watching and report it to the user. Close the PR only when the user authorized closing it; otherwise ask.
 

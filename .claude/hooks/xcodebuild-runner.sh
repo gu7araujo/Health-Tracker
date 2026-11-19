@@ -13,4 +13,4 @@ awk '/^([^ \t]*\/)?xcodebuild([ \t]|$)/ &&
   /[ \t](build|test|build-for-testing|test-without-building|analyze|archive)([ \t]|$)/ { found = 1 }
   END { exit !found }' <<<"$(simple_commands)" || exit 0
 
-context PreToolUse "Main session: build and test with mcp__xcode__BuildProject / RunSomeTests. Use xcodebuild only after an MCP build or test call returned an error, and quote that error to the user; if the Xcode MCP is disconnected, ask the user to run /mcp instead."
+context PreToolUse "Main session: build and test with mcp__xcode__BuildProject / RunSomeTests. Use xcodebuild only after an MCP build or test call returned an error, and quote that error to the user; if the Xcode MCP is disconnected, ask the user to reconnect it instead (/mcp in the Claude Code CLI, Restart agent in T3 Code)."
