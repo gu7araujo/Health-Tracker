@@ -10,7 +10,6 @@ jobs:
           cp scripts/AGENTS.md .github/CLAUDE.md
           cp scripts/AGENTS.md .githooks/CLAUDE.md
 
-      # A comment above the next step is not part of the copy step.
       - name: Run Claude Code Review
         id: claude-review
         env:

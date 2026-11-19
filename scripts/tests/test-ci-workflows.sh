@@ -187,7 +187,7 @@ grep -qxF "    if: github.event.pull_request.draft != true && github.event.pull_
 # Glob already run inside the checkout without a grant, and a bare one would let a prompt-injected PR
 # comment read outside it (the runner's environment, its token). The plugin's allowed-tools grant its
 # gh commands to the session that runs it, not to the subagents it launches, so those were denied
-# gh pr diff, the one way they see the diff (fetch-depth 1): the read-only grant reaches them.
+# gh pr diff, the plugin's way to read the diff: the read-only grant reaches them too.
 # --setting-sources user keeps the repo's .claude/settings.json allowlist out of the review (#90): the
 # action loads every source by default, and that allowlist runs PR-branch scripts with the tokens set.
 allowed="$(sed -nE "s/^ *claude_args: '(--setting-sources user )?--allowedTools \"([^\"]*)\"' *\$/\2/p" "$WORKFLOWS/claude-code-review.yml" | tr ',' '\n')"
