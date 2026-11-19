@@ -152,7 +152,8 @@ grep -q 'gh issue create' <<<"$notify" || fail "weekly.yml: 'Notify on failure' 
 grep -q 'flaky-test' <<<"$notify" || fail "weekly.yml: 'Notify on failure' should label a retried run's issue flaky-test"
 grep -qE '^ *issues: write *$' "$WEEKLY" || fail "weekly.yml: opening an issue needs 'issues: write'"
 # The step's script, run on a stub gh that logs its calls. A red gate opens (or comments on) "failed",
-# whatever else retried; a green one "passed on retry", naming the retried tests from quality.json,
+# whatever else retried, as does a later step failing after a green gate without a retry; a green one
+# with a retry "passed on retry", naming the retried tests from quality.json,
 # labelled flaky-test only when a test passed on retry (a runner-error rerun alone is no flaky test).
 notify_run="$(ruby -ryaml -e '
   steps = YAML.safe_load(File.read(ARGV[0]), aliases: true).dig("jobs", "test", "steps") || []
@@ -163,12 +164,12 @@ mkdir "$gh_stub/build"
 printf '%s\n' '#!/bin/sh' 'echo "$*" >>"$GH_CALLS"' \
   'case "$1 $2" in "issue list") echo "$OPEN" ;; "issue create") echo "https://github.com/o/r/issues/42" ;; esac' >"$gh_stub/gh"
 chmod +x "$gh_stub/gh"
-# notify_calls <gate outcome> <quality.json .retried> <open issue>: the gh calls the step makes, one
-# per line, after the issue search.
+# notify_calls <gate outcome> <quality.json .retried> <open issue> [retried output]: the gh calls the
+# step makes, one per line, after the issue search. The retried output defaults to true.
 notify_calls() {
   printf '{"retried":%s}' "$2" >"$gh_stub/build/quality.json"
   : >"$gh_stub/calls"
-  (cd "$gh_stub" && PATH="$gh_stub:$PATH" GH_CALLS="$gh_stub/calls" GATE="$1" OPEN="$3" RUN_URL=URL \
+  (cd "$gh_stub" && PATH="$gh_stub:$PATH" GH_CALLS="$gh_stub/calls" GATE="$1" OPEN="$3" RETRIED="${4-true}" RUN_URL=URL \
     bash -e -c "$notify_run" >/dev/null 2>&1)
   sed 1d "$gh_stub/calls"
 }
@@ -176,7 +177,8 @@ notify_calls() {
   [ "$(notify_calls failure '["UI tests: passed on retry: T"]' 3)" = 'issue comment 3 --body Failed again: URL' ] &&
   [ "$(notify_calls success '["UI tests: passed on retry: T"]' '')" = $'issue create --title Weekly quality gate passed on retry --body The scheduled `--full` run passed on retry: URL\n\nUI tests: passed on retry: T\nissue edit 42 --add-label flaky-test' ] &&
   [ "$(notify_calls success '["UI tests: passed on retry: T"]' 7)" = $'issue comment 7 --body Passed on retry again: URL\n\nUI tests: passed on retry: T\nissue edit 7 --add-label flaky-test' ] &&
-  [ "$(notify_calls success '[]' 7)" = 'issue comment 7 --body Passed on retry again: URL' ] ||
+  [ "$(notify_calls success '[]' 7)" = 'issue comment 7 --body Passed on retry again: URL' ] &&
+  [ "$(notify_calls success '[]' '' '')" = 'issue create --title Weekly quality gate failed --body The scheduled `--full` run failed: URL' ] ||
   fail "weekly.yml: 'Notify on failure' must open or comment on a 'failed' or 'passed on retry' issue, naming the retried tests and labelling flaky-test only a green run's test retry"
 rm -rf "$gh_stub"
 # A hung simulator must fail the Quality gate step, not time out the test job (ci.yml and

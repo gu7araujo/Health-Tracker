@@ -292,7 +292,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 |---|---|---|
 | PR, draft or ready (opened, pushed, or reopened) | ✅ | `scripts/quality --full` if it touches the app, its tests, the project or `--full`'s own scripts and settings (`scripts/ci/app-changes.sh` lists them); `--fast` otherwise |
 | Push to `main` (a merge) | ✅ | `scripts/quality --full` |
-| Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full`; a red run opens an issue "Weekly quality gate failed" (or comments on the open one); a green run with a test that passed on its retry does the same on "Weekly quality gate passed on retry", labelled `flaky-test` |
+| Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full`; a red run opens an issue "Weekly quality gate failed" (or comments on the open one); a green run with a retry does the same on "Weekly quality gate passed on retry", labelled `flaky-test` when a test (not only a runner error) passed on its retry |
 | Manual (**Run workflow** in the Actions tab) | ✅ (`ci.yml`) | `scripts/quality --full` |
 
 **`changes`** runs first, on `ubuntu-24.04` (seconds). On a PR it feeds the changed files to `scripts/ci/docs-only.sh`; when every one is docs or agent config, `lint` and `test` are skipped. It also feeds them to `scripts/ci/app-changes.sh`; when none can change what the UI suites test, `test` runs `--fast`. Other events always run `lint` and `test`, with `--full`.
