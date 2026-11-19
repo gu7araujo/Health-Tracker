@@ -17,7 +17,7 @@ Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-b
                      retried once: passing then, it counts as passed and is listed as "passed on retry". A UI bundle whose only
                      failures are its test runner's own ("System Failures") is run once more, the
                      first attempt kept as build/<UI|Intents>.attempt1.xcresult, unless the tests
-                     have run 15 min. A retry writes retried=true to $GITHUB_OUTPUT when it is set.
+                     have run 15 min. A retry or rerun writes retried=true to $GITHUB_OUTPUT when it is set.
   --json             Accepted for compatibility: every run writes build/quality.json.
   --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
                      (an exported SIMULATOR_ID is ignored so worktrees never share a device).
@@ -168,6 +168,8 @@ rows=""
 details=""
 # The UI and intents tests that failed, then passed on their retry, also kept in quality.json.
 retried=""
+# Set when a UI bundle reran after its runner's error: a retry too, with no test to list.
+reran=""
 
 # row <name> <value> <comparator> <threshold> <passed>
 row() {
@@ -358,6 +360,7 @@ for bundle in "${bundles[@]}"; do
       break
     fi
     details+="$name: reran once after: $reason"$'\n'
+    reran=true
     # An annotation keeps a flake the rerun absorbed visible on the CI run.
     [ "${GITHUB_ACTIONS:-}" = "true" ] && echo "::warning::$name: reran once after: $reason"
     # Kept as the flake's evidence (CI uploads build/*.xcresult on a failure or a retry), and out of the way:
@@ -443,7 +446,7 @@ fi
 status=$?
 jq --arg retried "$retried" '.retried = ($retried | split("\n") | map(select(. != "")))' build/quality.json \
   >build/quality.json.tmp && mv build/quality.json.tmp build/quality.json
-# CI uploads a retried test's first attempt as evidence, and the weekly run reports it (#141).
-[ -z "$retried" ] || [ -z "${GITHUB_OUTPUT:-}" ] || echo "retried=true" >>"$GITHUB_OUTPUT"
+# CI uploads a retried test's or rerun bundle's first attempt as evidence, and the weekly run reports it (#141).
+[ -z "$retried$reran" ] || [ -z "${GITHUB_OUTPUT:-}" ] || echo "retried=true" >>"$GITHUB_OUTPUT"
 [ -z "$details" ] || printf '\n%s' "$details"
 exit "$status"

@@ -334,7 +334,11 @@ for pair in "HealthTrackerUITests:UI tests" "HealthTrackerIntentsUITests:Intents
   echo 1 >"$TMP/runner-error.$bundle"
   # A previous run's first attempt is cleared, never mixed into this run's evidence.
   mkdir -p "$REPO/build/${name%% *}.attempt1.xcresult/stale"
+  rm -f "$TMP/github-output"
   run_quality '[]' --full
+  # The rerun is a retry too: CI uploads its first attempt as evidence (#141).
+  [ "$(cat "$TMP/github-output" 2>/dev/null)" = "retried=true" ] ||
+    fail "a $bundle rerun should write retried=true to \$GITHUB_OUTPUT, got: $(cat "$TMP/github-output" 2>&1)"
   [ ! -e "$REPO/build/${name%% *}.attempt1.xcresult/stale" ] ||
     fail "a previous run's $bundle first attempt should be cleared"
   grep -qE "^$name +0  <= 0 +✓\$" <<<"$out" || fail "a $bundle run that connects on the rerun should pass its row, got: $out"

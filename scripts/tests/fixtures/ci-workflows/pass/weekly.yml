@@ -21,4 +21,6 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       - name: Notify on failure or retry
         if: (failure() || steps.quality.outputs.retried == 'true') && github.event_name == 'schedule'
-        run: gh issue create --title "Weekly quality gate failed" --label flaky-test
+        run: |
+          title="Weekly quality gate passed on a retry"
+          gh issue create --title "$title" --label flaky-test --body "$(jq -r '.retried[]' build/quality.json)"

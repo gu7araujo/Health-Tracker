@@ -93,8 +93,8 @@ jobs:
     needs: [changes, lint]
     # Dependabot PRs only bump pinned actions, so they skip the macOS job: actionlint validates
     # the bump, and the --full run on main after merge exercises actions/checkout. Accepted risk:
-    # upload-artifact runs only on a failure or a retried test, so a broken bump of it shows up only
-    # when a later test fails or is retried.
+    # upload-artifact runs only on a failure or a retry, so a broken bump of it shows up only when a
+    # later test fails or is retried.
     if: >-
       needs.changes.outputs.code != 'false' &&
       (github.event_name != 'pull_request' || github.actor != 'dependabot[bot]')

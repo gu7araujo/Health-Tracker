@@ -4,8 +4,8 @@ name: Weekly
 # The steps duplicate ci.yml's test job on purpose: a reusable workflow would rename the
 # test job's check to "test / test" and add indirection for a handful of steps.
 # scripts/tests/test-ci-workflows.sh keeps them in step. A red scheduled run opens an issue
-# (or comments on the open one), so it reaches the repo's watchers; so does a test that passed only
-# on its retry, which labels the issue flaky-test.
+# (or comments on the open one), so it reaches the repo's watchers; so does a green run with a test
+# that passed only on its retry, on its own flaky-test issue.
 # --full runs HealthTrackerIntentsUITests too (here, on pushes to main and on app PRs), on the
 # simulator runtime the Simulator runtime step installs (scripts/ci/install-simulator-runtime.sh).
 on:
@@ -73,12 +73,17 @@ jobs:
           JOB_STATUS: ${{ job.status }}
           RETRIED: ${{ steps.quality.outputs.retried }}
         run: |
-          title="Weekly quality gate failed"
-          what="ended in $JOB_STATUS${RETRIED:+, with a test that passed only on its retry}"
+          # A red run and a green run whose test passed only on its retry (a flake to own,
+          # HealthTrackerUITests/AGENTS.md rule 6) each keep their own issue.
+          title="Weekly quality gate failed" label=""
+          [ "$JOB_STATUS" = failure ] || { title="Weekly quality gate passed on a retry"; label=flaky-test; }
+          body="The scheduled \`--full\` run ended in $JOB_STATUS: $RUN_URL"
+          retried="$(jq -r '.retried[]? | "- " + .' build/quality.json 2>/dev/null)"
+          [ -z "$RETRIED" ] ||
+            body+=$'\n\n'"Passed on retry:"$'\n'"${retried:-- no test listed: a UI bundle reran after a test runner error (see the run warnings)}"
           open="$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')"
           if [ -n "$open" ]; then
-            gh issue comment "$open" --body "Again, the run $what: $RUN_URL"
+            gh issue comment "$open" --body "$body"
           else
-            open="$(gh issue create --title "$title" --body "The scheduled \`--full\` run $what: $RUN_URL")"
+            gh issue create --title "$title" --body "$body" ${label:+--label "$label"}
           fi
-          [ -z "$RETRIED" ] || gh issue edit "$open" --add-label flaky-test

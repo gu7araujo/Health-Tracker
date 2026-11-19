@@ -151,6 +151,12 @@ grep -qE "^ *if: \(failure\(\) \|\| steps\.quality\.outputs\.retried == 'true'\)
   fail "weekly.yml: needs a 'Notify on failure or retry' step with if: (failure() || steps.quality.outputs.retried == 'true') && github.event_name == 'schedule'"
 grep -q 'gh issue create' <<<"$notify" || fail "weekly.yml: 'Notify on failure or retry' should open an issue"
 grep -q 'flaky-test' <<<"$notify" || fail "weekly.yml: 'Notify on failure or retry' should label a retry's issue flaky-test"
+# A green run with a retry is a flake, not a red run: it gets its own issue, naming the test
+# (HealthTrackerUITests/AGENTS.md rule 6).
+grep -qE 'title="[^"]*retry' <<<"$notify" ||
+  fail "weekly.yml: 'Notify on failure or retry' should file a retry under its own title, naming the retry"
+grep -qF '.retried[]' <<<"$notify" ||
+  fail "weekly.yml: 'Notify on failure or retry' should name the retried tests (.retried[] in build/quality.json)"
 grep -qE '^ *issues: write *$' "$WEEKLY" || fail "weekly.yml: opening an issue needs 'issues: write'"
 # A hung simulator must fail the Quality gate step, not time out the test job (ci.yml and
 # weekly.yml): a job timeout is a cancel, so the if: failure() upload and notification steps
@@ -394,10 +400,12 @@ if [ $# -eq 0 ]; then
   must "FAIL: ci.yml lint job: no 'run: scripts/fitness/run' step"
   must "FAIL: ci.yml lint job: 'Persisted shape' step must run on pull_request only"
   must "FAIL: ci.yml lint job: 'Persisted shape' step must run the guard against HEAD^1"
-  fixture notify 4
+  fixture notify 6
   must "FAIL: weekly.yml: needs a 'Notify on failure or retry' step with if: (failure() || steps.quality.outputs.retried == 'true')"
   must "FAIL: weekly.yml: 'Notify on failure or retry' should open an issue"
   must "FAIL: weekly.yml: 'Notify on failure or retry' should label a retry's issue flaky-test"
+  must "FAIL: weekly.yml: 'Notify on failure or retry' should file a retry under its own title"
+  must "FAIL: weekly.yml: 'Notify on failure or retry' should name the retried tests"
   must "FAIL: weekly.yml: opening an issue needs 'issues: write'"
   fixture upload 2
   must "FAIL: ci.yml: the Upload results step needs if: failure() || steps.quality.outputs.retried == 'true'"

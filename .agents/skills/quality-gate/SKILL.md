@@ -145,7 +145,7 @@ gh pr checks <n>                  # which job is red: changes, lint (Linux) or t
 gh run view <run-id> --log-failed # the failing step's log
 ```
 
-The run's job summary shows the same gate table as `build/quality.json`. When `test` fails, or a test passed only on its retry, the run uploads `build/*.xcresult` and `build/xcodebuild.log` as artifact `xcresult-<run-id>`:
+The run's job summary shows the same gate table as `build/quality.json`. When `test` fails, or a test passed only on its retry (or a UI bundle reran after a runner error), the run uploads `build/*.xcresult` and `build/xcodebuild.log` as artifact `xcresult-<run-id>`:
 
 ```bash
 gh run download <run-id> -n xcresult-<run-id> -D build/ci
