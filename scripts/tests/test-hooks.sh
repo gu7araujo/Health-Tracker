@@ -176,6 +176,26 @@ test_push_defaults_to_scripts_quality_fast_from_repo_root() {
   [ "$(cat "$WORK/quality-args" 2>/dev/null)" = "--fast" ] || { echo "scripts/quality --fast not run"; return 1; }
 }
 
+test_push_that_only_deletes_a_branch_skips_the_quality_command() {
+  new_repo push-delete
+  git switch -q -c feat/x
+  QUALITY_CMD=true git push -q origin feat/x || { echo "setup push failed"; return 1; }
+  stub "$WORK/quality" "$WORK/quality-ran" 1
+  QUALITY_CMD="$WORK/quality" git push -q origin --delete feat/x || { echo "delete push failed"; return 1; }
+  [ ! -e "$WORK/quality-ran" ] || { echo "quality ran on a delete-only push"; return 1; }
+  [ -z "$(git ls-remote origin refs/heads/feat/x)" ] || { echo "branch not deleted"; return 1; }
+}
+
+test_push_that_deletes_one_branch_and_updates_another_runs_the_quality_command() {
+  new_repo push-delete-mixed
+  git switch -q -c feat/old
+  QUALITY_CMD=true git push -q origin feat/old || { echo "setup push failed"; return 1; }
+  git switch -q -c feat/new
+  stub "$WORK/quality" "$WORK/quality-ran" 0
+  QUALITY_CMD="$WORK/quality" git push -q origin :feat/old feat/new || { echo "mixed push failed"; return 1; }
+  [ -e "$WORK/quality-ran" ] || { echo "quality not run on a push that updates a branch"; return 1; }
+}
+
 test_skip_quality_skips_the_gate_with_a_warning() {
   new_repo push-skip
   git switch -q -c feat/skip
