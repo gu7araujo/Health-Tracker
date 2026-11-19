@@ -1,0 +1,59 @@
+# Must fail the upload check only: results upload on failure() alone, so a test that passed on its
+# retry leaves no evidence (#141). weekly.yml has the same steps, so it fails it too, without drift.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', '.agents/**', '.claude/skills/**', '.codex/**']
+jobs:
+  changes:
+    outputs:
+      app: ${{ steps.detect.outputs.app }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/docs-only.sh
+      - run: git diff --no-renames --name-only -z HEAD^1 HEAD | scripts/ci/app-changes.sh
+  lint:
+    needs: changes
+    if: needs.changes.outputs.code != 'false'
+    steps:
+      # uses: foo/bar@v4 in a comment is not an action.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - name: Fitness
+        run: scripts/fitness/run
+      - name: Persisted shape
+        if: github.event_name == 'pull_request'
+        run: scripts/fitness/persisted-shape-guard.sh HEAD^1
+  test:
+    env:
+      MODE: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.app != 'false') && '--full' || '--fast' }}
+    needs: [changes, lint]
+    if: >-
+      needs.changes.outputs.code != 'false' &&
+      (github.event_name != 'pull_request' || github.actor != 'dependabot[bot]')
+    timeout-minutes: 75
+    steps:
+      - name: Simulator runtime
+        if: env.MODE == '--full'
+        timeout-minutes: 20
+        run: scripts/ci/install-simulator-runtime.sh
+      - name: Quality gate
+        id: quality
+        timeout-minutes: 45
+        run: scripts/quality "$MODE" --json
+      - name: Summary
+        if: always()
+        run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
+      - name: Upload results
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+  ci-gate:
+    if: always()
+    needs: [changes, lint, test]
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: case " $RESULTS " in *" failure "* | *" cancelled "*) exit 1 ;; esac

@@ -111,9 +111,11 @@ periphery_stub() {
 periphery_stub 0
 
 # gate <repo> [args...]: runs <repo>'s scripts/quality on the stubs, with the machine-wide --full lock
-# in $TMP so a real gate running on this Mac never holds the test up.
+# in $TMP so a real gate running on this Mac never holds the test up, and its step outputs in
+# $TMP/github-output, never the CI step's own.
 gate() {
   (cd "$1" && PATH="$TMP/bin:$PATH" SIMULATOR_ID=SHARED-UDID CI="${CI_ENV:-}" GITHUB_ACTIONS="${GHA:-}" \
+    GITHUB_OUTPUT="$TMP/github-output" \
     QUALITY_RERUN_DEADLINE="${RERUN_DEADLINE:-}" \
     QUALITY_LOCK="${LOCK_PATH:-$TMP/quality.lock}" QUALITY_LOCK_POLL=0.1 "$1/scripts/quality" "${@:2}")
 }
@@ -286,8 +288,12 @@ jq --slurpfile retried "$FIX/test-results-retried.json" \
     then ($retried[0].testNodes[0].children[] | select(.name == "HealthTrackerUITests")) else . end)' \
   "$TMP/tests.passing.json" >"$TMP/tests.json"
 retried_line="UI tests: passed on retry: MainViewUITests/testAddMeal(): MainViewUITests.swift:42: Timed out while evaluating UI query"
+rm -f "$TMP/github-output"
 run_quality '[]' --full
 grep -qE '^UI tests +0  <= 0 +✓$' <<<"$out" || fail "a test that passed on retry should pass its row, got: $out"
+# The step output lets CI upload the retried test's evidence from a green run (#141).
+[ "$(cat "$TMP/github-output" 2>/dev/null)" = "retried=true" ] ||
+  fail "a retry should write retried=true to \$GITHUB_OUTPUT, got: $(cat "$TMP/github-output" 2>&1)"
 grep -qxF "$retried_line" <<<"$out" || fail "the details should list the test that passed on retry, got: $out"
 [[ "$out" != *"::warning::"* ]] || fail "outside GitHub Actions a retry should not print an annotation, got: $out"
 [ "$(jq -c .retried "$REPO/build/quality.json")" = "$(jq -nc --arg l "$retried_line" '[$l]')" ] ||
@@ -313,10 +319,11 @@ grep -qxF "$retried_line" <<<"$out" || fail "a retry in a rerun bundle's first a
 [ "$(grep -c -- '-only-testing:HealthTrackerUITests ' "$TMP/xcodebuild.calls")" -eq 2 ] ||
   fail "the runner error should have rerun the UI bundle, got: $(cat "$TMP/xcodebuild.calls")"
 cp "$FIX/test-results-runner-error.json" "$TMP/runner-error.json"
-rm -f "$TMP/runner-error.HealthTrackerUITests"
+rm -f "$TMP/runner-error.HealthTrackerUITests" "$TMP/github-output"
 run_quality '[]' --full
 [ "$(jq -c .retried "$REPO/build/quality.json")" = "[]" ] ||
   fail "quality.json should list no retried test when none was, got: $(jq -c .retried "$REPO/build/quality.json")"
+[ ! -s "$TMP/github-output" ] || fail "a run without retries should write no step output, got: $(cat "$TMP/github-output")"
 
 # A UI bundle whose only failures are the test runner's own ("System Failures": it never connected, #111)
 # is run once more. A bundle with a failing test case, or with no result at all (a build failure), is not.

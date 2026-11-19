@@ -3,7 +3,8 @@
 # scripts/ci/summary.sh unconditionally, so a run that stops before build/quality.json is
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
 # wiring, the test job's PR filter and MODE, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
-# test-step parity, the weekly failure issue, the simulator runtime step, step and job timeouts,
+# test-step parity, results kept on a failed or retried run, the weekly failure and retry issue,
+# the simulator runtime step, step and job timeouts,
 # action pinning, valid YAML, the Claude review's one granted tool, the gh commands it denies, its
 # claude_args' --setting-sources user, its PR files step, CLAUDE.md copies, prompt and outcome step,
 # and the @claude job's owner check and checkout credentials.
@@ -131,10 +132,10 @@ grep -qE '^[^#]*\) exit 1 ;; esac *$' <<<"$ci_gate" || fail "ci.yml ci-gate job:
 
 # test_steps <workflow>: the test job's steps, with the quality mode spelled --full (ci.yml's
 # --full-only condition dropped), without blank lines (ci.yml's test job is not its last) and
-# without weekly.yml's red-run notification.
+# without weekly.yml's notification.
 test_steps() {
   awk '/^  test:/ { job = 1; next } job && /^  [a-z]/ { exit } job && /^    steps:/ { steps = 1; next } steps && NF { print }' "$1" |
-    awk '/^ *- name: Notify on failure *$/ { skip = 1; next } skip && /^      - / { skip = 0 } !skip' |
+    awk '/^ *- name: Notify on failure or retry *$/ { skip = 1; next } skip && /^      - / { skip = 0 } !skip' |
     sed -E -e 's|scripts/quality "\$MODE"|scripts/quality --full|' -e "/^ *if: env.MODE == '--full'( +#.*)? *\$/d"
 }
 # The weekly run copies ci.yml's test job steps (see weekly.yml); they must not drift apart.
@@ -143,11 +144,13 @@ drift="$(diff <(test_steps "$CI") <(test_steps "$WEEKLY"))" ||
   fail "weekly.yml's test steps drifted from ci.yml's (< ci.yml, > weekly.yml):"$'\n'"$drift"
 [ -n "$(test_steps "$CI")" ] || fail "ci.yml: no test job steps found"
 
-# A red scheduled run opens (or comments on) an issue, so it does not go unnoticed.
-notify="$(awk '/^ *- name: Notify on failure *$/ { found = 1; next } found && /^ *- / { exit } found { print }' "$WEEKLY")"
-grep -qE "^ *if: failure\(\) && github.event_name == 'schedule' *\$" <<<"$notify" ||
-  fail "weekly.yml: needs a 'Notify on failure' step with if: failure() && github.event_name == 'schedule'"
-grep -q 'gh issue create' <<<"$notify" || fail "weekly.yml: 'Notify on failure' should open an issue"
+# A red scheduled run, or one a test passed only on its retry (#141), opens (or comments on) an
+# issue, so it does not go unnoticed; a retry labels it flaky-test.
+notify="$(awk '/^ *- name: Notify on failure or retry *$/ { found = 1; next } found && /^ *- / { exit } found { print }' "$WEEKLY")"
+grep -qE "^ *if: \(failure\(\) \|\| steps\.quality\.outputs\.retried == 'true'\) && github\.event_name == 'schedule' *\$" <<<"$notify" ||
+  fail "weekly.yml: needs a 'Notify on failure or retry' step with if: (failure() || steps.quality.outputs.retried == 'true') && github.event_name == 'schedule'"
+grep -q 'gh issue create' <<<"$notify" || fail "weekly.yml: 'Notify on failure or retry' should open an issue"
+grep -q 'flaky-test' <<<"$notify" || fail "weekly.yml: 'Notify on failure or retry' should label a retry's issue flaky-test"
 grep -qE '^ *issues: write *$' "$WEEKLY" || fail "weekly.yml: opening an issue needs 'issues: write'"
 # A hung simulator must fail the Quality gate step, not time out the test job (ci.yml and
 # weekly.yml): a job timeout is a cancel, so the if: failure() upload and notification steps
@@ -155,6 +158,12 @@ grep -qE '^ *issues: write *$' "$WEEKLY" || fail "weekly.yml: opening an issue n
 for workflow in "$CI" "$WEEKLY"; do
   job="$(awk '/^  test:/ { found = 1; next } found && /^  [a-z]/ { exit } found { print }' "$workflow")"
   gate="$(awk '/^ *- name: Quality gate *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$job")"
+  # A test that passed on its retry leaves the run green: its first attempt's xcresult is still the
+  # flake's evidence (#141), so results upload on failure() or when the gate reports a retry.
+  upload="$(awk '/^ *- name: Upload results *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$job")"
+  grep -qE '^ *id: quality *$' <<<"$gate" &&
+    grep -qE "^ *if: failure\(\) \|\| steps\.quality\.outputs\.retried == 'true' *\$" <<<"$upload" ||
+    fail "$(basename "$workflow"): the Upload results step needs if: failure() || steps.quality.outputs.retried == 'true', and the Quality gate step id: quality"
   gate_timeout="$(sed -nE 's/^ *timeout-minutes: ([0-9]+) *$/\1/p' <<<"$gate")"
   job_timeout="$(sed -nE 's/^    timeout-minutes: ([0-9]+) *$/\1/p' <<<"$job")"
   [ -n "$gate_timeout" ] && [ -n "$job_timeout" ] && [ "$gate_timeout" -lt "$job_timeout" ] ||
@@ -385,10 +394,14 @@ if [ $# -eq 0 ]; then
   must "FAIL: ci.yml lint job: no 'run: scripts/fitness/run' step"
   must "FAIL: ci.yml lint job: 'Persisted shape' step must run on pull_request only"
   must "FAIL: ci.yml lint job: 'Persisted shape' step must run the guard against HEAD^1"
-  fixture notify 3
-  must "FAIL: weekly.yml: needs a 'Notify on failure' step with if: failure()"
-  must "FAIL: weekly.yml: 'Notify on failure' should open an issue"
+  fixture notify 4
+  must "FAIL: weekly.yml: needs a 'Notify on failure or retry' step with if: (failure() || steps.quality.outputs.retried == 'true')"
+  must "FAIL: weekly.yml: 'Notify on failure or retry' should open an issue"
+  must "FAIL: weekly.yml: 'Notify on failure or retry' should label a retry's issue flaky-test"
   must "FAIL: weekly.yml: opening an issue needs 'issues: write'"
+  fixture upload 2
+  must "FAIL: ci.yml: the Upload results step needs if: failure() || steps.quality.outputs.retried == 'true'"
+  must "FAIL: weekly.yml: the Upload results step needs if: failure() || steps.quality.outputs.retried == 'true'"
   fixture triggers 2
   must "FAIL: ci.yml: the pull_request trigger takes no paths-ignore"
   must "FAIL: ci.yml: the push trigger needs paths-ignore"
