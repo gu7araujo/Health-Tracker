@@ -305,6 +305,11 @@ context layer-docs.sh "$(read_input "cat Entities/DayData.swift" r5 "$ROOT/Healt
 context layer-docs.sh "$(read_input "cat ../Presentation/MainView.swift" r6 "$ROOT/HealthTracker/Domain")"
 [[ "$out" == *"HealthTracker/Presentation/AGENTS.md"* && "$out" != *Domain* ]] ||
   fail "a ../ path should resolve to the layer it names: $out"
+for command in "cat ../../Data/X.swift" "cat ./../../Data/X.swift"; do
+  context layer-docs.sh "$(read_input "$command" "r7-$command" "$ROOT/HealthTracker/Domain/Entities")"
+  [[ "$out" == *"HealthTracker/Data/AGENTS.md"* && "$out" != *Domain* ]] ||
+    fail "a path up two levels should resolve to the layer it names: $command ($out)"
+done
 context layer-docs.sh "$(read_input "sed -n 1,20p $ROOT/HealthTracker/Presentation/MainView.swift | head -5" r1)"
 [[ "$out" == *"HealthTracker/Presentation/AGENTS.md"* ]] || fail "an absolute path should map to its layer: $out"
 context layer-docs.sh "$(read_input "grep -rn 'water' HealthTrackerTests" r1)"

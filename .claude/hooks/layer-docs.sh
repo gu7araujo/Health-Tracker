@@ -35,6 +35,21 @@ layer_doc() {
   esac
 }
 
+# normalized <absolute path>: the path with its . and .. segments resolved, ending in /.
+normalized() {
+  local segment out=""
+  local -a segments
+  IFS=/ read -ra segments <<<"$1"
+  for segment in "${segments[@]}"; do
+    case "$segment" in
+      "" | .) ;;
+      ..) out="${out%/*}" ;;
+      *) out="$out/$segment" ;;
+    esac
+  done
+  printf '%s/' "$out"
+}
+
 # The paths the tool touches, one per line: relative to the checkout for an edit; for a Bash read,
 # the arguments of each reading command, a directory with a trailing / so it maps to its layer.
 if [ "$(field .tool_name)" = Bash ]; then
@@ -55,7 +70,7 @@ message=""
 while IFS= read -r rel; do
   if [ -n "$checkout" ]; then
     [[ "$rel" == /* ]] || rel="$cwd/$rel"
-    while [[ "$rel" =~ ^(.*/)?[^/]+/\.\./(.*)$ ]]; do rel="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"; done
+    rel="$(normalized "$rel")"
     rel="${rel#"$checkout"/}"
   fi
   layer_doc "${rel#./}" || continue
