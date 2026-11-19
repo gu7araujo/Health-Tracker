@@ -5,7 +5,7 @@
 # delete, or nothing to update) skips the guard and the gate.
 set -euo pipefail
 
-deletes_only=1
+sends_code=0
 # Each line is "<local ref> <local sha> <remote ref> <remote sha>". The local ref is the
 # refspec source as typed and can contain spaces, so read the other three from the right.
 while read -r -a fields; do
@@ -16,9 +16,9 @@ while read -r -a fields; do
     echo "pre-push: refusing to push to main. Push a branch and open a pull request." >&2
     exit 1
   fi
-  [[ "$local_sha" =~ ^0+$ ]] || deletes_only=0
+  [[ "$local_sha" =~ ^0+$ ]] || sends_code=1
 done
-[ "$deletes_only" = 1 ] && exit 0
+[ "$sends_code" = 1 ] || exit 0
 
 cd "$(git rev-parse --show-toplevel)"
 

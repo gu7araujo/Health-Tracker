@@ -202,8 +202,10 @@ test_push_with_nothing_to_update_skips_the_quality_command() {
   git switch -q -c feat/same
   QUALITY_CMD=true git push -q origin feat/same || { echo "setup push failed"; return 1; }
   stub "$WORK/quality" "$WORK/quality-ran" 0
+  mkdir -p scripts/fitness && stub scripts/fitness/persisted-shape-guard.sh "$WORK/guard-ran" 0
   QUALITY_CMD="$WORK/quality" git push -q origin feat/same 2>/dev/null || { echo "up-to-date push failed"; return 1; }
   [ ! -e "$WORK/quality-ran" ] || { echo "quality ran on a push with nothing to update"; return 1; }
+  [ ! -e "$WORK/guard-ran" ] || { echo "persisted-shape guard ran on a push with nothing to update"; return 1; }
 }
 
 test_push_with_a_spaced_zero_source_still_runs_the_quality_command() {
