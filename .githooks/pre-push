@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 # Refuses pushes to main, warns (never blocks) if the persisted JSON shape changed since
 # origin/main without a migration, then runs the quality gate (scripts/quality --fast,
-# or $QUALITY_CMD). SKIP_QUALITY=1 skips the gate. A push that only deletes refs sends no
-# code, so it skips the guard and the gate.
+# or $QUALITY_CMD). SKIP_QUALITY=1 skips the gate. A push that sends no code (every ref a
+# delete, or nothing to update) skips the guard and the gate.
 set -euo pipefail
 
 deletes_only=1
-while read -r _local_ref local_sha remote_ref _remote_sha; do
+# Each line is "<local ref> <local sha> <remote ref> <remote sha>". The local ref is the
+# refspec source as typed and can contain spaces, so read the other three from the right.
+while read -r -a fields; do
+  n=${#fields[@]}
+  local_sha=${fields[n - 3]}
+  remote_ref=${fields[n - 2]}
   if [ "$remote_ref" = "refs/heads/main" ]; then
     echo "pre-push: refusing to push to main. Push a branch and open a pull request." >&2
     exit 1

@@ -189,10 +189,43 @@ test_push_that_only_deletes_a_branch_skips_the_quality_command() {
   new_repo push-delete
   git switch -q -c feat/x
   QUALITY_CMD=true git push -q origin feat/x || { echo "setup push failed"; return 1; }
-  stub "$WORK/quality" "$WORK/quality-ran" 1
+  stub "$WORK/quality" "$WORK/quality-ran" 0
+  mkdir -p scripts/fitness && stub scripts/fitness/persisted-shape-guard.sh "$WORK/guard-ran" 0
   QUALITY_CMD="$WORK/quality" git push -q origin --delete feat/x || { echo "delete push failed"; return 1; }
   [ ! -e "$WORK/quality-ran" ] || { echo "quality ran on a delete-only push"; return 1; }
+  [ ! -e "$WORK/guard-ran" ] || { echo "persisted-shape guard ran on a delete-only push"; return 1; }
   [ -z "$(git ls-remote origin refs/heads/feat/x)" ] || { echo "branch not deleted"; return 1; }
+}
+
+test_push_with_nothing_to_update_skips_the_quality_command() {
+  new_repo push-uptodate
+  git switch -q -c feat/same
+  QUALITY_CMD=true git push -q origin feat/same || { echo "setup push failed"; return 1; }
+  stub "$WORK/quality" "$WORK/quality-ran" 0
+  QUALITY_CMD="$WORK/quality" git push -q origin feat/same 2>/dev/null || { echo "up-to-date push failed"; return 1; }
+  [ ! -e "$WORK/quality-ran" ] || { echo "quality ran on a push with nothing to update"; return 1; }
+}
+
+test_push_with_a_spaced_zero_source_still_runs_the_quality_command() {
+  new_repo push-spaced
+  git switch -q -c feat/spaced
+  git commit -q --allow-empty -m "fix 0 bug"
+  stub "$WORK/quality" "$WORK/quality-ran" 1
+  if QUALITY_CMD="$WORK/quality" git push -q origin 'HEAD^{/fix 0 bug}:refs/heads/feat/sneak' 2>/dev/null; then
+    echo "push succeeded"; return 1
+  fi
+  [ -e "$WORK/quality-ran" ] || { echo "quality not run for a source with a space"; return 1; }
+}
+
+test_push_to_main_from_a_spaced_source_is_refused() {
+  new_repo push-main-spaced
+  git switch -q -c feat/spaced
+  git commit -q --allow-empty -m "init commit"
+  local out
+  if out="$(QUALITY_CMD=true git push origin 'HEAD^{/init commit}:refs/heads/main' 2>&1)"; then
+    echo "push to main succeeded"; return 1
+  fi
+  [[ "$out" == *"refusing to push to main"* ]] || { echo "missing message: $out"; return 1; }
 }
 
 test_push_that_deletes_one_branch_and_updates_another_runs_the_quality_command() {
