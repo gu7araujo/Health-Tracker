@@ -306,7 +306,9 @@ if [ $# -eq 0 ]; then
   fixture() {
     dir="$1"
     mkdir "$tmp/$dir"
-    cp "$FIXTURES"/pass/*.yml "$FIXTURES/$dir"/*.yml "$tmp/$dir/"
+    # Two calls: GNU cp refuses to overwrite a file it created in the same call (#124).
+    cp "$FIXTURES"/pass/*.yml "$tmp/$dir/"
+    cp "$FIXTURES/$dir"/*.yml "$tmp/$dir/"
     out="$("$0" "$tmp/$dir" 2>&1)"
     status=$?
     printed="$(grep -c '^  FAIL: ' <<<"$out")"
