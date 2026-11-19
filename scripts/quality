@@ -18,7 +18,7 @@ Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-b
                      failures are its test runner's own ("System Failures") is run once more, the
                      first attempt kept as build/<UI|Intents>.attempt1.xcresult, unless the tests
                      have run 15 min. Either one writes retried=true to $GITHUB_OUTPUT, when set.
-  --json            Accepted for compatibility: every run writes build/quality.json.
+  --json             Accepted for compatibility: every run writes build/quality.json.
   --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
                      (an exported SIMULATOR_ID is ignored so worktrees never share a device).
   --update-baseline  With --fast: raise the *_UNIT_MIN ratchets to the measured coverage.
@@ -360,7 +360,7 @@ for bundle in "${bundles[@]}"; do
     details+="$name: reran once after: $reason"$'\n'
     # An annotation keeps a flake the rerun absorbed visible on the CI run.
     [ "${GITHUB_ACTIONS:-}" = "true" ] && echo "::warning::$name: reran once after: $reason"
-    # Kept as the flake's evidence (CI uploads build/*.xcresult when the gate fails), and out of the way:
+    # Kept as the flake's evidence (CI uploads it on the retried output below), and out of the way:
     # xcodebuild refuses an existing -resultBundlePath.
     [ ! -e "$bundle_result" ] || mv "$bundle_result" "${bundle_result%.xcresult}.attempt1.xcresult"
   done

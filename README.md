@@ -292,7 +292,7 @@ GitHub Actions re-runs the gate on GitHub's runners with the pinned tools, so a 
 |---|---|---|
 | PR, draft or ready (opened, pushed, or reopened) | ✅ | `scripts/quality --full` if it touches the app, its tests, the project or `--full`'s own scripts and settings (`scripts/ci/app-changes.sh` lists them); `--fast` otherwise |
 | Push to `main` (a merge) | ✅ | `scripts/quality --full` |
-| Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full`; a red run opens an issue "Weekly quality gate failed" (or comments on the open one) |
+| Weekly, Mondays 06:00 UTC (`weekly.yml`) | none | `scripts/quality --full`; a red run opens an issue "Weekly quality gate failed" (or comments on the open one); a green run with a test that passed on its retry does the same on "Weekly quality gate passed on retry", labelled `flaky-test` |
 | Manual (**Run workflow** in the Actions tab) | ✅ (`ci.yml`) | `scripts/quality --full` |
 
 **`changes`** runs first, on `ubuntu-24.04` (seconds). On a PR it feeds the changed files to `scripts/ci/docs-only.sh`; when every one is docs or agent config, `lint` and `test` are skipped. It also feeds them to `scripts/ci/app-changes.sh`; when none can change what the UI suites test, `test` runs `--fast`. Other events always run `lint` and `test`, with `--full`.
@@ -320,7 +320,7 @@ gh run view <run-id> --log-failed                           # the failing step's
 gh run download <run-id> -n xcresult-<run-id> -D build/ci   # test results and xcodebuild.log
 ```
 
-The artifact is uploaded only when `test` fails, and kept for 7 days. Open `build/ci/Test.xcresult` in Xcode, or reproduce locally with `CI=true scripts/quality --full`, which stops first on any drift from `scripts/tool-versions.env`, the versions CI uses.
+The artifact is uploaded when `test` fails, or when a test passed on its retry or a UI bundle reran after a runner error (the first attempt is `build/<UI|Intents>.attempt1.xcresult`), and kept for 7 days. Open `build/ci/Test.xcresult` in Xcode, or reproduce locally with `CI=true scripts/quality --full`, which stops first on any drift from `scripts/tool-versions.env`, the versions CI uses.
 
 The `main` ruleset requires a PR and the `claude-review` and `ci-gate` checks; `ci-gate` stands in for `changes`, `lint` and `test`, so still read a red one before you approve and merge.
 

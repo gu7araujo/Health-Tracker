@@ -20,24 +20,26 @@ jobs:
         if: failure() || steps.quality.outputs.retried == 'true'
         run: echo upload
       - name: Notify on failure
-        if: (failure() || steps.quality.outputs.retried == 'true') && github.event_name == 'schedule'
+        if: (failure() || steps.quality.outputs.retried == 'true') && !cancelled() && github.event_name == 'schedule'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          JOB_STATUS: ${{ job.status }}
-          RETRIED: ${{ steps.quality.outputs.retried }}
+          GATE: ${{ steps.quality.outcome }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          if [ "$JOB_STATUS" = failure ]; then
-            title="Weekly quality gate failed" outcome="failed" again="Failed again"
-          else
+          if [ "$GATE" = success ]; then
             title="Weekly quality gate passed on retry" outcome="passed on retry" again="Passed on retry again"
+          else
+            title="Weekly quality gate failed" outcome="failed" again="Failed again"
           fi
+          body="$RUN_URL"
+          tests="$(jq -r '.retried[]?' build/quality.json 2>/dev/null || true)"
+          if [ "$GATE" = success ] && [ -n "$tests" ]; then body="$body"$'\n\n'"$tests"; fi
           open="$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')"
           if [ -n "$open" ]; then
-            gh issue comment "$open" --body "$again: $RUN_URL"
+            gh issue comment "$open" --body "$again: $body"
           else
-            url="$(gh issue create --title "$title" --body "The scheduled \`--full\` run $outcome: $RUN_URL")"
+            url="$(gh issue create --title "$title" --body "The scheduled \`--full\` run $outcome: $body")"
             open="${url##*/}"
           fi
-          if [ "$RETRIED" = true ]; then gh issue edit "$open" --add-label flaky-test; fi
+          if [ "$GATE" = success ] && [ -n "$tests" ]; then gh issue edit "$open" --add-label flaky-test; fi
