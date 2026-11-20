@@ -76,6 +76,13 @@ if [ -n "\$result" ]; then
     exit 65
   fi
 fi
+# While \$TMP/hang.<bundle> exists, a <bundle> run starts a test and then prints nothing (#109);
+# with \$STUBBORN set, it also ignores TERM.
+if [ -e "$TMP/hang.\$bundle" ]; then
+  [ -z "\$STUBBORN" ] || trap '' TERM
+  echo "Test Case '-[HealthTrackerUITests.MealFlowUITests testMealItemLimitAndCancel]' started (Iteration 1 of 2)."
+  while [ -e "$TMP/hang.\$bundle" ]; do sleep 0.1; done
+fi
 while [ -e "$TMP/hold" ]; do sleep 0.1; done
 app=build/DerivedData/Build/Products/Debug-iphonesimulator/HealthTracker.app
 case "\$*" in
@@ -115,6 +122,7 @@ periphery_stub 0
 gate() {
   (cd "$1" && PATH="$TMP/bin:$PATH" SIMULATOR_ID=SHARED-UDID CI="${CI_ENV:-}" GITHUB_ACTIONS="${GHA:-}" \
     GITHUB_OUTPUT="${GHA_OUTPUT:-}" QUALITY_RERUN_DEADLINE="${RERUN_DEADLINE:-}" \
+    QUALITY_SILENCE_LIMIT="${SILENCE_LIMIT:-}" QUALITY_SILENCE_POLL=0.1 QUALITY_SILENCE_GRACE=1 \
     QUALITY_LOCK="${LOCK_PATH:-$TMP/quality.lock}" QUALITY_LOCK_POLL=0.1 "$1/scripts/quality" "${@:2}")
 }
 
@@ -381,6 +389,79 @@ run_quality '[]' --full
 [ "$(grep -c -- '-only-testing:HealthTrackerTests ' "$TMP/xcodebuild.calls")" -eq 1 ] ||
   fail "a unit run that never reached its runner should not be rerun, got: $(cat "$TMP/xcodebuild.calls")"
 rm -f "$TMP/runner-error.HealthTrackerTests"
+
+# A UI run whose xcodebuild prints nothing for QUALITY_SILENCE_LIMIT s has hung (#109: after a test's
+# 180 s allowance stop, it went silent until the CI step's 45 min timeout). The gate stops it and fails
+# the row, naming the test it hung in, so a hang costs its bundle and the later bundles still run.
+# run_hung [env...]: runs --full while the UI run hangs, with a 1 s silence limit, and sets out. The gate
+# is given 30 s: a gate still waiting then fails the test and the hang is released.
+run_hung() {
+  : >"$TMP/xcodebuild.calls"
+  rm -f "$TMP/hang.out" "$TMP/hang.code"
+  touch "$TMP/hang.HealthTrackerUITests"
+  (
+    export SILENCE_LIMIT=1
+    for setting in "$@"; do
+      export "${setting?}"
+    done
+    run_quality '[]' --full
+    printf '%s' "$out" >"$TMP/hang.out"
+    echo "$code" >"$TMP/hang.code"
+  ) &
+  local hang_gate=$!
+  for _ in $(seq 300); do
+    [ ! -e "$TMP/hang.code" ] || break
+    sleep 0.1
+  done
+  [ -e "$TMP/hang.code" ] || fail "a silent UI run should be stopped, but the gate was still waiting on it after 30 s ($*)"
+  rm -f "$TMP/hang.HealthTrackerUITests"
+  wait "$hang_gate"
+  out="$(cat "$TMP/hang.out")"
+}
+run_hung
+grep -qE '^UI tests +1  <= 0 +✗$' <<<"$out" || fail "a hung UI run should fail its row, got: $out"
+grep -qxF "UI tests: MealFlowUITests/testMealItemLimitAndCancel(): hung: xcodebuild printed nothing for 1 s, so the gate stopped it" <<<"$out" ||
+  fail "the details should name the test the UI run hung in, got: $out"
+grep -q -- '-only-testing:HealthTrackerIntentsUITests ' "$TMP/xcodebuild.calls" ||
+  fail "the intents bundle should still run after a hung UI run, got: $(cat "$TMP/xcodebuild.calls")"
+# A killed run usually leaves no readable result: the row still counts the hang, the only line listed.
+run_hung NO_RESULT=1
+grep -qE '^UI tests +1  <= 0 +✗$' <<<"$out" || fail "a hung UI run with no result should fail its row with 1, got: $out"
+[ "$(grep -c '^UI tests: ' <<<"$out")" -eq 1 ] || fail "a hung UI run with no result should list only the hang, got: $out"
+# An xcodebuild that ignores TERM is killed.
+run_hung STUBBORN=1
+grep -qE '^UI tests +1  <= 0 +✗$' <<<"$out" || fail "a hung UI run that ignores TERM should fail its row, got: $out"
+# A test that passed on its retry before the hang stays listed.
+cp "$TMP/tests.json" "$TMP/tests.passing.json"
+jq --slurpfile retried "$FIX/test-results-retried.json" \
+  '.testNodes[0].children |= map(if .name == "HealthTrackerUITests"
+    then ($retried[0].testNodes[0].children[] | select(.name == "HealthTrackerUITests")) else . end)' \
+  "$TMP/tests.passing.json" >"$TMP/tests.json"
+run_hung
+grep -qxF "$retried_line" <<<"$out" || fail "a retry before the hang should stay listed, got: $out"
+mv "$TMP/tests.passing.json" "$TMP/tests.json"
+# A Ctrl-C during a UI run leaves no watchdog behind: as a background job it ignores SIGINT.
+# Ctrl-C signals the terminal's whole process group, so the gate runs in its own (set -m) and gets that.
+: >"$TMP/xcodebuild.calls"
+touch "$TMP/hang.HealthTrackerUITests"
+set -m
+(SILENCE_LIMIT=600 run_quality '[]' --full) &
+interrupted=$!
+set +m
+wait_until grep -q 'HealthTrackerUITests' "$TMP/xcodebuild.calls" || fail "the UI run never started"
+kill -INT -- "-$interrupted"
+wait "$interrupted"
+rm -f "$TMP/hang.HealthTrackerUITests"
+# The gate itself may still be cleaning up; only a process that stays is a leftover watchdog.
+wait_until sh -c "! pgrep -f '$REPO/scripts/quality' >/dev/null" ||
+  fail "an interrupted gate should leave no watchdog running, got: $(pgrep -fl "$REPO/scripts/quality")"
+pkill -f "$REPO/scripts/quality" 2>/dev/null
+# A hang marker left by an interrupted run is never read as this run's hang.
+mkdir -p "$REPO/build"
+: >"$REPO/build/xcodebuild.silent"
+run_quality '[]' --full
+[[ "$out" != *"hung:"* ]] || fail "a stale hang marker should not fail the next run, got: $out"
+grep -qE '^Unit tests +0  <= 0 +✓$' <<<"$out" || fail "a stale hang marker should not fail the unit row, got: $out"
 # No result at all (a build failure) is not rerun: running it again would fail the same way.
 : >"$TMP/xcodebuild.calls"
 NO_RESULT=1 run_quality '[]' --full

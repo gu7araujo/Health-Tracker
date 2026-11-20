@@ -18,6 +18,8 @@ Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-b
                      failures are its test runner's own ("System Failures") is run once more, the
                      first attempt kept as build/<UI|Intents>.attempt1.xcresult, unless the tests
                      have run 15 min. Either one writes retried=true to $GITHUB_OUTPUT, when set.
+                     A UI or intents run that prints nothing for 300 s ($QUALITY_SILENCE_LIMIT) has
+                     hung: the gate stops it and fails that bundle, naming the last test that started.
   --json             Accepted for compatibility: every run writes build/quality.json.
   --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
                      (an exported SIMULATOR_ID is ignored so worktrees never share a device).
@@ -122,9 +124,12 @@ mkdir -p "$PIDS"
 # one already booted is someone's session and stays up.
 shutdown_on_exit=""
 held_lock=""
+watchdog=""
 cleanup() {
   local udid
   rm -f "$PIDS/$$"
+  # A non-interactive shell's background job ignores SIGINT, so a Ctrl-C would leave it running.
+  [ -z "$watchdog" ] || kill_tree TERM "$watchdog"
   [ -z "$held_lock" ] || rm -rf "$LOCK"
   for udid in $shutdown_on_exit; do
     xcrun simctl shutdown "$udid" >/dev/null 2>&1
@@ -284,6 +289,44 @@ build_settings=(-enableCodeCoverage YES)
 # on a slow CI runner took 91 s. It is also the maximum, so a test's own executionTimeAllowance cannot raise it.
 # A test it stops is not retried (#136): xcodebuild restarts the runner past it, so a hang still costs 180 s.
 UI_TEST_ALLOWANCE=180
+# Whole seconds a UI or intents run may print nothing before the gate stops its xcodebuild and fails the bundle.
+# Past a test's allowance stop xcodebuild can go silent until the CI step's timeout (#109). A healthy run
+# logs every XCUITest step; its longest quiet stretch is the intents warm-up, whose unlogged intent calls
+# can take about 130 s.
+SILENCE_LIMIT="${QUALITY_SILENCE_LIMIT:-300}"
+SILENCE_POLL="${QUALITY_SILENCE_POLL:-5}"
+# Whole seconds a stopped xcodebuild gets to finish its result bundle before it is killed, as --stop allows.
+SILENCE_GRACE="${QUALITY_SILENCE_GRACE:-30}"
+
+# watch_silence: stops this run's xcodebuild once build/xcodebuild.log has not grown for $SILENCE_LIMIT s,
+# leaving build/xcodebuild.silent behind. Matches xcodebuild by its command, not tee's build/xcodebuild.log.
+watch_silence() {
+  local size last=-1 changed=$SECONDS pid pids
+  while sleep "$SILENCE_POLL"; do
+    size="$(wc -c <build/xcodebuild.log)"
+    if [ "$size" -ne "$last" ]; then
+      last=$size
+      changed=$SECONDS
+    elif [ $((SECONDS - changed)) -ge "$SILENCE_LIMIT" ]; then
+      pids="$(pgrep -P $$ -f '(^|/)xcodebuild( |$)')" || return
+      : >build/xcodebuild.silent
+      # TERM lets xcodebuild finish its result bundle; KILL is for one still running $SILENCE_GRACE s later.
+      for pid in $pids; do
+        kill_tree TERM "$pid"
+      done
+      for _ in $(seq $((SILENCE_GRACE * 5))); do
+        pgrep -P $$ -f '(^|/)xcodebuild( |$)' >/dev/null || return
+        sleep 0.2
+      done
+      # Found again: a pid that exited during the grace may already belong to another process.
+      for pid in $(pgrep -P $$ -f '(^|/)xcodebuild( |$)'); do
+        kill_tree KILL "$pid"
+      done
+      return
+    fi
+  done
+}
+
 # Seconds after the first test run starts past which an unmeasured UI bundle is not rerun: on a runner slow
 # enough to be that late, a rerun could outlast the 45-min CI step and lose the whole table.
 RERUN_DEADLINE="${QUALITY_RERUN_DEADLINE:-900}"
@@ -292,6 +335,7 @@ PROFILE_DATA="build/DerivedData/Build/ProfileData"
 rm -rf "$RESULT" build/Unit.xcresult build/UI.xcresult build/Intents.xcresult \
   build/UI.attempt1.xcresult build/Intents.attempt1.xcresult "$PROFILE_DATA"
 : >build/xcodebuild.log
+rm -f build/xcodebuild.silent
 # Boot and wait first: launching on a still-booting clone fails every test with "Application failed preflight checks".
 xcrun simctl bootstatus "$SIMULATOR" -b >/dev/null
 tests_start=$SECONDS
@@ -332,9 +376,15 @@ for bundle in "${bundles[@]}"; do
     runs=2
   fi
   passed_on_retry=""
+  hung=""
   for ((run = 1; run <= runs; run++)); do
     log_start=$(($(wc -l <build/xcodebuild.log) + 1))
     [ "$run" -eq 1 ] || xcrun simctl bootstatus "$destination" -b >/dev/null
+    watchdog=""
+    if [ "$bundle" != "HealthTrackerTests" ]; then
+      watch_silence &
+      watchdog=$!
+    fi
     xcodebuild test \
       -scheme HealthTracker \
       -destination "platform=iOS Simulator,id=$destination" \
@@ -343,11 +393,25 @@ for bundle in "${bundles[@]}"; do
       -derivedDataPath build/DerivedData \
       "${build_settings[@]}" \
       -resultBundlePath "$bundle_result" 2>&1 | tee -a build/xcodebuild.log | "${beautify[@]}"
+    if [ -n "$watchdog" ]; then
+      kill "$watchdog" 2>/dev/null
+      wait "$watchdog" 2>/dev/null
+      watchdog=""
+    fi
     xcrun xcresulttool get test-results tests --path "$bundle_result" >build/test-results.json 2>/dev/null
     failed="$("$LIB/test-failures.sh" build/test-results.json "$bundle")"
     # Read per attempt: a runner error's rerun moves this attempt's result aside.
     retries="$("$LIB/test-failures.sh" build/test-results.json "$bundle" --retried | sed "s/^/$name: passed on retry: /")"
     [ -z "$retries" ] || passed_on_retry+="$retries"$'\n'
+    if [ -e build/xcodebuild.silent ]; then
+      rm -f build/xcodebuild.silent
+      hung_test="$(tail -n +"$log_start" build/xcodebuild.log |
+        sed -nE "s/^Test Case '-\[[^.]+\.([^ ]+) ([^]]+)\]' started.*/\1\/\2()/p" | tail -n 1)"
+      hung="$name: ${hung_test:+$hung_test: }hung: xcodebuild printed nothing for $SILENCE_LIMIT s, so the gate stopped it"
+      # Its result bundle is unfinished, and a rerun would wait on the same hang.
+      failed=$((${failed:-0} + 1))
+      break
+    fi
     [ "$run" -lt "$runs" ] || break
     runner_errors="$("$LIB/test-failures.sh" build/test-results.json "$bundle" --system)"
     [ -n "$runner_errors" ] && [ "$failed" -eq "$(grep -c . <<<"$runner_errors")" ] || break
@@ -369,8 +433,10 @@ for bundle in "${bundles[@]}"; do
     reason="$(tail -n +"$log_start" build/xcodebuild.log | grep 'error:' | tail -n 1)"
     details+="$name n/a: ${reason:-no error: line in build/xcodebuild.log}"$'\n'
   elif [ "$failed" -gt 0 ]; then
-    details+="$("$LIB/test-failures.sh" build/test-results.json "$bundle" --list | sed "s/^/$name: /")"$'\n'
+    listed="$("$LIB/test-failures.sh" build/test-results.json "$bundle" --list | sed "s/^/$name: /")"
+    [ -z "$listed" ] || details+="$listed"$'\n'
   fi
+  [ -z "$hung" ] || details+="$hung"$'\n'
   if [ -n "$passed_on_retry" ]; then
     details+="$passed_on_retry"
     retried+="$passed_on_retry"
