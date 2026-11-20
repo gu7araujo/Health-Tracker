@@ -17,9 +17,8 @@ import Foundation
 /// notifications (visible in Notification Center). It targets only today's date-specific
 /// identifiers, preserving future days' notifications.
 ///
-/// `execute()` runs on the concurrent executor, never the main actor: the system calls
-/// behind it are synchronous XPC that can block for minutes while `usernotificationsd`
-/// is busy (for example on a freshly booted device), and on the main actor that froze the UI.
+/// The service queues the removals and returns at once; they reach `usernotificationsd`
+/// later, which can take minutes while it is busy (for example on a freshly booted device).
 ///
 /// Satisfies requirements NOTIF-11, NOTIF-12, NOTIF-13, NOTIF-14.
 final nonisolated class CancelNotificationsUseCase: Sendable {
@@ -63,7 +62,7 @@ final nonisolated class CancelNotificationsUseCase: Sendable {
         // Remove delivered notifications (visible in Notification Center)
         notificationService.removeDeliveredNotifications(withIdentifiers: identifiers)
 
-        logger.info("Successfully canceled notifications for date: \(dateString)")
+        logger.info("Queued cancellation of notifications for date: \(dateString)")
     }
 
     // MARK: - Private Helpers

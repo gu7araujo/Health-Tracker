@@ -165,33 +165,78 @@ struct NotificationServiceTests {
     // MARK: - Cancellation
 
     @Test("cancelAllNotifications removes all pending requests")
-    func cancelAllNotifications_delegatesToCenter() {
+    func cancelAllNotifications_delegatesToCenter() throws {
         let center = MockUserNotificationCenter()
         let service = makeService(center: center)
 
         service.cancelAllNotifications()
+        try #require(center.removalFinished.wait(timeout: .now() + 1) == .success)
 
         #expect(center.removeAllPendingCalled)
     }
 
     @Test("cancelNotifications forwards the identifiers")
-    func cancelNotifications_delegatesToCenter() {
+    func cancelNotifications_delegatesToCenter() throws {
         let center = MockUserNotificationCenter()
         let service = makeService(center: center)
 
         service.cancelNotifications(withIdentifiers: ["a", "b"])
+        try #require(center.removalFinished.wait(timeout: .now() + 1) == .success)
 
         #expect(center.removedPendingIdentifiers == [["a", "b"]])
     }
 
     @Test("removeDeliveredNotifications forwards the identifiers")
-    func removeDeliveredNotifications_delegatesToCenter() {
+    func removeDeliveredNotifications_delegatesToCenter() throws {
         let center = MockUserNotificationCenter()
         let service = makeService(center: center)
 
         service.removeDeliveredNotifications(withIdentifiers: ["x"])
+        try #require(center.removalFinished.wait(timeout: .now() + 1) == .success)
 
         #expect(center.removedDeliveredIdentifiers == [["x"]])
+    }
+
+    enum Removal: CaseIterable {
+        case allPending, pending, delivered
+    }
+
+    /// The center's removals are synchronous XPC that `usernotificationsd` can leave unanswered for
+    /// minutes. A caller that waits holds its thread, and a few saves then fill Swift's cooperative pool.
+    @Test("A removal returns before a stalled notification center answers", arguments: Removal.allCases)
+    func removal_returnsBeforeStalledCenterAnswers(removal: Removal) throws {
+        let center = MockUserNotificationCenter()
+        let stall = DispatchSemaphore(value: 0)
+        center.removalStall = stall
+        let service = makeService(center: center)
+
+        switch removal {
+        case .allPending: service.cancelAllNotifications()
+        case .pending: service.cancelNotifications(withIdentifiers: ["a"])
+        case .delivered: service.removeDeliveredNotifications(withIdentifiers: ["a"])
+        }
+        stall.signal()
+        try #require(center.removalFinished.wait(timeout: .now() + 1) == .success)
+
+        #expect(center.removalStallTimedOut == false)
+    }
+
+    /// `ScheduleNotificationsUseCase` cancels all, then schedules: a removal still queued behind a
+    /// stalled center must not reach it after the new request and remove it.
+    @Test("A request scheduled after a cancel reaches the center after that cancel")
+    func scheduleNotification_waitsForEarlierRemovals() async throws {
+        let center = MockUserNotificationCenter()
+        let stall = DispatchSemaphore(value: 0)
+        center.removalStall = stall
+        let service = makeService(center: center)
+
+        service.cancelAllNotifications()
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) { stall.signal() }
+        try await service.scheduleNotification(
+            identifier: "id", title: "T", body: "B", dateComponents: DateComponents(hour: 20), repeats: false
+        )
+
+        #expect(center.callOrder == ["removeAllPending", "add"])
     }
 
     // MARK: - setDelegate
