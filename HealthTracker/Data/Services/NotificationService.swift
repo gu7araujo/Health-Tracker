@@ -19,6 +19,11 @@ import UserNotifications
 final nonisolated class NotificationService: NotificationServiceProtocol {
     private let notificationCenter: UserNotificationCentering
     private let logger: LoggerProtocol
+    /// The center's removals are synchronous XPC that `usernotificationsd` can leave unanswered for
+    /// minutes (on a freshly booted device). Run inline, each one held a Swift concurrency thread, and
+    /// once those filled the CPU count no other dispatch work ran: on a 3-CPU CI runner the third save
+    /// stopped the app from ever going idle. This serial queue holds at most one thread while stalled.
+    private let removalQueue = DispatchQueue(label: "NotificationService.removals", qos: .utility)
 
     /// Initializes the notification service with a notification center and logger.
     ///
@@ -99,6 +104,12 @@ final nonisolated class NotificationService: NotificationServiceProtocol {
             trigger: trigger
         )
 
+        // Let removals queued before this call reach the center first, so a cancel-then-schedule
+        // never removes the new request. Suspends, rather than blocks, while a removal stalls.
+        await withCheckedContinuation { continuation in
+            removalQueue.async { continuation.resume() }
+        }
+
         do {
             try await notificationCenter.add(request)
             logger.info("Notification scheduled successfully: \(identifier)")
@@ -110,20 +121,26 @@ final nonisolated class NotificationService: NotificationServiceProtocol {
 
     func cancelAllNotifications() {
         logger.debug("Canceling all pending notifications")
-        notificationCenter.removeAllPendingNotificationRequests()
-        logger.info("All pending notifications canceled")
+        removalQueue.async { [notificationCenter, logger] in
+            notificationCenter.removeAllPendingNotificationRequests()
+            logger.info("All pending notifications canceled")
+        }
     }
 
     func cancelNotifications(withIdentifiers identifiers: [String]) {
         logger.debug("Canceling notifications: \(identifiers)")
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
-        logger.info("Canceled \(identifiers.count) notification(s)")
+        removalQueue.async { [notificationCenter, logger] in
+            notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
+            logger.info("Canceled \(identifiers.count) notification(s)")
+        }
     }
 
     func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
         logger.debug("Removing delivered notifications: \(identifiers)")
-        notificationCenter.removeDeliveredNotifications(withIdentifiers: identifiers)
-        logger.info("Removed \(identifiers.count) delivered notification(s)")
+        removalQueue.async { [notificationCenter, logger] in
+            notificationCenter.removeDeliveredNotifications(withIdentifiers: identifiers)
+            logger.info("Removed \(identifiers.count) delivered notification(s)")
+        }
     }
 }
 
