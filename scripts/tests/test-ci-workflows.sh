@@ -157,6 +157,20 @@ grep -qE 'title="[^"]*retry' <<<"$notify" ||
   fail "weekly.yml: 'Notify on failure or retry' should file a retry under its own title, naming the retry"
 grep -qF '.retried[]' <<<"$notify" ||
   fail "weekly.yml: 'Notify on failure or retry' should name the retried tests (.retried[] in build/quality.json)"
+# A red run that stops before build/quality.json is written (a runtime install failure, the step
+# timeout) must still open its issue: GitHub runs the step under bash -e, with gh stubbed here.
+notify_run="$(awk '/^ *run: \| *$/ { found = 1; next } found' <<<"$notify" | sed -E 's/^ {10}//')"
+if [ -n "$notify_run" ]; then
+  notify_dir="$(mktemp -d)"
+  mkdir "$notify_dir/bin"
+  printf '#!/usr/bin/env bash\necho "gh $*" >>"%s/gh.log"\n' "$notify_dir" >"$notify_dir/bin/gh"
+  chmod +x "$notify_dir/bin/gh"
+  (cd "$notify_dir" && PATH="$notify_dir/bin:$PATH" JOB_STATUS=failure RETRIED="" RUN_URL=run \
+    bash -e -c "$notify_run") >/dev/null 2>&1
+  grep -q '^gh issue create' "$notify_dir/gh.log" 2>/dev/null ||
+    fail "weekly.yml: 'Notify on failure or retry' should open an issue on a red run with no build/quality.json"
+  rm -rf "$notify_dir"
+fi
 grep -qE '^ *issues: write *$' "$WEEKLY" || fail "weekly.yml: opening an issue needs 'issues: write'"
 # A hung simulator must fail the Quality gate step, not time out the test job (ci.yml and
 # weekly.yml): a job timeout is a cancel, so the if: failure() upload and notification steps

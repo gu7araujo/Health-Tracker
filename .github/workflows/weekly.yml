@@ -78,7 +78,7 @@ jobs:
           title="Weekly quality gate failed" label=""
           [ "$JOB_STATUS" = failure ] || { title="Weekly quality gate passed on a retry"; label=flaky-test; }
           body="The scheduled \`--full\` run ended in $JOB_STATUS: $RUN_URL"
-          retried="$(jq -r '.retried[]? | "- " + .' build/quality.json 2>/dev/null)"
+          retried="$(jq -r '.retried[]? | "- " + .' build/quality.json 2>/dev/null || true)"
           [ -z "$RETRIED" ] ||
             body+=$'\n\n'"Passed on retry:"$'\n'"${retried:-- no test listed: a UI bundle reran after a test runner error (see the run warnings)}"
           open="$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')"
