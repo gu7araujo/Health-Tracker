@@ -22,7 +22,8 @@ final nonisolated class NotificationService: NotificationServiceProtocol {
     /// The center's removals are synchronous XPC that `usernotificationsd` can leave unanswered for
     /// minutes (on a freshly booted device). Run inline, each one held a Swift concurrency thread, and
     /// once those filled the CPU count no other dispatch work ran: on a 3-CPU CI runner the third save
-    /// stopped the app from ever going idle. This serial queue holds at most one thread while stalled.
+    /// stopped the app from ever going idle. This serial queue holds at most one GCD thread per
+    /// instance while stalled, outside that pool; ordering between instances is not guaranteed.
     private let removalQueue = DispatchQueue(label: "NotificationService.removals", qos: .utility)
 
     /// Initializes the notification service with a notification center and logger.
@@ -105,7 +106,8 @@ final nonisolated class NotificationService: NotificationServiceProtocol {
         )
 
         // Let removals queued before this call reach the center first, so a cancel-then-schedule
-        // never removes the new request. Suspends, rather than blocks, while a removal stalls.
+        // never removes the new request. A removal queued while this call waits is not ordered
+        // against the add. Suspends, rather than blocks, while a removal stalls.
         await withCheckedContinuation { continuation in
             removalQueue.async { continuation.resume() }
         }

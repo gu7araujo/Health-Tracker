@@ -165,34 +165,34 @@ struct NotificationServiceTests {
     // MARK: - Cancellation
 
     @Test("cancelAllNotifications removes all pending requests")
-    func cancelAllNotifications_delegatesToCenter() {
+    func cancelAllNotifications_delegatesToCenter() throws {
         let center = MockUserNotificationCenter()
         let service = makeService(center: center)
 
         service.cancelAllNotifications()
-        center.removalFinished.wait()
+        try #require(center.removalFinished.wait(timeout: .now() + 1) == .success)
 
         #expect(center.removeAllPendingCalled)
     }
 
     @Test("cancelNotifications forwards the identifiers")
-    func cancelNotifications_delegatesToCenter() {
+    func cancelNotifications_delegatesToCenter() throws {
         let center = MockUserNotificationCenter()
         let service = makeService(center: center)
 
         service.cancelNotifications(withIdentifiers: ["a", "b"])
-        center.removalFinished.wait()
+        try #require(center.removalFinished.wait(timeout: .now() + 1) == .success)
 
         #expect(center.removedPendingIdentifiers == [["a", "b"]])
     }
 
     @Test("removeDeliveredNotifications forwards the identifiers")
-    func removeDeliveredNotifications_delegatesToCenter() {
+    func removeDeliveredNotifications_delegatesToCenter() throws {
         let center = MockUserNotificationCenter()
         let service = makeService(center: center)
 
         service.removeDeliveredNotifications(withIdentifiers: ["x"])
-        center.removalFinished.wait()
+        try #require(center.removalFinished.wait(timeout: .now() + 1) == .success)
 
         #expect(center.removedDeliveredIdentifiers == [["x"]])
     }
@@ -204,7 +204,7 @@ struct NotificationServiceTests {
     /// The center's removals are synchronous XPC that `usernotificationsd` can leave unanswered for
     /// minutes. A caller that waits holds its thread, and a few saves then fill Swift's cooperative pool.
     @Test("A removal returns before a stalled notification center answers", arguments: Removal.allCases)
-    func removal_returnsBeforeStalledCenterAnswers(removal: Removal) {
+    func removal_returnsBeforeStalledCenterAnswers(removal: Removal) throws {
         let center = MockUserNotificationCenter()
         let stall = DispatchSemaphore(value: 0)
         center.removalStall = stall
@@ -216,7 +216,7 @@ struct NotificationServiceTests {
         case .delivered: service.removeDeliveredNotifications(withIdentifiers: ["a"])
         }
         stall.signal()
-        center.removalFinished.wait()
+        try #require(center.removalFinished.wait(timeout: .now() + 1) == .success)
 
         #expect(center.removalStallTimedOut == false)
     }
