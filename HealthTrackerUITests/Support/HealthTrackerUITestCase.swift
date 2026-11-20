@@ -156,13 +156,17 @@ class HealthTrackerUITestCase: XCTestCase {
 
     /// Taps the field, waits until it holds keyboard focus, then types. Typing straight after the tap
     /// can land while a sheet still animates: "Neither element nor any descendant has keyboard focus" (#116).
+    /// The runner's first call waits up to 30 s: a fresh simulator's first keyboard has missed a 5 s
+    /// focus wait on CI (#109). Later calls keep 5 s, so a broken field still fails fast.
     /// Not named `type`, which would hide Swift's `type(of:)` in every suite.
     func enterText(_ text: String, into field: XCUIElement, taps: Int = 1,
                    file: StaticString = #filePath, line: UInt = #line)
     {
         field.tap(withNumberOfTaps: taps, numberOfTouches: 1)
         var attributeMissing = false
-        let focused = waitUntil {
+        let timeout: TimeInterval = Self.firstKeyboardAttempted ? 5 : 30
+        Self.firstKeyboardAttempted = true
+        let focused = waitUntil(timeout: timeout) {
             guard let snapshot = (try? field.snapshot()) as? NSObject else { return false }
             attributeMissing = !snapshot.responds(to: NSSelectorFromString(Self.keyboardFocusKey))
             return attributeMissing || snapshot.value(forKey: Self.keyboardFocusKey) as? Bool == true
@@ -179,6 +183,9 @@ class HealthTrackerUITestCase: XCTestCase {
     /// The snapshot attribute `typeText` checks: the public `hasFocus` stays false on an iOS text field
     /// that holds the keyboard (seen on iOS 26.5 and 27.2).
     private static let keyboardFocusKey = "hasKeyboardFocus"
+
+    /// Whether this runner process has called `enterText` yet; only that first call gets the long wait.
+    private static var firstKeyboardAttempted = false
 
     // MARK: - Flow Helpers
 
