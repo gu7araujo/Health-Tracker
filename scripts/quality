@@ -17,7 +17,7 @@ Usage: scripts/quality [--fast|--full] [--json] [--simulator <udid>] [--update-b
                      retried once: passing then, it counts as passed and is listed as "passed on retry". A UI bundle whose only
                      failures are its test runner's own ("System Failures") is run once more, the
                      first attempt kept as build/<UI|Intents>.attempt1.xcresult, unless the tests
-                     have run 15 min.
+                     have run 15 min. Either one writes retried=true to $GITHUB_OUTPUT, when set.
   --json             Accepted for compatibility: every run writes build/quality.json.
   --simulator <udid> Simulator to test on. Default: reuse/clone "HT-<branch>", one per worktree
                      (an exported SIMULATOR_ID is ignored so worktrees never share a device).
@@ -360,7 +360,7 @@ for bundle in "${bundles[@]}"; do
     details+="$name: reran once after: $reason"$'\n'
     # An annotation keeps a flake the rerun absorbed visible on the CI run.
     [ "${GITHUB_ACTIONS:-}" = "true" ] && echo "::warning::$name: reran once after: $reason"
-    # Kept as the flake's evidence (CI uploads build/*.xcresult when the gate fails), and out of the way:
+    # Kept as the flake's evidence (CI uploads it on the retried output below), and out of the way:
     # xcodebuild refuses an existing -resultBundlePath.
     [ ! -e "$bundle_result" ] || mv "$bundle_result" "${bundle_result%.xcresult}.attempt1.xcresult"
   done
@@ -443,5 +443,10 @@ fi
 status=$?
 jq --arg retried "$retried" '.retried = ($retried | split("\n") | map(select(. != "")))' build/quality.json \
   >build/quality.json.tmp && mv build/quality.json.tmp build/quality.json
+# A test that passed on retry, or a bundle rerun after a runner error, leaves a green run whose first
+# attempt is the flake's only evidence: CI uploads it and the weekly run reports it (#141).
+if [ -n "${GITHUB_OUTPUT:-}" ] && { [ -n "$retried" ] || compgen -G 'build/*.attempt1.xcresult' >/dev/null; }; then
+  echo "retried=true" >>"$GITHUB_OUTPUT"
+fi
 [ -z "$details" ] || printf '\n%s' "$details"
 exit "$status"

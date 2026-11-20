@@ -1,5 +1,6 @@
-# Must fail every notify check, and only those: Notify on failure also runs on non-scheduled runs
-# and only comments (the issue opens in another job), and 'issues: write' sits in a comment.
+# Must fail every notify check, and only those: Notify on failure skips a retried run and also runs
+# off schedule, only comments (the issue opens in another job), never labels flaky-test, and
+# 'issues: write' sits in a comment.
 jobs:
   test:
     timeout-minutes: 75
@@ -10,11 +11,15 @@ jobs:
         timeout-minutes: 20
         run: scripts/ci/install-simulator-runtime.sh
       - name: Quality gate
+        id: quality
         timeout-minutes: 45
         run: scripts/quality --full --json
       - name: Summary
         if: always()
         run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
+      - name: Upload results
+        if: failure() || steps.quality.outputs.retried == 'true'
+        run: echo upload
       - name: Notify on failure
         if: failure()
         run: gh issue comment 1 --body "failed"

@@ -1,4 +1,4 @@
-# Must pass: ci.yml's test steps, a Notify on failure step that opens an issue, issues: write.
+# Must pass: ci.yml's test steps, a Notify on failure step that opens or comments on an issue and labels a retry flaky-test, issues: write.
 jobs:
   test:
     timeout-minutes: 75
@@ -9,11 +9,37 @@ jobs:
         timeout-minutes: 20
         run: scripts/ci/install-simulator-runtime.sh
       - name: Quality gate
+        id: quality
         timeout-minutes: 45
         run: scripts/quality --full --json
       - name: Summary
         if: always()
         run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
+      - name: Upload results
+        if: failure() || steps.quality.outputs.retried == 'true'
+        run: echo upload
       - name: Notify on failure
-        if: failure() && github.event_name == 'schedule'
-        run: gh issue create --title "Weekly quality gate failed"
+        if: (failure() || steps.quality.outputs.retried == 'true') && !cancelled() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GATE: ${{ steps.quality.outcome }}
+          RETRIED: ${{ steps.quality.outputs.retried }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$GATE" = success ] && [ "$RETRIED" = true ]; then
+            title="Weekly quality gate passed on retry" outcome="passed on retry" again="Passed on retry again" retry=true
+          else
+            title="Weekly quality gate failed" outcome="failed" again="Failed again" retry=
+          fi
+          body="$RUN_URL"
+          tests="$(jq -r '.retried[]?' build/quality.json 2>/dev/null || true)"
+          if [ -n "$retry" ] && [ -n "$tests" ]; then body="$body"$'\n\n'"$tests"; fi
+          open="$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')"
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body "$again: $body"
+          else
+            url="$(gh issue create --title "$title" --body "The scheduled \`--full\` run $outcome: $body")"
+            open="${url##*/}"
+          fi
+          if [ -n "$retry" ] && [ -n "$tests" ]; then gh issue edit "$open" --add-label flaky-test; fi

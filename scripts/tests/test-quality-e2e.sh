@@ -114,7 +114,7 @@ periphery_stub 0
 # in $TMP so a real gate running on this Mac never holds the test up.
 gate() {
   (cd "$1" && PATH="$TMP/bin:$PATH" SIMULATOR_ID=SHARED-UDID CI="${CI_ENV:-}" GITHUB_ACTIONS="${GHA:-}" \
-    QUALITY_RERUN_DEADLINE="${RERUN_DEADLINE:-}" \
+    GITHUB_OUTPUT="${GHA_OUTPUT:-}" QUALITY_RERUN_DEADLINE="${RERUN_DEADLINE:-}" \
     QUALITY_LOCK="${LOCK_PATH:-$TMP/quality.lock}" QUALITY_LOCK_POLL=0.1 "$1/scripts/quality" "${@:2}")
 }
 
@@ -292,8 +292,12 @@ grep -qxF "$retried_line" <<<"$out" || fail "the details should list the test th
 [[ "$out" != *"::warning::"* ]] || fail "outside GitHub Actions a retry should not print an annotation, got: $out"
 [ "$(jq -c .retried "$REPO/build/quality.json")" = "$(jq -nc --arg l "$retried_line" '[$l]')" ] ||
   fail "quality.json should list the retried test, got: $(jq -c .retried "$REPO/build/quality.json")"
-GHA=true run_quality '[]' --full
+: >"$TMP/github-output"
+GHA=true GHA_OUTPUT="$TMP/github-output" run_quality '[]' --full
 grep -qxF "::warning::$retried_line" <<<"$out" || fail "on GitHub Actions a retry should be a warning annotation, got: $out"
+# The step output tells CI to upload the first attempt's evidence and the weekly run to report it (#141).
+[ "$(cat "$TMP/github-output")" = "retried=true" ] ||
+  fail "a retried test should write retried=true to \$GITHUB_OUTPUT, got: [$(cat "$TMP/github-output")]"
 # GitHub reads a % in an annotation as an escape, so the gate writes it as %25.
 cp "$TMP/tests.json" "$TMP/tests.retried.json"
 sed 's/UI query/UI query at 50%/' "$TMP/tests.retried.json" >"$TMP/tests.json"
@@ -314,9 +318,11 @@ grep -qxF "$retried_line" <<<"$out" || fail "a retry in a rerun bundle's first a
   fail "the runner error should have rerun the UI bundle, got: $(cat "$TMP/xcodebuild.calls")"
 cp "$FIX/test-results-runner-error.json" "$TMP/runner-error.json"
 rm -f "$TMP/runner-error.HealthTrackerUITests"
-run_quality '[]' --full
+: >"$TMP/github-output"
+GHA=true GHA_OUTPUT="$TMP/github-output" run_quality '[]' --full
 [ "$(jq -c .retried "$REPO/build/quality.json")" = "[]" ] ||
   fail "quality.json should list no retried test when none was, got: $(jq -c .retried "$REPO/build/quality.json")"
+[ ! -s "$TMP/github-output" ] || fail "a run without retries should write no step output, got: [$(cat "$TMP/github-output")]"
 
 # A UI bundle whose only failures are the test runner's own ("System Failures": it never connected, #111)
 # is run once more. A bundle with a failing test case, or with no result at all (a build failure), is not.
@@ -342,9 +348,13 @@ for pair in "HealthTrackerUITests:UI tests" "HealthTrackerIntentsUITests:Intents
     fail "the first $bundle attempt's result bundle should be kept"
   # On GitHub Actions the rerun is also an annotation, so a flake the rerun absorbed still shows on the run.
   echo 1 >"$TMP/runner-error.$bundle"
-  GHA=true run_quality '[]' --full
+  : >"$TMP/github-output"
+  GHA=true GHA_OUTPUT="$TMP/github-output" run_quality '[]' --full
   grep -qF "::warning::$name: reran once after: $runner_error" <<<"$out" ||
     fail "on GitHub Actions the $bundle rerun should be a warning annotation, got: $out"
+  # Its first attempt is evidence too (#111): CI uploads it.
+  [ "$(cat "$TMP/github-output")" = "retried=true" ] ||
+    fail "a $bundle rerun should write retried=true to \$GITHUB_OUTPUT, got: [$(cat "$TMP/github-output")]"
   : >"$TMP/xcodebuild.calls"
   echo 2 >"$TMP/runner-error.$bundle"
   run_quality '[]' --full

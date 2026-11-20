@@ -73,4 +73,4 @@ An issue closes when its PR merges, or, for a post-merge Done when, once that ch
 
 ## The weekly auto-issue
 
-A red scheduled run of `.github/workflows/weekly.yml` opens an unlabelled issue titled `Weekly quality gate failed`, or comments on the open one. Triage it like any other: add `ci` (and `flaky-test` when a re-run passes), read the linked run through the `quality-gate` skill's CI section, and close it with the fixing PR's `Closes #<n>`.
+A red scheduled run of `.github/workflows/weekly.yml` opens an unlabelled issue titled `Weekly quality gate failed`, or comments on the open one. A green one with a retry opens or comments on `Weekly quality gate passed on retry`, labelled `flaky-test` when a test (not only a runner error) passed on its retry, with those tests listed. Triage it like any other: add `ci` (and `flaky-test` when a re-run passes), read the linked run through the `quality-gate` skill's CI section, and close it with the fixing PR's `Closes #<n>`.

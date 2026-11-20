@@ -4,7 +4,8 @@ name: Weekly
 # The steps duplicate ci.yml's test job on purpose: a reusable workflow would rename the
 # test job's check to "test / test" and add indirection for a handful of steps.
 # scripts/tests/test-ci-workflows.sh keeps them in step. A red scheduled run opens an issue
-# (or comments on the open one), so it reaches the repo's watchers.
+# (or comments on the open one), so it reaches the repo's watchers; so does a green one with a retry,
+# on a "passed on retry" issue, labelled flaky-test when a test (not only a runner error) passed on it.
 # --full runs HealthTrackerIntentsUITests too (here, on pushes to main and on app PRs), on the
 # simulator runtime the Simulator runtime step installs (scripts/ci/install-simulator-runtime.sh).
 on:
@@ -45,6 +46,7 @@ jobs:
         timeout-minutes: 20
         run: scripts/ci/install-simulator-runtime.sh
       - name: Quality gate
+        id: quality
         # With the Simulator runtime step's, below the job's limit: a step timeout fails the step,
         # so the if: failure() steps still run; a job timeout cancels it and skips them.
         timeout-minutes: 45
@@ -53,7 +55,9 @@ jobs:
         if: always()
         run: scripts/ci/summary.sh build/quality.json >>"$GITHUB_STEP_SUMMARY"
       - name: Upload results
-        if: failure()
+        # A test that passed on its retry, or a bundle rerun after a runner error, leaves the run green:
+        # the first attempt's result bundle is the flake's only evidence (scripts/quality's retried output).
+        if: failure() || steps.quality.outputs.retried == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: xcresult-${{ github.run_id }}
@@ -62,16 +66,29 @@ jobs:
             build/xcodebuild.log
           retention-days: 7
       - name: Notify on failure
-        if: failure() && github.event_name == 'schedule'
+        # Also on a green run whose flake the retry absorbed (#141): a test that passed on its retry
+        # labels that issue flaky-test; a runner-error rerun alone files it unlabelled.
+        if: (failure() || steps.quality.outputs.retried == 'true') && !cancelled() && github.event_name == 'schedule'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          GATE: ${{ steps.quality.outcome }}
+          RETRIED: ${{ steps.quality.outputs.retried }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          title="Weekly quality gate failed"
+          if [ "$GATE" = success ] && [ "$RETRIED" = true ]; then
+            title="Weekly quality gate passed on retry" outcome="passed on retry" again="Passed on retry again" retry=true
+          else
+            title="Weekly quality gate failed" outcome="failed" again="Failed again" retry=
+          fi
+          body="$RUN_URL"
+          tests="$(jq -r '.retried[]?' build/quality.json 2>/dev/null || true)"
+          if [ -n "$retry" ] && [ -n "$tests" ]; then body="$body"$'\n\n'"$tests"; fi
           open="$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')"
           if [ -n "$open" ]; then
-            gh issue comment "$open" --body "Failed again: $RUN_URL"
+            gh issue comment "$open" --body "$again: $body"
           else
-            gh issue create --title "$title" --body "The scheduled \`--full\` run failed: $RUN_URL"
+            url="$(gh issue create --title "$title" --body "The scheduled \`--full\` run $outcome: $body")"
+            open="${url##*/}"
           fi
+          if [ -n "$retry" ] && [ -n "$tests" ]; then gh issue edit "$open" --add-label flaky-test; fi

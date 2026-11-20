@@ -3,8 +3,8 @@
 # scripts/ci/summary.sh unconditionally, so a run that stops before build/quality.json is
 # written still gets summary.sh's "no report" summary instead of a blank one. Also: lint job
 # wiring, the test job's PR filter and MODE, the changes and ci-gate jobs, NUL-safe xargs, weekly/ci
-# test-step parity, the weekly failure issue, the simulator runtime step, step and job timeouts,
-# action pinning, valid YAML, the Claude review's one granted tool, the gh commands it denies, its
+# test-step parity, the results upload on a red or retried run, the weekly failure and retry issue,
+# the simulator runtime step, step and job timeouts, action pinning, valid YAML, the Claude review's one granted tool, the gh commands it denies, its
 # claude_args' --setting-sources user, its PR files step, CLAUDE.md copies, prompt and outcome step,
 # and the @claude job's owner check and checkout credentials.
 # Usage: test-ci-workflows.sh [workflows dir]  (default: .github/workflows, which also runs the
@@ -143,18 +143,56 @@ drift="$(diff <(test_steps "$CI") <(test_steps "$WEEKLY"))" ||
   fail "weekly.yml's test steps drifted from ci.yml's (< ci.yml, > weekly.yml):"$'\n'"$drift"
 [ -n "$(test_steps "$CI")" ] || fail "ci.yml: no test job steps found"
 
-# A red scheduled run opens (or comments on) an issue, so it does not go unnoticed.
+# A red scheduled run opens (or comments on) an issue, so it does not go unnoticed; so does a green one
+# whose flake the retry absorbed (#141). A cancelled run reports neither.
 notify="$(awk '/^ *- name: Notify on failure *$/ { found = 1; next } found && /^ *- / { exit } found { print }' "$WEEKLY")"
-grep -qE "^ *if: failure\(\) && github.event_name == 'schedule' *\$" <<<"$notify" ||
-  fail "weekly.yml: needs a 'Notify on failure' step with if: failure() && github.event_name == 'schedule'"
+grep -qE "^ *if: \(failure\(\) \|\| steps.quality.outputs.retried == 'true'\) && !cancelled\(\) && github.event_name == 'schedule' *\$" <<<"$notify" ||
+  fail "weekly.yml: needs a 'Notify on failure' step with if: (failure() || steps.quality.outputs.retried == 'true') && !cancelled() && github.event_name == 'schedule'"
 grep -q 'gh issue create' <<<"$notify" || fail "weekly.yml: 'Notify on failure' should open an issue"
+grep -q 'flaky-test' <<<"$notify" || fail "weekly.yml: 'Notify on failure' should label a retried run's issue flaky-test"
 grep -qE '^ *issues: write *$' "$WEEKLY" || fail "weekly.yml: opening an issue needs 'issues: write'"
+# The step's script, run on a stub gh that logs its calls. A red gate opens (or comments on) "failed",
+# whatever else retried, as does a later step failing after a green gate without a retry; a green one
+# with a retry "passed on retry", naming the retried tests from quality.json,
+# labelled flaky-test only when a test passed on retry (a runner-error rerun alone is no flaky test).
+notify_run="$(ruby -ryaml -e '
+  steps = YAML.safe_load(File.read(ARGV[0]), aliases: true).dig("jobs", "test", "steps") || []
+  print((steps.find { |s| s["name"] == "Notify on failure" } || {})["run"].to_s)
+' "$WEEKLY")"
+gh_stub="$(mktemp -d)"
+mkdir "$gh_stub/build"
+printf '%s\n' '#!/bin/sh' 'echo "$*" >>"$GH_CALLS"' \
+  'case "$1 $2" in "issue list") echo "$OPEN" ;; "issue create") echo "https://github.com/o/r/issues/42" ;; esac' >"$gh_stub/gh"
+chmod +x "$gh_stub/gh"
+# notify_calls <gate outcome> <quality.json .retried> <open issue> [retried output]: the gh calls the
+# step makes, one per line, after the issue search. The retried output defaults to true.
+notify_calls() {
+  printf '{"retried":%s}' "$2" >"$gh_stub/build/quality.json"
+  : >"$gh_stub/calls"
+  (cd "$gh_stub" && PATH="$gh_stub:$PATH" GH_CALLS="$gh_stub/calls" GATE="$1" OPEN="$3" RETRIED="${4-true}" RUN_URL=URL \
+    bash -e -c "$notify_run" >/dev/null 2>&1)
+  sed 1d "$gh_stub/calls"
+}
+[ "$(notify_calls failure '[]' '')" = 'issue create --title Weekly quality gate failed --body The scheduled `--full` run failed: URL' ] &&
+  [ "$(notify_calls failure '["UI tests: passed on retry: T"]' 3)" = 'issue comment 3 --body Failed again: URL' ] &&
+  [ "$(notify_calls success '["UI tests: passed on retry: T"]' '')" = $'issue create --title Weekly quality gate passed on retry --body The scheduled `--full` run passed on retry: URL\n\nUI tests: passed on retry: T\nissue edit 42 --add-label flaky-test' ] &&
+  [ "$(notify_calls success '["UI tests: passed on retry: T"]' 7)" = $'issue comment 7 --body Passed on retry again: URL\n\nUI tests: passed on retry: T\nissue edit 7 --add-label flaky-test' ] &&
+  [ "$(notify_calls success '[]' 7)" = 'issue comment 7 --body Passed on retry again: URL' ] &&
+  [ "$(notify_calls success '[]' '' '')" = 'issue create --title Weekly quality gate failed --body The scheduled `--full` run failed: URL' ] ||
+  fail "weekly.yml: 'Notify on failure' must open or comment on a 'failed' or 'passed on retry' issue, naming the retried tests and labelling flaky-test only a green run's test retry"
+rm -rf "$gh_stub"
 # A hung simulator must fail the Quality gate step, not time out the test job (ci.yml and
 # weekly.yml): a job timeout is a cancel, so the if: failure() upload and notification steps
 # would be skipped.
 for workflow in "$CI" "$WEEKLY"; do
   job="$(awk '/^  test:/ { found = 1; next } found && /^  [a-z]/ { exit } found { print }' "$workflow")"
   gate="$(awk '/^ *- name: Quality gate *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$job")"
+  # A test that passed on its retry leaves the run green: its first attempt is the flake's only
+  # evidence, so the results upload on that run too, read from the gate's retried output (#141).
+  upload="$(awk '/^ *- name: Upload results *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$job")"
+  grep -qE '^ *id: quality *$' <<<"$gate" &&
+    grep -qE "^ *if: failure\(\) \|\| steps.quality.outputs.retried == 'true' *\$" <<<"$upload" ||
+    fail "$(basename "$workflow"): Upload results needs if: failure() || steps.quality.outputs.retried == 'true', on a Quality gate step with id: quality"
   gate_timeout="$(sed -nE 's/^ *timeout-minutes: ([0-9]+) *$/\1/p' <<<"$gate")"
   job_timeout="$(sed -nE 's/^    timeout-minutes: ([0-9]+) *$/\1/p' <<<"$job")"
   [ -n "$gate_timeout" ] && [ -n "$job_timeout" ] && [ "$gate_timeout" -lt "$job_timeout" ] ||
@@ -369,6 +407,10 @@ if [ $# -eq 0 ]; then
   fixture dependabot 2
   must "ci.yml test job: if: must be"
   must "ci.yml test job: Dependabot PRs must skip test"
+  fixture upload 3
+  must "FAIL: ci.yml: Upload results needs if: failure() || steps.quality.outputs.retried == 'true'"
+  must "FAIL: weekly.yml: Upload results needs if: failure() || steps.quality.outputs.retried == 'true'"
+  must "weekly.yml's test steps drifted from ci.yml's"
   fixture drift 1
   must "weekly.yml's test steps drifted from ci.yml's"
   fixture pinning 3
@@ -385,9 +427,11 @@ if [ $# -eq 0 ]; then
   must "FAIL: ci.yml lint job: no 'run: scripts/fitness/run' step"
   must "FAIL: ci.yml lint job: 'Persisted shape' step must run on pull_request only"
   must "FAIL: ci.yml lint job: 'Persisted shape' step must run the guard against HEAD^1"
-  fixture notify 3
-  must "FAIL: weekly.yml: needs a 'Notify on failure' step with if: failure()"
+  fixture notify 5
+  must "FAIL: weekly.yml: needs a 'Notify on failure' step with if: (failure()"
   must "FAIL: weekly.yml: 'Notify on failure' should open an issue"
+  must "FAIL: weekly.yml: 'Notify on failure' should label a retried run's issue flaky-test"
+  must "FAIL: weekly.yml: 'Notify on failure' must open or comment on"
   must "FAIL: weekly.yml: opening an issue needs 'issues: write'"
   fixture triggers 2
   must "FAIL: ci.yml: the pull_request trigger takes no paths-ignore"
