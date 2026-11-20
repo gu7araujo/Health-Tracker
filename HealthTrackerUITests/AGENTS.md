@@ -7,7 +7,7 @@ The end-to-end target. Built on **XCUITest**, each suite launches the real app o
 The shared machinery every suite leans on, all on `HealthTrackerUITestCase`:
 
 - **Launch** — `setUp` relaunches the app with `-uiTesting` (`HealthTracker/UITestingSupport.swift`: temp-dir store, skipped migration + permission prompts) forced to English `en_GB`, through `launchRetryingOnce`: a first launch that records a failure is relaunched once (#58, XCUITest losing a launch that succeeded). The 24-hour `en_GB` clock exposes the workout duration wheel as hours 0-23, exactly as the duration model expects.
-- **Lookup + waits** — `element(_:)` resolves any element by identifier; `assertExists` / `assertNotExists` / `assertSelected` poll for a condition through `waitUntil` and `snapshot()`; `enterText(_:into:)` taps a field and waits for keyboard focus before typing; `scrollTo` swipes an off-screen row into view. All time out rather than sleep.
+- **Lookup + waits** — `element(_:)` resolves any element by identifier; `assertExists` / `assertNotExists` / `assertSelected` poll for a condition through `waitUntil` and `snapshot()`; `enterText(_:into:)` taps a field and waits for keyboard focus before typing, up to 30 s for a fresh simulator's first keyboard; `scrollTo` swipes an off-screen row into view. All time out rather than sleep.
 - **Flow helpers** — `openAddModal`, `addMeal`, `addWorkout`, `saveModal`, `cancelModal`, `selectMenuOption`, `setDurationWheels`, `tapSwipeAction`. Compose a flow from these rather than re-scripting taps.
 
 The `Support/` files are also members of the `HealthTrackerIntentsUITests` target (the App Intents suite, on iOS 27), so a new `Support` file needs both checkboxes. That suite's own conventions: `HealthTrackerIntentsUITests/AGENTS.md`.
