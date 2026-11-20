@@ -11,7 +11,7 @@ jobs:
         run: |
           mkdir .review
           gh pr diff "$PR" --repo "$GITHUB_REPOSITORY" >.review/pr.diff
-          gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json title,body,state,comments,reviews,headRefOid >.review/pr.json
+          gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json title,body,state,isDraft,comments,reviews,headRefOid >.review/pr.json
 
       - name: CLAUDE.md for the review
         shell: bash

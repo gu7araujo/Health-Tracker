@@ -278,7 +278,7 @@ PR: ${{ github.event.pull_request.number }}
 run: |
 mkdir .review
 gh pr diff "$PR" --repo "$GITHUB_REPOSITORY" >.review/pr.diff
-gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json title,body,state,comments,reviews,headRefOid >.review/pr.json
+gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json title,body,state,isDraft,comments,reviews,headRefOid >.review/pr.json
 EOF
 )"
 pr_files="$(awk '/^ *- name: PR files for the review *$/ { found = 1; next } found && /^ *- / { exit } found { print }' <<<"$review_steps")"
@@ -290,7 +290,7 @@ pr_step_before_review="$(awk '/^ *- name: PR files for the review *$/ { found = 
 # Claude Code, and on a small diff the model skips step 4's agents: the prompt asks for every step,
 # and an early stop it still makes posts its reason (#62).
 read -r REVIEW_PROMPT <<'EOF'
-prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/. Run every step on every open PR, with the four agents of step 4 whatever the diff size: this workflow already excludes drafts and forks, and a PR written with Claude Code still needs the review. Stop early only when the PR is closed or Claude has already commented on it. If you stop before step 4 for any other reason, post a comment with gh pr comment that says why. The diff is in .review/pr.diff, and the title, body, state, comments, reviews and head commit SHA (headRefOid) are in .review/pr.json: tell each agent to read those files, since gh pr diff and gh pr view are denied.'
+prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} Rules: the root AGENTS.md stands in for the root CLAUDE.md, which the action resets, and HealthTrackerUITests/CLAUDE.md also covers HealthTrackerIntentsUITests/. Run every step on every open PR, with the four agents of step 4 whatever the diff size: this workflow already excludes drafts and forks, and a PR written with Claude Code still needs the review. Stop early only when the PR is closed or Claude has already commented on it. If you stop before step 4 for any other reason, post a comment with gh pr comment that says why. The diff is in .review/pr.diff, and the title, body, state, draft flag (isDraft), comments, reviews and head commit SHA (headRefOid) are in .review/pr.json: tell each agent to read those files, since gh pr diff and gh pr view are denied.'
 EOF
 grep -qxF -- "$REVIEW_PROMPT" <<<"$(sed 's/^ *//; s/ *$//' "$WORKFLOWS/claude-code-review.yml")" ||
   fail "claude-code-review.yml: the review prompt must name the root AGENTS.md and the UI test rules' reach, ask for every step on every open PR, and point at the .review files"
