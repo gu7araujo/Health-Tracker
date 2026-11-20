@@ -7,20 +7,28 @@ import AppIntentsTesting
 import XCTest
 
 /// Runs the App Intents the way Siri and Shortcuts do: out of process, through `AppIntentsTesting`,
-/// inside the app `setUp` launched with `-uiTesting`, so they share its isolated store.
+/// inside the app `setUpWithError` launched with `-uiTesting`, so they share its isolated store.
 /// Intents, enums, and raw values are addressed by their persisted names, so a rename fails here first.
 final class AppIntentsUITests: HealthTrackerUITestCase {
     /// Whether this run has warmed up its intents, or tried to: see `warmUpIntents()`.
     private static var warmUpAttempted = false
 
+    /// Runs before the base class's `setUpWithError`, which then relaunches the app onto a fresh store:
+    /// a warm-up write that timed out may still have saved.
     override func setUp() async throws {
         try await super.setUp()
-        // In an async test a stop-on-failure kills the runner, and xcodebuild stalls on the restart
-        continueAfterFailure = true
         // Once per run: a warm-up that failed would fail the same way for every test
         guard !Self.warmUpAttempted else { return }
         Self.warmUpAttempted = true
+        launchApp()
         try await warmUpIntents()
+    }
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        // In an async test a stop-on-failure kills the runner, and xcodebuild stalls on the restart.
+        // Set here, after super: the base class's setUpWithError resets it to false
+        continueAfterFailure = true
     }
 
     // MARK: - Write Intents
@@ -173,8 +181,7 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
     /// On a freshly installed or erased simulator the system isn't ready for this app's intents: the first
     /// calls fail with "… is not present" until it registers the app's metadata, then the first writes time out
     /// at 30 s (`LNConnectionErrorDomain` 1014) for up to about a minute (#86). Retries one write on those two
-    /// errors until it succeeds, then relaunches so the test starts on a fresh store: a write that timed out may
-    /// still have saved. Any other error is a real failure and is thrown at once.
+    /// errors until it succeeds. Any other error is a real failure and is thrown at once.
     private func warmUpIntents() async throws {
         let deadline = Duration.seconds(100)
         let start = ContinuousClock.now
@@ -193,7 +200,6 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
                 try await Task.sleep(for: .seconds(1))
             }
         }
-        launchRetryingOnce { app.launch() }
     }
 
     private struct IntentsNotReady: Error, CustomStringConvertible {

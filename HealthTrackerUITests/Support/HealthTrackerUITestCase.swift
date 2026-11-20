@@ -17,15 +17,26 @@ import XCTest
 class HealthTrackerUITestCase: XCTestCase {
     var app: XCUIApplication!
 
-    override func setUp() async throws {
-        try await super.setUp()
+    /// Synchronous on purpose: an `async` setUp makes the whole test async, where a stop-on-failure
+    /// (or a failed tap, which always stops) kills the runner, so a failed test never gets its retry (#160).
+    override func setUpWithError() throws {
+        try super.setUpWithError()
         continueAfterFailure = false
+        // XCTest runs synchronous setup on the main thread, which `assumeIsolated` checks; `self` never
+        // leaves it, but the compiler can't see a main-actor class's state past its XCTestCase superclass.
+        // Drop both once XCTest lets a synchronous setUp override be @MainActor
+        nonisolated(unsafe) let test = self
+        MainActor.assumeIsolated { test.launchApp() }
+    }
+
+    // MARK: - Launch
+
+    /// Launches a fresh app: `-uiTesting` (an isolated temp store) in English with a 24-hour clock.
+    func launchApp() {
         app = XCUIApplication()
         app.launchArguments += ["-uiTesting", "-AppleLanguages", "(en)", "-AppleLocale", "en_GB"]
         launchRetryingOnce { app.launch() }
     }
-
-    // MARK: - Launch
 
     private enum LaunchAttempt { case none, first, firstFailed(String) }
 

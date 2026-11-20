@@ -7,7 +7,7 @@ import XCTest
 
 final class LaunchUITests: HealthTrackerUITestCase {
     /// Regression for #58: on a loaded CI simulator XCUITest can lose track of a launch that
-    /// succeeded, which failed the first test of the bundle in `setUp`. The failure is
+    /// succeeded, which failed the first test of the bundle in setup. The failure is
     /// recorded by hand here: a real failed `launch()` takes minutes to give up.
     func testLaunchFailureRetriedOnceThenFailsTheTest() {
         let lostLaunch = XCTIssue(
