@@ -276,7 +276,8 @@ Enabled by `scripts/bootstrap`. They live in `.githooks/`.
 **pre-push** (~2 min):
 - refuses to push to `main`;
 - runs `scripts/fitness/persisted-shape-guard.sh origin/main`, which only warns (also with `SKIP_QUALITY=1`);
-- runs `scripts/quality --fast`, and blocks the push if a gate is red.
+- runs `scripts/quality --fast`, and blocks the push if a gate is red;
+- skips the guard and the gate when the push sends no code: every ref is a delete (`git push origin --delete <branch>`), or there is nothing to update.
 
 Escape hatch: `SKIP_QUALITY=1 git push` skips the gate (it prints a warning). Use it in an emergency, or in a cloud session, which has no Xcode to run the gate. CI still runs the gate on every push to an open PR, drafts included, unless the PR touches only docs or agent config. Use it rarely, and run `--full` before opening the PR.
 
