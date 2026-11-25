@@ -12,13 +12,13 @@
 /* Section Headers */
 "meals_section" = "Refeições";
 "water_section" = "Água";
-"workouts_section" = "Exercícios";
+"workouts_section" = "Treinos";
 "mood_section" = "Humor";
 "health_section" = "Saúde";
 
 /* Meal Details */
-"quantity_label" = "Quantidade: %@";
-"satisfaction_label" = "Satisfeito(a): %@";
+"quantity_label" = "Porção: %@";
+"satisfaction_label" = "Satisfação: %@";
 
 /* Meal Quantity Options */
 "meal_quantity_very_small" = "Muito pequena";
@@ -31,7 +31,7 @@
 "edit_action" = "Editar";
 
 /* Empty States */
-"empty_list" = "Lista vazia!";
+"empty_list" = "Nada registrado ainda";
 
 /* Loading */
 "loading" = "Carregando...";
@@ -40,21 +40,21 @@
 "mood_prompt" = "Como está o seu humor hoje?";
 
 /* Add/Edit Modal */
-"add_meal_title" = "Nova Refeição";
-"edit_meal_title" = "Editar Refeição";
-"add_workout_title" = "Novo Treino";
-"edit_workout_title" = "Editar Treino";
+"add_meal_title" = "Nova refeição";
+"edit_meal_title" = "Editar refeição";
+"add_workout_title" = "Novo treino";
+"edit_workout_title" = "Editar treino";
 "meal_description_placeholder" = "Descrição da refeição";
 "add_meal_item_button" = "Adicionar item";
 "workout_description_placeholder" = "Descrição do treino";
 "close_button" = "Fechar";
 "save_button" = "Salvar";
-"quantity_picker_label" = "Quantidade";
-"satisfaction_picker_label" = "Satisfeito(a)";
-"time_label" = "Tempo";
+"quantity_picker_label" = "Porção";
+"satisfaction_picker_label" = "Satisfação";
+"time_label" = "Duração";
 "duration_picker_label" = "Duração";
 "intensity_picker_label" = "Intensidade";
-"workout_time_label" = "Tempo: %@";
+"workout_time_label" = "Duração: %@";
 "workout_intensity_label" = "Intensidade: %@";
 
 /* Workout Intensity Options */
@@ -64,7 +64,7 @@
 
 /* Notification Messages */
 "notification_lunch" = "Registre o que você comeu hoje";
-"notification_evening" = "Registre suas refeições e atividades";
+"notification_evening" = "Registre suas refeições e treinos";
 
 /* Mood Options */
 "mood_good" = "Bom";
@@ -72,9 +72,9 @@
 "mood_sad" = "Ruim";
 
 /* Day Status Explanation */
-"day_status_explanation.optimal" = "Ótimo dia: Todas as metas atingidas.";
-"day_status_explanation.moderate" = "Dia moderado";
-"day_status_explanation.poor" = "Dia ruim";
+"day_status_explanation.optimal" = "Todas as metas atingidas.";
+"day_status_explanation.moderate" = "Perto das metas";
+"day_status_explanation.poor" = "Abaixo das metas";
 
 /* Water Section */
 "water_unit" = " L";
@@ -93,15 +93,15 @@
 "satisfaction_hundred" = "100%";
 
 /* Day Status Reasons */
-"day_status_reason.meals_two_medium" = "2 refeições médias";
-"day_status_reason.meals_multiple_medium" = "múltiplas refeições grandes/médias";
+"day_status_reason.meals_two_medium" = "duas refeições médias";
+"day_status_reason.meals_multiple_medium" = "refeição grande ou várias médias";
 "day_status_reason.water_low" = "baixa ingestão de água";
 "day_status_reason.water_moderate" = "ingestão moderada de água";
 "day_status_reason.water_none" = "água não registrada";
-"day_status_reason.workout_insufficient" = "treino insuficiente (<30min)";
+"day_status_reason.workout_insufficient" = "treino abaixo de 30 min";
 "day_status_reason.workout_none" = "sem treino";
 "day_status_reason.mood_neutral" = "humor neutro";
-"day_status_reason.mood_sad" = "humor triste";
+"day_status_reason.mood_sad" = "humor ruim";
 
 /* App Intents: Log Water */
 "intent_log_water_title" = "Registrar água";
@@ -121,23 +121,23 @@
 "intent_log_mood_dialog %@" = "Humor registrado: %@.";
 
 /* App Intents: Add Meal */
-"intent_add_meal_title" = "Adicionar refeição";
-"intent_add_meal_description" = "Adiciona uma refeição a hoje. Separe os itens com vírgulas.";
+"intent_add_meal_title" = "Registrar refeição";
+"intent_add_meal_description" = "Registra uma refeição de hoje. Separe os itens com vírgulas.";
 "intent_param_meal_items" = "Itens";
 "intent_param_meal_items_prompt" = "O que você comeu?";
-"intent_param_meal_size" = "Quantidade";
-"intent_param_meal_satisfaction" = "Satisfeito(a)";
-"intent_add_meal_summary ${items}" = "Adicionar refeição: ${items}";
+"intent_param_meal_size" = "Porção";
+"intent_param_meal_satisfaction" = "Satisfação";
+"intent_add_meal_summary ${items}" = "Registrar refeição: ${items}";
 "intent_add_meal_dialog %@" = "Refeição registrada: %@.";
 
 /* App Intents: Add Workout */
-"intent_add_workout_title" = "Adicionar treino";
-"intent_add_workout_description" = "Adiciona um treino a hoje.";
+"intent_add_workout_title" = "Registrar treino";
+"intent_add_workout_description" = "Registra um treino de hoje.";
 "intent_param_workout_name" = "Treino";
 "intent_param_workout_name_prompt" = "Qual treino você fez?";
 "intent_param_workout_minutes" = "Minutos";
 "intent_param_workout_intensity" = "Intensidade";
-"intent_add_workout_summary ${name}" = "Adicionar treino: ${name}";
+"intent_add_workout_summary ${name}" = "Registrar treino: ${name}";
 "intent_add_workout_dialog %@" = "Treino registrado: %@.";
 
 /* App Intents: Day Status */
@@ -148,6 +148,6 @@
 
 /* App Intents: Enum Types */
 "intent_type_mood" = "Humor";
-"intent_type_meal_size" = "Quantidade da refeição";
+"intent_type_meal_size" = "Porção da refeição";
 "intent_type_meal_satisfaction" = "Satisfação";
 "intent_type_workout_intensity" = "Intensidade do treino";

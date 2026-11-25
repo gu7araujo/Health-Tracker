@@ -17,11 +17,11 @@
 "health_section" = "Health";
 
 /* Meal Details */
-"quantity_label" = "Quantity: %@";
-"satisfaction_label" = "Satisfied: %@";
+"quantity_label" = "Size: %@";
+"satisfaction_label" = "Satisfaction: %@";
 
 /* Meal Quantity Options */
-"meal_quantity_very_small" = "Very Small";
+"meal_quantity_very_small" = "Very small";
 "meal_quantity_small" = "Small";
 "meal_quantity_medium" = "Medium";
 "meal_quantity_large" = "Large";
@@ -31,7 +31,7 @@
 "edit_action" = "Edit";
 
 /* Empty States */
-"empty_list" = "Empty list!";
+"empty_list" = "Nothing logged yet";
 
 /* Loading */
 "loading" = "Loading...";
@@ -49,12 +49,12 @@
 "workout_description_placeholder" = "Workout description";
 "close_button" = "Close";
 "save_button" = "Save";
-"quantity_picker_label" = "Quantity";
-"satisfaction_picker_label" = "Satisfied";
-"time_label" = "Time";
+"quantity_picker_label" = "Size";
+"satisfaction_picker_label" = "Satisfaction";
+"time_label" = "Duration";
 "duration_picker_label" = "Duration";
 "intensity_picker_label" = "Intensity";
-"workout_time_label" = "Time: %@";
+"workout_time_label" = "Duration: %@";
 "workout_intensity_label" = "Intensity: %@";
 
 /* Workout Intensity Options */
@@ -64,7 +64,7 @@
 
 /* Notification Messages */
 "notification_lunch" = "Log what you ate today";
-"notification_evening" = "Log your meals and activities";
+"notification_evening" = "Log your meals and workouts";
 
 /* Mood Options */
 "mood_good" = "Good";
@@ -72,9 +72,9 @@
 "mood_sad" = "Bad";
 
 /* Day Status Explanation */
-"day_status_explanation.optimal" = "Good day: All targets met.";
-"day_status_explanation.moderate" = "Moderate day";
-"day_status_explanation.poor" = "Poor day";
+"day_status_explanation.optimal" = "All targets met.";
+"day_status_explanation.moderate" = "Near targets";
+"day_status_explanation.poor" = "Below targets";
 
 /* Water Section */
 "water_unit" = " L";
@@ -94,14 +94,14 @@
 
 /* Day Status Reasons */
 "day_status_reason.meals_two_medium" = "2 medium meals";
-"day_status_reason.meals_multiple_medium" = "multiple large/medium meals";
+"day_status_reason.meals_multiple_medium" = "a large meal or 3+ medium meals";
 "day_status_reason.water_low" = "low water intake";
 "day_status_reason.water_moderate" = "moderate water intake";
 "day_status_reason.water_none" = "no water logged";
-"day_status_reason.workout_insufficient" = "insufficient workout (<30min)";
+"day_status_reason.workout_insufficient" = "workout under 30m";
 "day_status_reason.workout_none" = "no workout";
 "day_status_reason.mood_neutral" = "neutral mood";
-"day_status_reason.mood_sad" = "sad mood";
+"day_status_reason.mood_sad" = "bad mood";
 
 /* App Intents: Log Water */
 "intent_log_water_title" = "Log Water";
@@ -121,23 +121,23 @@
 "intent_log_mood_dialog %@" = "Mood logged: %@.";
 
 /* App Intents: Add Meal */
-"intent_add_meal_title" = "Add Meal";
-"intent_add_meal_description" = "Adds a meal to today. Separate items with commas.";
+"intent_add_meal_title" = "Log Meal";
+"intent_add_meal_description" = "Logs a meal for today. Separate items with commas.";
 "intent_param_meal_items" = "Items";
 "intent_param_meal_items_prompt" = "What did you eat?";
 "intent_param_meal_size" = "Size";
 "intent_param_meal_satisfaction" = "Satisfaction";
-"intent_add_meal_summary ${items}" = "Add meal: ${items}";
+"intent_add_meal_summary ${items}" = "Log meal: ${items}";
 "intent_add_meal_dialog %@" = "Meal logged: %@.";
 
 /* App Intents: Add Workout */
-"intent_add_workout_title" = "Add Workout";
-"intent_add_workout_description" = "Adds a workout to today.";
+"intent_add_workout_title" = "Log Workout";
+"intent_add_workout_description" = "Logs a workout for today.";
 "intent_param_workout_name" = "Workout";
 "intent_param_workout_name_prompt" = "What workout did you do?";
 "intent_param_workout_minutes" = "Minutes";
 "intent_param_workout_intensity" = "Intensity";
-"intent_add_workout_summary ${name}" = "Add workout: ${name}";
+"intent_add_workout_summary ${name}" = "Log workout: ${name}";
 "intent_add_workout_dialog %@" = "Workout logged: %@.";
 
 /* App Intents: Day Status */

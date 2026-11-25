@@ -11,8 +11,8 @@ final class MealFlowUITests: HealthTrackerUITestCase {
             addMeal(items: ["Oatmeal"])
             let card = assertExists(element(AccessibilityID.mealCard(0)))
             XCTAssertTrue(card.label.contains("Oatmeal"))
-            XCTAssertTrue(card.label.contains("Quantity: Small"))
-            XCTAssertTrue(card.label.contains("Satisfied: 50%"))
+            XCTAssertTrue(card.label.contains("Size: Small"))
+            XCTAssertTrue(card.label.contains("Satisfaction: 50%"))
         }
 
         XCTContext.runActivity(named: "Edit") { _ in
@@ -28,7 +28,7 @@ final class MealFlowUITests: HealthTrackerUITestCase {
 
             let card = assertExists(element(AccessibilityID.mealCard(0)))
             XCTAssertTrue(card.label.contains("Toast with eggs"))
-            XCTAssertTrue(card.label.contains("Satisfied: 80%"))
+            XCTAssertTrue(card.label.contains("Satisfaction: 80%"))
         }
 
         XCTContext.runActivity(named: "Delete") { _ in
@@ -65,9 +65,9 @@ final class MealFlowUITests: HealthTrackerUITestCase {
 
             let card = assertExists(element(AccessibilityID.mealCard(0)))
             XCTAssertTrue(card.label.contains("Rice, Beans, Salad"))
-            XCTAssertTrue(card.label.contains("Quantity: Large"))
+            XCTAssertTrue(card.label.contains("Size: Large"))
             // Choosing Large auto-updates satisfaction to its default of 100%
-            XCTAssertTrue(card.label.contains("Satisfied: 100%"))
+            XCTAssertTrue(card.label.contains("Satisfaction: 100%"))
         }
     }
 
