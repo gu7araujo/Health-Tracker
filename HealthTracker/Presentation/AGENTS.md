@@ -34,6 +34,8 @@ The app ships `en` and `pt-BR` (Brazil is the primary locale). Every user-facing
 - `HealthTracker/Resources/en.lproj/Localizable.strings`
 - `HealthTracker/Resources/pt-BR.lproj/Localizable.strings`
 
+Before writing or changing any string a user reads or hears, call `Skill("app-copy")`: it holds the naming criteria and the vocabulary both locales share.
+
 Route user-facing text through `String(localized:)`; resolve locale- and timezone-sensitive APIs from the device:
 
 ```swift
