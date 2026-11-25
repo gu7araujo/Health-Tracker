@@ -74,8 +74,8 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
 
         let card = assertExists(element(AccessibilityID.mealCard(0)))
         XCTAssertTrue(card.label.contains("Rice, beans"), "got \(card.label)")
-        XCTAssertTrue(card.label.contains("Quantity: Large"), "got \(card.label)")
-        XCTAssertTrue(card.label.contains("Satisfied: 30%"), "got \(card.label)")
+        XCTAssertTrue(card.label.contains("Size: Large"), "got \(card.label)")
+        XCTAssertTrue(card.label.contains("Satisfaction: 30%"), "got \(card.label)")
     }
 
     @MainActor
@@ -101,7 +101,7 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
 
         let card = assertExists(element(AccessibilityID.workoutCard(0)))
         XCTAssertTrue(card.label.contains("Swimming"), "got \(card.label)")
-        XCTAssertTrue(card.label.contains("Time: 45m"), "got \(card.label)")
+        XCTAssertTrue(card.label.contains("Duration: 45m"), "got \(card.label)")
         XCTAssertTrue(card.label.contains("Intensity: High"), "got \(card.label)")
     }
 
@@ -117,7 +117,7 @@ final class AppIntentsUITests: HealthTrackerUITestCase {
 
         try await run("LogMoodIntent", ["mood": enumCase("MoodAppEnum", "sad")])
         let twoCategories = try await dayStatus()
-        XCTAssertEqual(twoCategories, "Poor day: low water intake, no workout, sad mood.")
+        XCTAssertEqual(twoCategories, "Below targets: low water intake, no workout, bad mood.")
     }
 
     // MARK: - Stale Overwrite

@@ -16,7 +16,7 @@ enum EnglishLabel {
     static let cancel = "Cancel"
 
     // Quantity picker options
-    static let quantityVerySmall = "Very Small"
+    static let quantityVerySmall = "Very small"
     static let quantitySmall = "Small"
     static let quantityMedium = "Medium"
     static let quantityLarge = "Large"
