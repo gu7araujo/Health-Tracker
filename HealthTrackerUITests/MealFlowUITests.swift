@@ -42,6 +42,13 @@ final class MealFlowUITests: HealthTrackerUITestCase {
         }
     }
 
+    /// Scrolls the element into view, then taps: the focused new row can sit under the keyboard while
+    /// the sheet is still at half height (seen on a cold iOS 26.5 simulator).
+    private func scrollToAndTap(_ element: XCUIElement) {
+        scrollTo(assertExists(element))
+        element.tap()
+    }
+
     func testMealMultipleItemsAndFieldRemoval() {
         openAddModal(choosing: EnglishLabel.mealOption)
         let addItemButton = app.buttons[AccessibilityID.addMealItemButton]
@@ -50,16 +57,22 @@ final class MealFlowUITests: HealthTrackerUITestCase {
             enterText("Rice", into: assertExists(app.textFields[AccessibilityID.mealItemField(0)]))
 
             assertExists(addItemButton).tap()
-            assertExists(app.textFields[AccessibilityID.mealItemField(1)])
-            assertExists(app.buttons[AccessibilityID.mealItemDeleteButton(1)]).tap()
+            // The new field takes the keyboard so the user can type the next item straight away
+            assertKeyboardFocus(assertExists(app.textFields[AccessibilityID.mealItemField(1)]))
+            scrollToAndTap(app.buttons[AccessibilityID.mealItemDeleteButton(1)])
             assertNotExists(app.textFields[AccessibilityID.mealItemField(1)], timeout: 2)
         }
 
         XCTContext.runActivity(named: "Save several items with Large") { _ in
-            for (index, item) in ["Beans", "Salad"].enumerated() {
+            for (index, item) in ["Beans", "Discarded", "Salad"].enumerated() {
                 assertExists(addItemButton).tap()
                 enterText(item, into: assertExists(app.textFields[AccessibilityID.mealItemField(index + 1)]))
             }
+            // Removing an earlier field keeps the keyboard on Salad, which moves up one row
+            scrollToAndTap(app.buttons[AccessibilityID.mealItemDeleteButton(2)])
+            let salad = app.textFields[AccessibilityID.mealItemField(2)]
+            assertKeyboardFocus(salad)
+            XCTAssertEqual(salad.value as? String, "Salad")
             selectMenuOption(picker: AccessibilityID.quantityPicker, option: EnglishLabel.quantityLarge)
             saveModal()
 

@@ -7,6 +7,12 @@
 
 import SwiftUI
 
+/// A meal item being edited, with a stable id so each field keeps its text and focus when another is removed.
+private struct MealItemDraft: Identifiable {
+    let id = UUID()
+    var text = ""
+}
+
 struct AddEditModal: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -16,7 +22,8 @@ struct AddEditModal: View {
     private let workoutId: UUID?
 
     @State private var text: String = ""
-    @State private var mealItems: [String] = [""]
+    @State private var mealItems = [MealItemDraft()]
+    @FocusState private var focusedMealItem: MealItemDraft.ID?
     @State private var selectedQuantity: Meal.Quantity = .small
     @State private var selectedSatisfaction: Meal.Satisfaction = .fifty
     @State private var satisfactionWasManuallySet: Bool = false
@@ -141,36 +148,37 @@ struct AddEditModal: View {
         )
     }
 
+    private func mealItemField(_ item: Binding<MealItemDraft>, at index: Int) -> some View {
+        TextField(String(localized: "meal_description_placeholder"), text: item.text)
+            .multilineTextAlignment(.center)
+            .focused($focusedMealItem, equals: item.wrappedValue.id)
+            .accessibilityIdentifier(AccessibilityID.mealItemField(index))
+            .overlay(alignment: .trailing) {
+                if index > 0 {
+                    Button {
+                        mealItems.removeAll { $0.id == item.wrappedValue.id }
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .foregroundStyle(.red)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(String(localized: "delete_action"))
+                    .accessibilityIdentifier(AccessibilityID.mealItemDeleteButton(index))
+                }
+            }
+    }
+
     private var mealDescriptionFields: some View {
         Group {
-            ForEach(mealItems.indices, id: \.self) { index in
-                TextField(
-                    String(localized: "meal_description_placeholder"),
-                    text: Binding(
-                        get: { mealItems[index] },
-                        set: { mealItems[index] = $0 }
-                    )
-                )
-                .multilineTextAlignment(.center)
-                .accessibilityIdentifier(AccessibilityID.mealItemField(index))
-                .overlay(alignment: .trailing) {
-                    if index > 0 {
-                        Button {
-                            mealItems.remove(at: index)
-                        } label: {
-                            Image(systemName: "minus.circle.fill")
-                                .foregroundStyle(.red)
-                        }
-                        .buttonStyle(.borderless)
-                        .accessibilityLabel(String(localized: "delete_action"))
-                        .accessibilityIdentifier(AccessibilityID.mealItemDeleteButton(index))
-                    }
-                }
+            ForEach($mealItems) { item in
+                mealItemField(item, at: mealItems.firstIndex { $0.id == item.wrappedValue.id } ?? 0)
             }
 
             if mealItems.count < maxMealItems {
                 Button {
-                    mealItems.append("")
+                    let newItem = MealItemDraft()
+                    mealItems.append(newItem)
+                    focusedMealItem = newItem.id
                 } label: {
                     Label(String(localized: "add_meal_item_button"), systemImage: "plus.circle.fill")
                 }
@@ -238,7 +246,7 @@ struct AddEditModal: View {
 private extension AddEditModal {
     func loadExistingData() {
         if section == .meal, let mealId, let meal = viewModel.meal(withId: mealId) {
-            mealItems = meal.items
+            mealItems = meal.items.map { MealItemDraft(text: $0) }
             selectedQuantity = meal.quantity
             selectedSatisfaction = meal.satisfaction
             satisfactionWasManuallySet = false
@@ -266,7 +274,7 @@ private extension AddEditModal {
     func saveMeal() {
         // Drop blank added fields; the first field is always kept, matching the
         // previous single-field behavior of not requiring non-empty text
-        let itemsToSave = mealItems.enumerated()
+        let itemsToSave = mealItems.map(\.text).enumerated()
             .filter { index, item in index == 0 || !item.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
             .map(\.element)
 
@@ -310,4 +318,8 @@ private extension AddEditModal {
             viewModel.addWorkout(workout)
         }
     }
+}
+
+#Preview {
+    AddEditModal(viewModel: MainViewModel(), section: .meal, mealId: nil, workoutId: nil)
 }
