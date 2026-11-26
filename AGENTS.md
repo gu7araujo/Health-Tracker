@@ -4,7 +4,7 @@ HealthTracker is an iOS 26.0 health tracking app built with SwiftUI and Swift 6:
 
 ## Repo Map
 
-Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it on the first Read of a file there, and a hook names it on a first edit or Bash read there; read it yourself when you plan a change there or review from a diff.
+Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it on the first Read there, and a hook names it on a first edit or Bash read; read it yourself when you plan a change or review from a diff.
 
 | Working in | Read |
 |---|---|
@@ -18,7 +18,7 @@ Each area keeps its rules in its own `AGENTS.md`. Claude Code loads it on the fi
 | `scripts/`, `.githooks/`, `.github/` | `scripts/AGENTS.md` |
 
 - `HealthTracker/UITestingSupport.swift` — the `-uiTesting` and unit-test-host startup switches; what each skips: the test targets' `AGENTS.md`.
-- `HealthTracker/Resources/` — localizable strings for `en` and `pt-BR`, plus `AppShortcuts.strings` (Siri phrases).
+- `HealthTracker/Resources/` — `en` and `pt-BR` strings and `AppShortcuts.strings` (Siri phrases).
 
 ## Workflow
 
@@ -27,7 +27,7 @@ The core loop is **red → green**: write a failing test, then make it pass. Fol
 1. Before coding, state how you'll verify the change with something runnable: a unit or UI test, a bash command, a preview snapshot.
 2. Write that test first and watch it fail (**red**). Every bug fix starts with a regression test that reproduces the bug.
 3. Implement the minimum code to pass it (**green**). On app or test code, then run the `simplify` skill over the diff.
-4. Run `scripts/quality --fast` and iterate until it exits 0, so review sees a diff that passes the gates.
+4. Run `scripts/quality --fast` and iterate until it exits 0, so review sees a passing diff.
 5. Review the diff in a fresh-context subagent, never in the session that wrote it: `reviewing` skill.
 6. Run `scripts/quality --full` and iterate until it exits 0: the bar for **done** ([Quality Gates](#quality-gates)).
 
@@ -39,7 +39,7 @@ The core loop is **red → green**: write a failing test, then make it pass. Fol
 4. **Previews**: for an edited View, the `RenderPreview` snapshots `HealthTracker/Presentation/AGENTS.md` asks for.
 5. **Review**: each pass the `reviewing` skill's tier calls for (or why one was unavailable), with its findings and what became of each.
 
-Aim for near-total coverage: every public function, file and edge case earns a test. Follow the plan when we have one.
+Aim for near-total coverage: every public function, file and edge case earns a test. Follow any plan.
 
 Keep every change **tight**:
 
@@ -70,6 +70,7 @@ A skill loads only when called: make each call below. Each layer's `AGENTS.md` n
 |---|---|
 | Main session, before the first reply to the user | `Skill("unslop")`, then apply it to every reply the user reads. Subagents skip it |
 | An actor-isolation or `Sendable` diagnostic | `Skill("swift-concurrency:swift-concurrency")` before fixing, then fix every call site sharing the cause |
+| Writing a text users read or hear (screen, notification, intent, App Store) | `Skill("app-copy")` |
 | Checking behaviour on a device | `device-interaction`; seed data with `mock-sim-data` |
 | An Apple API question | `DocumentationSearch` before training memory |
 | Compile-checking one file | `XcodeRefreshCodeIssuesInFile` |
@@ -93,6 +94,6 @@ A change to the persisted JSON shape (`DayData`, `Meal`, `Workout`, `Mood`, `Day
 
 - Run `scripts/bootstrap` once per clone and per new worktree: it installs the git hooks and the pinned tools.
 - Branch first (`git switch -c <type>/<name>`): the git hooks refuse commits and pushes to `main`, and run `scripts/quality --fast` before every push that sends code. Let them run.
-- Use the `gh` CLI for GitHub work. Open PRs **ready for review**; the user approves and merges every PR. Writing one: `file-pr` skill. Pushing and watching CI: `quality-gate` skill.
+- Use the `gh` CLI for GitHub work. Open PRs **ready for review**; the user merges every PR. Writing one: `file-pr` skill. Pushing and watching CI: `quality-gate` skill.
 - A task that outlives the session becomes a GitHub issue, closed by the PR that does it: `issue-tracking` skill.
 - Once a feature or batch of related PRs is merged, run the `retro` skill over the batch and report its table alongside the requested work; implementing its proposals needs the user's go-ahead.
