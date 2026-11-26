@@ -42,11 +42,10 @@ final class MealFlowUITests: HealthTrackerUITestCase {
         }
     }
 
-    /// Taps once the element is hittable: the keyboard that Add item raises resizes the sheet, and a
-    /// tap during that resize finds the button "not hittable".
-    private func tapWhenHittable(_ element: XCUIElement) {
-        let element = assertExists(element)
-        XCTAssertTrue(waitUntil { element.isHittable }, "Expected element to be hittable: \(element)")
+    /// Scrolls the element into view, then taps: the focused new row can sit under the keyboard while
+    /// the sheet is still at half height (seen on a cold iOS 26.5 simulator).
+    private func scrollToAndTap(_ element: XCUIElement) {
+        scrollTo(assertExists(element))
         element.tap()
     }
 
@@ -60,7 +59,7 @@ final class MealFlowUITests: HealthTrackerUITestCase {
             assertExists(addItemButton).tap()
             // The new field takes the keyboard so the user can type the next item straight away
             assertKeyboardFocus(assertExists(app.textFields[AccessibilityID.mealItemField(1)]))
-            tapWhenHittable(app.buttons[AccessibilityID.mealItemDeleteButton(1)])
+            scrollToAndTap(app.buttons[AccessibilityID.mealItemDeleteButton(1)])
             assertNotExists(app.textFields[AccessibilityID.mealItemField(1)], timeout: 2)
         }
 
@@ -70,7 +69,7 @@ final class MealFlowUITests: HealthTrackerUITestCase {
                 enterText(item, into: assertExists(app.textFields[AccessibilityID.mealItemField(index + 1)]))
             }
             // Removing an earlier field keeps the keyboard on Salad, which moves up one row
-            tapWhenHittable(app.buttons[AccessibilityID.mealItemDeleteButton(2)])
+            scrollToAndTap(app.buttons[AccessibilityID.mealItemDeleteButton(2)])
             let salad = app.textFields[AccessibilityID.mealItemField(2)]
             assertKeyboardFocus(salad)
             XCTAssertEqual(salad.value as? String, "Salad")
