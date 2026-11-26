@@ -5,7 +5,7 @@ description: Name and word every text an app user reads or hears: screen labels,
 
 # App copy
 
-A name is a design decision, as much as layout. It is built on Apple's WWDC26 session 290 ("Craft clear names for features and labels in your app") and on the copy review in #167. Prose in a PR, README or reply follows `unslop`; this skill covers the words the app shows.
+A name is a design decision, as much as layout. It follows Apple's WWDC26 session 290 ("Craft clear names for features and labels in your app"). Prose in a PR, README or reply follows `unslop`; this skill covers the words the app shows.
 
 ## 1. Know the surface
 
