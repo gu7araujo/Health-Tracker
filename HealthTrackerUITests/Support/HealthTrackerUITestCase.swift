@@ -206,7 +206,7 @@ class HealthTrackerUITestCase: XCTestCase {
     /// that holds the keyboard (seen on iOS 26.5 and 27.2).
     private static let keyboardFocusKey = "hasKeyboardFocus"
 
-    /// Whether this runner process has called `enterText` yet; only that first call gets the long wait.
+    /// Whether this runner process has waited for keyboard focus yet; only that first wait is long.
     private static var firstKeyboardAttempted = false
 
     // MARK: - Flow Helpers
