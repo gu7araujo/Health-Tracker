@@ -57,10 +57,15 @@ final class MealFlowUITests: HealthTrackerUITestCase {
         }
 
         XCTContext.runActivity(named: "Save several items with Large") { _ in
-            for (index, item) in ["Beans", "Salad"].enumerated() {
+            for (index, item) in ["Beans", "Discarded", "Salad"].enumerated() {
                 assertExists(addItemButton).tap()
                 enterText(item, into: assertExists(app.textFields[AccessibilityID.mealItemField(index + 1)]))
             }
+            // Removing an earlier field keeps the keyboard on Salad, which moves up one row
+            assertExists(app.buttons[AccessibilityID.mealItemDeleteButton(2)]).tap()
+            let salad = app.textFields[AccessibilityID.mealItemField(2)]
+            assertKeyboardFocus(salad)
+            XCTAssertEqual(salad.value as? String, "Salad")
             selectMenuOption(picker: AccessibilityID.quantityPicker, option: EnglishLabel.quantityLarge)
             saveModal()
 

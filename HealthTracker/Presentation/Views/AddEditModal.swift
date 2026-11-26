@@ -145,9 +145,10 @@ struct AddEditModal: View {
     private func mealItemField(at index: Int) -> some View {
         TextField(
             String(localized: "meal_description_placeholder"),
+            // SwiftUI can read a removed row's binding while it moves focus, so guard the index
             text: Binding(
-                get: { mealItems[index] },
-                set: { mealItems[index] = $0 }
+                get: { mealItems.indices.contains(index) ? mealItems[index] : "" },
+                set: { if mealItems.indices.contains(index) { mealItems[index] = $0 } }
             )
         )
         .multilineTextAlignment(.center)
@@ -156,6 +157,10 @@ struct AddEditModal: View {
         .overlay(alignment: .trailing) {
             if index > 0 {
                 Button {
+                    // Move focus off the removed row first; a row below it shifts up one index
+                    if let focused = focusedMealItem, focused >= index {
+                        focusedMealItem = focused == index ? nil : focused - 1
+                    }
                     mealItems.remove(at: index)
                 } label: {
                     Image(systemName: "minus.circle.fill")
