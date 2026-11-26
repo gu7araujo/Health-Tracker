@@ -62,6 +62,7 @@
     },
     "repoOwned": [
       "agent-docs-placement",
+      "app-copy",
       "cli-build",
       "cli-test",
       "file-pr",
