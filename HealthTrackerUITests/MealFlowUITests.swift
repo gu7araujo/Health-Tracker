@@ -50,7 +50,8 @@ final class MealFlowUITests: HealthTrackerUITestCase {
             enterText("Rice", into: assertExists(app.textFields[AccessibilityID.mealItemField(0)]))
 
             assertExists(addItemButton).tap()
-            assertExists(app.textFields[AccessibilityID.mealItemField(1)])
+            // The new field takes the keyboard so the user can type the next item straight away
+            assertKeyboardFocus(assertExists(app.textFields[AccessibilityID.mealItemField(1)]))
             assertExists(app.buttons[AccessibilityID.mealItemDeleteButton(1)]).tap()
             assertNotExists(app.textFields[AccessibilityID.mealItemField(1)], timeout: 2)
         }

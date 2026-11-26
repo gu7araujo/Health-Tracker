@@ -174,21 +174,33 @@ class HealthTrackerUITestCase: XCTestCase {
                    file: StaticString = #filePath, line: UInt = #line)
     {
         field.tap(withNumberOfTaps: taps, numberOfTouches: 1)
-        var attributeMissing = false
         let timeout: TimeInterval = Self.firstKeyboardAttempted ? 5 : 30
         Self.firstKeyboardAttempted = true
+        if assertKeyboardFocus(field, timeout: timeout, file: file, line: line) {
+            field.typeText(text)
+        }
+    }
+
+    /// Waits until the field holds keyboard focus, returning whether it did.
+    @discardableResult
+    func assertKeyboardFocus(_ field: XCUIElement, timeout: TimeInterval = 5,
+                             file: StaticString = #filePath, line: UInt = #line) -> Bool
+    {
+        var attributeMissing = false
         let focused = waitUntil(timeout: timeout) {
             guard let snapshot = (try? field.snapshot()) as? NSObject else { return false }
             attributeMissing = !snapshot.responds(to: NSSelectorFromString(Self.keyboardFocusKey))
             return attributeMissing || snapshot.value(forKey: Self.keyboardFocusKey) as? Bool == true
         }
         if attributeMissing {
-            XCTFail("Snapshots no longer expose \(Self.keyboardFocusKey); update enterText", file: file, line: line)
-        } else if focused {
-            field.typeText(text)
-        } else {
-            XCTFail("Expected keyboard focus before typing: \(field)", file: file, line: line)
+            XCTFail("Snapshots no longer expose \(Self.keyboardFocusKey); update assertKeyboardFocus",
+                    file: file, line: line)
+            return false
         }
+        if !focused {
+            XCTFail("Expected keyboard focus: \(field)", file: file, line: line)
+        }
+        return focused
     }
 
     /// The snapshot attribute `typeText` checks: the public `hasFocus` stays false on an iOS text field

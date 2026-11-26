@@ -17,6 +17,7 @@ struct AddEditModal: View {
 
     @State private var text: String = ""
     @State private var mealItems: [String] = [""]
+    @FocusState private var focusedMealItem: Int?
     @State private var selectedQuantity: Meal.Quantity = .small
     @State private var selectedSatisfaction: Meal.Satisfaction = .fifty
     @State private var satisfactionWasManuallySet: Bool = false
@@ -141,36 +142,42 @@ struct AddEditModal: View {
         )
     }
 
+    private func mealItemField(at index: Int) -> some View {
+        TextField(
+            String(localized: "meal_description_placeholder"),
+            text: Binding(
+                get: { mealItems[index] },
+                set: { mealItems[index] = $0 }
+            )
+        )
+        .multilineTextAlignment(.center)
+        .focused($focusedMealItem, equals: index)
+        .accessibilityIdentifier(AccessibilityID.mealItemField(index))
+        .overlay(alignment: .trailing) {
+            if index > 0 {
+                Button {
+                    mealItems.remove(at: index)
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(String(localized: "delete_action"))
+                .accessibilityIdentifier(AccessibilityID.mealItemDeleteButton(index))
+            }
+        }
+    }
+
     private var mealDescriptionFields: some View {
         Group {
             ForEach(mealItems.indices, id: \.self) { index in
-                TextField(
-                    String(localized: "meal_description_placeholder"),
-                    text: Binding(
-                        get: { mealItems[index] },
-                        set: { mealItems[index] = $0 }
-                    )
-                )
-                .multilineTextAlignment(.center)
-                .accessibilityIdentifier(AccessibilityID.mealItemField(index))
-                .overlay(alignment: .trailing) {
-                    if index > 0 {
-                        Button {
-                            mealItems.remove(at: index)
-                        } label: {
-                            Image(systemName: "minus.circle.fill")
-                                .foregroundStyle(.red)
-                        }
-                        .buttonStyle(.borderless)
-                        .accessibilityLabel(String(localized: "delete_action"))
-                        .accessibilityIdentifier(AccessibilityID.mealItemDeleteButton(index))
-                    }
-                }
+                mealItemField(at: index)
             }
 
             if mealItems.count < maxMealItems {
                 Button {
                     mealItems.append("")
+                    focusedMealItem = mealItems.count - 1
                 } label: {
                     Label(String(localized: "add_meal_item_button"), systemImage: "plus.circle.fill")
                 }
@@ -310,4 +317,8 @@ private extension AddEditModal {
             viewModel.addWorkout(workout)
         }
     }
+}
+
+#Preview {
+    AddEditModal(viewModel: MainViewModel(), section: .meal, mealId: nil, workoutId: nil)
 }
